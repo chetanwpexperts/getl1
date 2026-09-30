@@ -70,6 +70,9 @@ return [
     // Shown to users in this timezone (all GetL1 customers are in India for now).
     'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Asia/Kolkata'),
 
+    // Minimum time suppliers get to quote. Never below 60 in production.
+    'rfq_min_quote_minutes' => (int) env('RFQ_MIN_QUOTE_MINUTES', 60),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

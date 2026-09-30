@@ -35,6 +35,14 @@ class RfqService
     public const MAX_ATTACHMENTS = 5;
     public const ATTACHMENT_MAX_KB = 10240;
     public const MIN_DEADLINE_MINUTES = 60;
+
+    /** 60 in production; staging can lower it (RFQ_MIN_QUOTE_MINUTES) for quick end-to-end tests. */
+    public static function minDeadlineMinutes(): int
+    {
+        $min = (int) config('app.rfq_min_quote_minutes', self::MIN_DEADLINE_MINUTES);
+
+        return app()->isProduction() ? max(self::MIN_DEADLINE_MINUTES, $min) : max(1, $min);
+    }
     public const MAX_DEADLINE_DAYS = 60;
 
     public const UNITS = ['pcs', 'nos', 'kg', 'mt', 'ton', 'ltr', 'mtr', 'sqft', 'sqm', 'box', 'roll', 'set', 'pack', 'bag', 'pair', 'job', 'lot'];
@@ -233,8 +241,10 @@ class RfqService
         }
         if (! $rfq->quote_deadline) {
             $errors['quote_deadline'] = 'Set a deadline for quotes.';
-        } elseif ($rfq->quote_deadline->lt(now()->addMinutes(self::MIN_DEADLINE_MINUTES))) {
-            $errors['quote_deadline'] = 'Give suppliers at least 1 hour to quote.';
+        } elseif ($rfq->quote_deadline->lt(now()->addMinutes($min = self::minDeadlineMinutes()))) {
+            $errors['quote_deadline'] = $min >= 60 && $min % 60 === 0
+                ? 'Give suppliers at least '.($min / 60).' '.str('hour')->plural($min / 60).' to quote.'
+                : "Give suppliers at least {$min} minutes to quote.";
         } elseif ($rfq->quote_deadline->gt(now()->addDays(self::MAX_DEADLINE_DAYS))) {
             $errors['quote_deadline'] = 'The deadline can be at most '.self::MAX_DEADLINE_DAYS.' days away.';
         }

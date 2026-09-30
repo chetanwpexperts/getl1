@@ -52,8 +52,12 @@
                 ['Quote deadline set', (bool) $rfq->quote_deadline, $errors->first('quote_deadline')],
                 ['Suppliers invited ('.$rfq->invites->count().')', $rfq->invites->isNotEmpty(), $errors->first('suppliers')],
             ] as [$label, $done, $err])
-                <div class="rounded-xl border p-4 text-sm {{ $done ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700' }}">
-                    <span class="font-medium">{{ $done ? '✓' : '○' }} {{ $label }}</span>
+                @php
+                    $box = $err ? 'border-red-200 bg-red-50 text-red-900'
+                        : ($done ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700');
+                @endphp
+                <div class="rounded-xl border p-4 text-sm {{ $box }}">
+                    <span class="font-medium">{{ $err ? '!' : ($done ? '✓' : '○') }} {{ $label }}</span>
                     @if ($err)<p class="mt-1 text-red-700">{{ $err }}</p>@endif
                 </div>
             @endforeach
