@@ -7,7 +7,7 @@
     <title>@yield('title', 'Dashboard') · GetL1</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
+<body class="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased" data-server-time="{{ now()->getTimestampMs() }}">
     <header class="border-b border-slate-200 bg-white">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
             <div class="flex items-center gap-6">
@@ -20,6 +20,20 @@
             </div>
 
             <div class="flex items-center gap-3 text-sm">
+                @isset($navAuction)
+                    <a href="{{ $navAuction['url'] }}" title="{{ $navAuction['title'] }}"
+                       class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm {{ $navAuction['live'] ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100' }}">
+                        <span class="relative flex size-2">
+                            <span class="absolute inline-flex size-full animate-ping rounded-full {{ $navAuction['live'] ? 'bg-white' : 'bg-emerald-500' }} opacity-75"></span>
+                            <span class="relative inline-flex size-2 rounded-full {{ $navAuction['live'] ? 'bg-white' : 'bg-emerald-600' }}"></span>
+                        </span>
+                        @if ($navAuction['live'])
+                            Auction live · Join
+                        @else
+                            Auction <span class="tabular-nums" data-countdown-to="{{ $navAuction['starts_ms'] }}" data-countdown-prefix="in " data-countdown-done="starting"></span>
+                        @endif
+                    </a>
+                @endisset
                 @isset($currentOrg)
                     @php $orgs = auth()->user()->organizations; @endphp
                     @if ($orgs->count() > 1)

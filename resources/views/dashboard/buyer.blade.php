@@ -21,6 +21,8 @@
         @endif
     </div>
 
+    <x-auction-cards :auctions="$activeAuctions" :org="$currentOrg" />
+
     <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ([
             ['Open RFQs', $openRfqs],

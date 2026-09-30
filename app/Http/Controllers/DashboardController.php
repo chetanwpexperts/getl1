@@ -21,6 +21,7 @@ class DashboardController extends Controller
             $org->load('subscription.plan');
 
             return view('dashboard.buyer', [
+                'activeAuctions' => \App\Services\Auction\ActiveAuctions::for($org, 24 * 60),
                 'openRfqs' => Rfq::whereNotIn('status', [RfqStatus::Awarded, RfqStatus::Cancelled])->count(),
                 'liveAuctions' => Auction::where('status', AuctionStatus::Live)->count(),
                 'auctionsThisMonth' => Auction::where('created_at', '>=', now()->startOfMonth())->count(),
@@ -30,6 +31,7 @@ class DashboardController extends Controller
         }
 
         return view('dashboard.supplier', [
+            'activeAuctions' => \App\Services\Auction\ActiveAuctions::for($org, 24 * 60),
             'pendingInvites' => RfqInvite::with('rfq.organization')
                 ->where('supplier_org_id', $org->id)
                 ->where('status', InviteStatus::Invited)

@@ -80,22 +80,4 @@ export function initLivePage() {
 
     document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
     schedule();
-
-    // Countdowns: <span data-countdown-to="epoch ms"></span> → "4m 12s"
-    const counters = document.querySelectorAll('[data-countdown-to]');
-    if (counters.length) {
-        const fmt = (ms) => {
-            const s = Math.max(0, Math.floor(ms / 1000));
-            const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-            if (d) return `${d}d ${h}h`;
-            if (h) return `${h}h ${m}m`;
-            return `${m}m ${String(sec).padStart(2, '0')}s`;
-        };
-        const tick = () => counters.forEach((c) => {
-            const left = Number(c.dataset.countdownTo) - (Date.now() + offset);
-            c.textContent = left > 0 ? fmt(left) : 'now';
-        });
-        tick();
-        setInterval(tick, 1000);
-    }
 }

@@ -3,12 +3,14 @@ import { initRfqItems } from './rfq-items';
 import { initAuction } from './auction';
 import { initQuoteForm } from './quote-form';
 import { initLivePage } from './live-page';
+import { initCountdowns } from './countdowns';
 
 document.addEventListener('DOMContentLoaded', () => {
     initRfqItems();
     initAuction();
     initQuoteForm();
     initLivePage();
+    initCountdowns();
 
     // Copy-to-clipboard buttons: <button data-copy="text">
     document.addEventListener('click', async (e) => {

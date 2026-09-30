@@ -34,6 +34,22 @@ class AppLayoutComposer
         if ($org) {
             $view->with('currentOrg', $org);
             $view->with('currentRole', $user->roleIn($org));
+
+            // Running or starting-soon auction: shown as a button in the header on every page.
+            // Same result for the header and both menus: look it up once per request.
+            $memo = 'getl1.active_auction.'.$org->id;
+            if (! request()->attributes->has($memo)) {
+                request()->attributes->set($memo, \App\Services\Auction\ActiveAuctions::for($org)->first());
+            }
+            $auction = request()->attributes->get($memo);
+            if ($auction && ! request()->routeIs('buyer.auctions.show', 'supplier.auctions.show')) {
+                $view->with('navAuction', [
+                    'url' => \App\Services\Auction\ActiveAuctions::url($org, $auction),
+                    'live' => \App\Services\Auction\Standings::effectiveStatus($auction) === \App\Enums\AuctionStatus::Live,
+                    'starts_ms' => $auction->starts_at->getTimestampMs(),
+                    'title' => $auction->rfq?->title,
+                ]);
+            }
         }
     }
 }

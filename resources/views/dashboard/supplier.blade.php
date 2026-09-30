@@ -6,6 +6,8 @@
     <h1 class="text-2xl font-semibold">Dashboard</h1>
     <p class="mt-1 text-sm text-slate-600">{{ $currentOrg->name }}, {{ $currentOrg->city }}</p>
 
+    <x-auction-cards :auctions="$activeAuctions" :org="$currentOrg" />
+
     @unless ($verified)
         <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
             <p class="font-semibold">Get your verified badge</p>

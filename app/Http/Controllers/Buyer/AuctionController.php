@@ -52,6 +52,11 @@ class AuctionController extends Controller
             'auction' => $auction,
             'rfq' => $auction->rfq,
             'state' => AuctionState::forBuyer($auction),
+            // For "send the room link on WhatsApp" while scheduled or live.
+            'participants' => \App\Models\RfqInvite::with(['listEntry', 'supplier'])
+                ->where('rfq_id', $auction->rfq_id)
+                ->whereIn('supplier_org_id', \App\Models\Bid::where('auction_id', $auction->id)->distinct()->select('supplier_org_id'))
+                ->get(),
         ]);
     }
 

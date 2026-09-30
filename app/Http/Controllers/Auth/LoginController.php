@@ -65,7 +65,24 @@ class LoginController extends Controller
         $user->forceFill(['last_login_at' => now()])->save();
         $audit->log('login', $user, user: $user, organizationId: $user->current_organization_id);
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended($this->landing($user));
+    }
+
+    /**
+     * Where to land after login when no page was requested: a supplier with an auction
+     * running or starting soon goes straight into the auction room.
+     */
+    private function landing(\App\Models\User $user): string
+    {
+        $org = $user->currentOrganization;
+        if ($org && $org->isSupplier() && $user->belongsToOrganization($org)) {
+            $auction = \App\Services\Auction\ActiveAuctions::for($org)->first();
+            if ($auction) {
+                return \App\Services\Auction\ActiveAuctions::url($org, $auction);
+            }
+        }
+
+        return route('dashboard');
     }
 
     public function destroy(Request $request, AuditLogger $audit): RedirectResponse

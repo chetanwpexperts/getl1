@@ -427,4 +427,59 @@ class AuctionTest extends TestCase
         $big = new \App\Events\AuctionStateChanged('auction.1.buyer', ['id' => 1, 'recent' => array_fill(0, 500, ['supplier' => str_repeat('x', 40)])]);
         $this->assertSame(['id' => 1, 'refresh' => true], $big->broadcastWith());
     }
+
+    // ---------------------------------------------------------------- getting suppliers into the room fast
+
+    private function login(User $u): \Illuminate\Testing\TestResponse
+    {
+        auth()->logout();
+
+        return $this->post('/login', ['email' => $u->email, 'password' => 'password']);
+    }
+
+    public function test_supplier_login_lands_in_the_auction_room(): void
+    {
+        $a = $this->scheduled(); // starts in ~10 minutes: counts as "soon"
+        $this->login($this->s['A'][1])->assertRedirect(route('supplier.auctions.show', $a->id));
+
+        $this->travelTo($a->starts_at->copy()->addSecond());
+        $this->login($this->s['B'][1])->assertRedirect(route('supplier.auctions.show', $a->id));
+
+        // No auction: normal dashboard. Buyers always land on the dashboard.
+        [, $outsider] = $this->supplier('Outsider Traders');
+        $this->login($outsider)->assertRedirect(route('dashboard'));
+        $this->login($this->buyerUser)->assertRedirect(route('dashboard'));
+
+        // After it ends: dashboard again.
+        $this->travelTo($a->ends_at->copy()->addMinute());
+        $this->login($this->s['A'][1])->assertRedirect(route('dashboard'));
+    }
+
+    public function test_room_link_from_email_returns_to_the_room_after_login(): void
+    {
+        $a = $this->scheduled(['starts_at' => now()->addHours(6)->setTimezone('Asia/Kolkata')->format('Y-m-d\\TH:i')]);
+        auth()->logout();
+        $this->get(route('supplier.auctions.show', $a->id))->assertRedirect(route('login'));
+        $this->post('/login', ['email' => $this->s['C'][1]->email, 'password' => 'password'])
+            ->assertRedirect(route('supplier.auctions.show', $a->id));
+    }
+
+    public function test_header_button_and_dashboard_card(): void
+    {
+        $a = $this->live();
+
+        $this->actingAs($this->s['A'][1])->get('/dashboard')->assertOk()
+            ->assertSee('Auction live · Join')->assertSee('Join auction now')
+            ->assertSee(route('supplier.auctions.show', $a->id));
+        $this->actingAs($this->s['A'][1])->get(route('supplier.documents.index'))->assertOk()->assertSee('Auction live · Join');
+
+        $this->actingAs($this->buyerUser)->get('/dashboard')->assertOk()->assertSee('Watch live')
+            ->assertSee(route('buyer.auctions.show', $a->id));
+        $this->actingAs($this->buyerUser)->get(route('buyer.auctions.show', $a->id))->assertOk()
+            ->assertSee('Copy auction room link')->assertDontSee('Auction live · Join');
+
+        // Suppliers outside the auction see nothing.
+        [, $outsider] = $this->supplier('Outsider Traders');
+        $this->actingAs($outsider)->get('/dashboard')->assertOk()->assertDontSee('Auction live');
+    }
 }

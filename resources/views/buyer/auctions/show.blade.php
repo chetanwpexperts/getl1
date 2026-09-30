@@ -73,6 +73,37 @@
             </section>
         </div>
 
+        @if (in_array($state['status'], ['scheduled', 'live'], true) && $participants->isNotEmpty())
+            @php
+                $roomUrl = route('supplier.auctions.show', $auction->id);
+                $when = $state['status'] === 'live' ? 'is live now' : 'starts '.$auction->starts_at->ist()->format('d M, h:i A').' IST';
+            @endphp
+            <section class="mt-6 rounded-xl border border-slate-200 bg-white">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
+                    <h2 class="font-semibold">Participants</h2>
+                    <button type="button" data-copy="{{ $roomUrl }}" class="text-sm font-medium text-emerald-700 hover:underline">Copy auction room link</button>
+                </div>
+                <p class="px-5 pt-3 text-xs text-slate-500">They already got an email with the time and a reminder 15 minutes before. Send the room link on WhatsApp for a nudge; it opens straight into their bidding room after sign-in.</p>
+                <ul class="divide-y divide-slate-100 text-sm">
+                    @foreach ($participants as $p)
+                        @php
+                            $phone = $p->listEntry?->contact_phone;
+                            $wa = $phone ? 'https://wa.me/91'.$phone.'?text='.rawurlencode(
+                                "Hello, the live auction by {$currentOrg->name} for \"{$rfq->title}\" {$when}. Join your bidding room: {$roomUrl}") : null;
+                        @endphp
+                        <li class="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                            <span>{{ $p->supplier?->name ?? $p->listEntry?->displayName() ?? 'Supplier' }}
+                                <span class="block text-xs text-slate-500">{{ collect([$phone, $p->listEntry?->contact_email])->filter()->implode(' · ') ?: 'No contact details' }}</span>
+                            </span>
+                            @if ($wa)
+                                <a href="{{ $wa }}" target="_blank" rel="noopener noreferrer" class="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50">Send on WhatsApp</a>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
+
         @if ($canManage && $state['status'] === 'scheduled')
             <details class="mt-6 max-w-xl rounded-xl border border-slate-200 bg-white p-5 text-sm">
                 <summary class="cursor-pointer text-red-700">Cancel this auction</summary>
