@@ -99,11 +99,13 @@ class Automations
             ->get();
 
         foreach ($rfqs as $rfq) {
+            // Build everything first: a failure here must not mark the email as sent.
+            $summary = $this->quoteSummary($rfq);
+            $team = $this->buyerTeam($rfq);
             if (! $this->claim(Rfq::withoutGlobalScopes(), $rfq->id, 'quotes_opened_notified_at')) {
                 continue;
             }
-            $summary = $this->quoteSummary($rfq);
-            foreach ($this->buyerTeam($rfq) as $user) {
+            foreach ($team as $user) {
                 Mail::to($user->email)->queue(new QuotesOpenedMail($rfq, $summary));
                 $sent++;
             }
