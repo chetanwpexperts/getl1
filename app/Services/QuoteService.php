@@ -61,6 +61,7 @@ class QuoteService
                 throw ValidationException::withMessages(['items' => 'Quote every item in the RFQ.']);
             }
 
+            $freightIncluded = ($invite->rfq->terms['freight'] ?? null) === 'included';
             $total = 0.0;
             foreach ($items as $item) {
                 $total += (float) $posted[$item->id]['unit_price'] * (float) $item->qty;
@@ -83,7 +84,8 @@ class QuoteService
                     'rfq_item_id' => $item->id,
                     'unit_price' => $posted[$item->id]['unit_price'],
                     'gst_rate' => $posted[$item->id]['gst_rate'],
-                    'freight' => $posted[$item->id]['freight'] ?? 0,
+                    // Buyer asked for freight-inclusive prices: no separate freight.
+                    'freight' => $freightIncluded ? 0 : ($posted[$item->id]['freight'] ?? 0),
                 ]);
             }
 

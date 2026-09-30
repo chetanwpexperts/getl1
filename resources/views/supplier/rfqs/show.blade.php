@@ -89,40 +89,57 @@
                 </div>
 
                 @if ($accepted && $open)
-                    <form method="POST" action="{{ route('supplier.rfqs.quote', $invite->id) }}">
+                    @php
+                        $freightIncluded = ($rfq->terms['freight'] ?? null) === 'included';
+                    @endphp
+                    <form method="POST" action="{{ route('supplier.rfqs.quote', $invite->id) }}" data-quote-form>
                         @csrf
                         @error('items') <p class="mx-5 mt-3 text-sm text-red-600">{{ $message }}</p> @enderror
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[640px] text-sm">
                                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                                    <tr><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Unit price (₹, ex-GST)</th><th class="px-4 py-2">GST</th><th class="px-4 py-2">Freight (₹)</th></tr>
+                                    <tr>
+                                        <th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Unit price (₹, ex-GST)</th><th class="px-4 py-2">GST</th>
+                                        @unless ($freightIncluded)<th class="px-4 py-2">Freight, total for line (₹)</th>@endunless
+                                        <th class="px-4 py-2 text-right">Amount (ex-GST)</th>
+                                    </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
                                     @foreach ($rfq->items as $item)
                                         @php $line = $quoteLines[$item->id] ?? null; @endphp
-                                        <tr>
+                                        <tr data-quote-row data-qty="{{ (float) $item->qty }}">
                                             <td class="px-4 py-2">{{ $item->name }}@if ($item->spec)<span class="block text-xs text-slate-500">{{ $item->spec }}</span>@endif</td>
                                             <td class="px-4 py-2 text-right tabular-nums">{{ $qtyFmt($item->qty) }} {{ $item->unit }}</td>
                                             <td class="px-4 py-2">
-                                                <input name="items[{{ $item->id }}][unit_price]" inputmode="decimal" required
+                                                <input name="items[{{ $item->id }}][unit_price]" inputmode="decimal" required data-price
                                                        value="{{ old("items.{$item->id}.unit_price", $line?->unit_price) }}" class="{{ $cls }} w-32">
                                                 @error("items.{$item->id}.unit_price") <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                             </td>
                                             <td class="px-4 py-2">
                                                 @php $gst = (string) old("items.{$item->id}.gst_rate", $line ? rtrim(rtrim((string) $line->gst_rate, '0'), '.') : '18'); @endphp
-                                                <select name="items[{{ $item->id }}][gst_rate]" class="{{ $cls }} w-24">
+                                                <select name="items[{{ $item->id }}][gst_rate]" class="{{ $cls }} w-24" data-gst>
                                                     @foreach ($gstRates as $r)<option value="{{ $r }}" @selected($gst === $r)>{{ $r }}%</option>@endforeach
                                                 </select>
                                             </td>
-                                            <td class="px-4 py-2">
-                                                <input name="items[{{ $item->id }}][freight]" inputmode="decimal"
-                                                       value="{{ old("items.{$item->id}.freight", $line && (float) $line->freight > 0 ? $line->freight : '') }}" class="{{ $cls }} w-28" placeholder="0">
-                                            </td>
+                                            @unless ($freightIncluded)
+                                                <td class="px-4 py-2">
+                                                    <input name="items[{{ $item->id }}][freight]" inputmode="decimal" data-freight
+                                                           value="{{ old("items.{$item->id}.freight", $line && (float) $line->freight > 0 ? $line->freight : '') }}" class="{{ $cls }} w-28" placeholder="0">
+                                                </td>
+                                            @endunless
+                                            <td class="px-4 py-2 text-right font-medium tabular-nums" data-line-amount>—</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
+                        <dl class="ml-auto grid max-w-sm grid-cols-2 gap-x-6 gap-y-1 border-t border-slate-100 px-5 py-4 text-sm tabular-nums">
+                            <dt class="text-slate-600">Total before GST</dt><dd class="text-right text-base font-semibold" data-sum-basic>—</dd>
+                            <dt class="text-slate-600">GST</dt><dd class="text-right" data-sum-gst>—</dd>
+                            @unless ($freightIncluded)<dt class="text-slate-600">Freight</dt><dd class="text-right" data-sum-freight>—</dd>@endunless
+                            <dt class="border-t border-slate-200 pt-1 font-medium">Landed cost</dt><dd class="border-t border-slate-200 pt-1 text-right font-semibold" data-sum-landed>—</dd>
+                            <dd class="col-span-2 mt-1 text-xs text-slate-500">The total before GST is your quote price{{ $freightIncluded ? ', with freight included as the buyer asked' : '' }}. If there's a live auction, you start from it.</dd>
+                        </dl>
                         <div class="grid gap-4 border-t border-slate-100 px-5 py-4 sm:grid-cols-3">
                             <div>
                                 <label for="valid_till" class="block text-sm font-medium text-slate-700">Quote valid till</label>

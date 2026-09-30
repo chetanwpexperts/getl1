@@ -224,6 +224,27 @@ class RfqFlowTest extends TestCase
         $this->assertSame('134000.00', Quote::firstOrFail()->total);
     }
 
+    public function test_freight_is_ignored_when_buyer_wants_it_included(): void
+    {
+        [$s, $u, $e] = $this->linkedSupplier('Sharma Cartons');
+        $rfq = $this->draft(['terms' => ['freight' => 'included']]);
+        $svc = app(RfqService::class);
+        $svc->invite($rfq, $this->buyerUser, [$e->id]);
+        $svc->publish($rfq->fresh(), $this->buyerUser);
+        $inv = $this->inviteFor($rfq, $s);
+        $this->actingAs($u)->post("/supplier/rfqs/{$inv->id}/accept", ['agree' => 1]);
+
+        $this->actingAs($u)->get("/supplier/rfqs/{$inv->id}")->assertOk()->assertDontSee('Freight, total for line');
+        $payload = $this->quotePayload($rfq, [10, 10]);
+        foreach ($payload['items'] as &$line) {
+            $line['freight'] = 5000;
+        }
+        $this->actingAs($u)->post("/supplier/rfqs/{$inv->id}/quote", $payload);
+
+        $this->unscope();
+        $this->assertSame(0.0, (float) Quote::firstOrFail()->items()->sum('freight'));
+    }
+
     public function test_quote_must_cover_every_item_and_needs_acceptance(): void
     {
         [$s, $u, $e] = $this->linkedSupplier('Sharma Cartons');
