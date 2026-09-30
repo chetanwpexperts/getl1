@@ -26,6 +26,21 @@ use Illuminate\Validation\ValidationException;
 class AuctionService
 {
     public const MIN_PARTICIPANTS = 2;
+    public const MIN_DURATION_MINUTES = 10;
+
+    /** 10 in production; staging can allow shorter auctions (AUCTION_MIN_DURATION) for quick tests. */
+    public static function minDuration(): int
+    {
+        $min = (int) config('app.auction_min_duration_minutes', self::MIN_DURATION_MINUTES);
+
+        return app()->isProduction() ? max(self::MIN_DURATION_MINUTES, $min) : max(1, $min);
+    }
+
+    /** Duration choices shown on the schedule form. */
+    public static function durationOptions(): array
+    {
+        return array_values(array_filter([2, 5, 10, 15, 20, 30, 45, 60, 90, 120], fn ($m) => $m >= self::minDuration()));
+    }
 
     public function __construct(private AuditLogger $audit, private AuctionBroadcaster $broadcaster, private BidService $bids) {}
 
@@ -33,7 +48,7 @@ class AuctionService
     {
         return [
             'starts_at' => ['required', 'date_format:Y-m-d\TH:i'],
-            'duration_min' => ['required', 'integer', 'min:10', 'max:240'],
+            'duration_min' => ['required', 'integer', 'min:'.self::minDuration(), 'max:240'],
             'min_decrement_type' => ['required', 'in:percent,amount'],
             'min_decrement_value' => ['required', 'numeric', 'gt:0', 'max:999999999'],
             'max_decrement_pct' => ['required', 'numeric', 'min:1', 'max:50'],

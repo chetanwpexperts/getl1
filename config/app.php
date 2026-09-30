@@ -73,6 +73,9 @@ return [
     // Minimum time suppliers get to quote. Never below 60 in production.
     'rfq_min_quote_minutes' => (int) env('RFQ_MIN_QUOTE_MINUTES', 60),
 
+    // Shortest live auction. Never below 10 in production.
+    'auction_min_duration_minutes' => (int) env('AUCTION_MIN_DURATION', 10),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

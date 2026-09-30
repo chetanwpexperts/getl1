@@ -32,7 +32,7 @@
                         <div>
                             <label for="duration_min" class="block text-sm font-medium text-slate-700">Duration</label>
                             <select id="duration_min" name="duration_min" class="{{ $input }}">
-                                @foreach ([10, 15, 20, 30, 45, 60, 90, 120] as $m)
+                                @foreach (\App\Services\Auction\AuctionService::durationOptions() as $m)
                                     <option value="{{ $m }}" @selected((int) old('duration_min', 30) === $m)>{{ $m }} minutes</option>
                                 @endforeach
                             </select>
