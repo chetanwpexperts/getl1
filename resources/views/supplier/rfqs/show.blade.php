@@ -56,7 +56,11 @@
                     @else The live auction has closed
                     @endif
                 </p>
-                <p class="mt-1">You start at your sealed quote. Other suppliers never see your name or price.</p>
+                <p class="mt-1">
+                    @if ($aStatus === 'closed') See your final rank and price. The buyer will now award the order.
+                    @else You start at your sealed quote. Other suppliers never see your name or price.
+                    @endif
+                </p>
             </div>
             <a href="{{ route('supplier.auctions.show', $auction->id) }}" class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">
                 {{ $aStatus === 'live' ? 'Join auction' : ($aStatus === 'scheduled' ? 'Open auction room' : 'View your result') }}
@@ -177,7 +181,7 @@
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[480px] text-sm">
                             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                                <tr><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Needed by</th>@if ($quote)<th class="px-4 py-2 text-right">Your price</th>@endif</tr>
+                                <tr><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Needed by</th>@if ($quote)<th class="px-4 py-2 text-right">{{ $auction ? 'Your sealed quote' : 'Your price' }}</th>@endif</tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach ($rfq->items as $item)
@@ -191,7 +195,7 @@
                             </tbody>
                         </table>
                     </div>
-                    @if ($quote)<p class="border-t border-slate-100 px-5 py-3 text-sm">Your total (ex-GST): <span class="font-semibold">{{ \App\Support\Money::inr($quote->total) }}</span></p>@endif
+                    @if ($quote)<p class="border-t border-slate-100 px-5 py-3 text-sm">{{ $auction ? 'Your sealed quote total' : 'Your total' }} (ex-GST): <span class="font-semibold">{{ \App\Support\Money::inr($quote->total) }}</span>@if ($auction) <span class="text-slate-500">· your auction bids are in the auction room</span>@endif</p>@endif
                 @endif
             </section>
         </div>

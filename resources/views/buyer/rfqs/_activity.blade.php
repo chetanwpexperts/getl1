@@ -29,7 +29,7 @@
                 <li class="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-5 py-2.5">
                     <span class="min-w-0 flex-1">
                         {{ \App\Support\ActivityText::describe($log, $names) }}
-                        <span class="block text-xs text-slate-500">{{ $log->user?->name ?? 'GetL1 (automatic)' }}@if ($log->ip) · {{ $log->ip }}@endif</span>
+                        <span class="block text-xs text-slate-500">{{ $log->user?->name ?? 'GetL1 (automatic)' }}@if ($log->user && $log->ip) · {{ $log->ip }}@endif</span>
                     </span>
                     <time class="whitespace-nowrap text-xs text-slate-500" datetime="{{ $log->created_at->toIso8601String() }}">{{ $log->created_at->ist()->format('d M Y, h:i:s A') }}</time>
                 </li>

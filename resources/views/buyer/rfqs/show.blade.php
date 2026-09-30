@@ -93,7 +93,12 @@
                 </p>
                 <p class="mt-1">
                     Start price {{ \App\Support\Money::inr($auction->start_price) }}
-                    @if ($auction->current_l1 !== null) · Current L1 {{ \App\Support\Money::inr($auction->current_l1) }} @endif
+                    @if ($auction->current_l1 !== null)
+                        · {{ $aStatus === 'closed' ? 'Final' : 'Current' }} L1 {{ \App\Support\Money::inr($auction->current_l1) }}
+                        @if ($aStatus === 'closed' && (float) $auction->current_l1 < (float) $auction->start_price)
+                            · saved {{ \App\Support\Money::inr((float) $auction->start_price - (float) $auction->current_l1) }} ({{ number_format($auction->savingsPct(), 2) }}%) in the auction
+                        @endif
+                    @endif
                 </p>
             </div>
             <a href="{{ route('buyer.auctions.show', $auction->id) }}" class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">
@@ -114,7 +119,13 @@
     @if ($unsealed)
         <section class="mt-6 rounded-xl border border-slate-200 bg-white">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
-                <h2 class="font-semibold">Quote comparison</h2>
+                @php
+                    $auctionClosed = $auction && \App\Services\Auction\Standings::effectiveStatus($auction)->value === 'closed';
+                @endphp
+                <div>
+                    <h2 class="font-semibold">{{ $auctionClosed ? 'Sealed quotes (before the live auction)' : 'Quote comparison' }}</h2>
+                    @if ($auctionClosed)<p class="text-xs text-slate-500">Final prices came from the live auction; see the auction results above.</p>@endif
+                </div>
                 <span class="text-xs text-slate-500">Ranked by landed cost (price + GST + freight)</span>
             </div>
             @if ($comparison->isEmpty())
@@ -124,13 +135,15 @@
                     $lastTotal = $rfq->items->every(fn ($i) => $i->last_purchase_price !== null)
                         ? $rfq->items->sum(fn ($i) => (float) $i->last_purchase_price * (float) $i->qty) : null;
                     $l1 = $comparison->first();
+                    // After an auction, compare the final auction price, not the sealed quote.
+                    $bestBasic = $auctionClosed && $auction->current_l1 !== null ? (float) $auction->current_l1 : $l1['basic'];
                 @endphp
                 @if ($lastTotal && $lastTotal > 0)
                     <p class="border-b border-slate-100 px-5 py-3 text-sm">
-                        Best quote (before GST) vs your last purchase price:
-                        <span class="font-semibold {{ $l1['basic'] <= $lastTotal ? 'text-emerald-700' : 'text-red-700' }}">
-                            {{ \App\Support\Money::inr(abs($lastTotal - $l1['basic'])) }} {{ $l1['basic'] <= $lastTotal ? 'lower' : 'higher' }}
-                            ({{ number_format(abs(1 - $l1['basic'] / $lastTotal) * 100, 1) }}%)
+                        {{ $auctionClosed ? 'Final auction price' : 'Best quote' }} (before GST) vs your last purchase price:
+                        <span class="font-semibold {{ $bestBasic <= $lastTotal ? 'text-emerald-700' : 'text-red-700' }}">
+                            {{ \App\Support\Money::inr(abs($lastTotal - $bestBasic)) }} {{ $bestBasic <= $lastTotal ? 'lower' : 'higher' }}
+                            ({{ number_format(abs(1 - $bestBasic / $lastTotal) * 100, 1) }}%)
                         </span>
                     </p>
                 @endif
