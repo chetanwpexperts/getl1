@@ -186,7 +186,7 @@ class Automations
             'declined' => RfqInvite::where('rfq_id', $rfq->id)->where('status', InviteStatus::Declined->value)->count(),
             'l1' => $l1 ? ['supplier' => $l1['quote']->supplier->name, 'basic' => $l1['basic'], 'landed' => $l1['landed']] : null,
             'last_total' => $lastTotal,
-            'can_auction' => $comparison->count() >= Auction\AuctionService::MIN_PARTICIPANTS,
+            'can_auction' => $comparison->count() >= \App\Services\Auction\AuctionService::MIN_PARTICIPANTS,
         ];
     }
 
