@@ -57,7 +57,7 @@ export function initAuction() {
         pollTimer = setInterval(refresh, socketUp ? 20000 : 2000);
         const dot = $('[data-connection]');
         if (dot) {
-            dot.textContent = socketUp ? 'Live' : 'Updating every 2s';
+            dot.textContent = socketUp ? 'Real-time updates on' : 'Updating every 2 seconds';
             dot.dataset.state = socketUp ? 'up' : 'down';
         }
     }
