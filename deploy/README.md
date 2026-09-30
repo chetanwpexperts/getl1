@@ -47,11 +47,15 @@ Add key (read-only is fine). Test: `ssh -T git@github.com`.
 
 ## 3. Clone and run the setup (about 5–10 min)
 
+GetL1 creates three folders side by side: `getl1-staging`, `getl1-site` and `getl1-data`. By default
+they go in `/var/www`. To keep them in another folder you already use (e.g. `cdata`), set
+`GETL1_BASE` to that folder's full path. Other projects in that folder are not touched.
+
 ```bash
-sudo mkdir -p /var/www/getl1-staging && sudo chown $USER:$USER /var/www/getl1-staging
-git clone git@github.com:chetanwpexperts/getl1.git /var/www/getl1-staging
-cd /var/www/getl1-staging
-sudo CERT_EMAIL=you@example.com bash deploy/setup-vps.sh
+BASE=/var/www                      # or the full path of your folder, e.g. /var/www/cdata
+git clone git@github.com:chetanwpexperts/getl1.git $BASE/getl1-staging
+cd $BASE/getl1-staging
+sudo GETL1_BASE=$BASE CERT_EMAIL=you@example.com bash deploy/setup-vps.sh
 ```
 
 It asks for a **staging username and password**. That's the browser login you and your testers use
@@ -63,19 +67,19 @@ If DNS isn't pointing yet, it skips SSL and tells you. Re-run the same command o
 
 ```bash
 # after pushing to main, update staging
-bash /var/www/getl1-staging/deploy/deploy-staging.sh
+bash $BASE/getl1-staging/deploy/deploy-staging.sh
 
 # after changing landing/public, update getl1.com
-bash /var/www/getl1-staging/deploy/deploy-landing.sh
+bash $BASE/getl1-staging/deploy/deploy-landing.sh
 
 # see who joined the waitlist
-sudo cat /var/www/getl1-data/waitlist.csv
+sudo cat $BASE/getl1-data/waitlist.csv
 
 # add another staging tester
 sudo htpasswd -B /etc/nginx/.htpasswd-getl1-staging tester-name
 
 # logs
-tail -f /var/www/getl1-staging/storage/logs/laravel-*.log
+tail -f $BASE/getl1-staging/storage/logs/laravel-*.log
 sudo supervisorctl status getl1-staging-worker
 ```
 

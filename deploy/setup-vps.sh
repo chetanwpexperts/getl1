@@ -9,9 +9,10 @@
 # Safe to re-run: every step checks before it acts.
 #
 # Usage (from inside the cloned repo, as your own sudo user, not root login):
-#   sudo CERT_EMAIL=you@example.com bash deploy/setup-vps.sh
+#   sudo GETL1_BASE=/path/to/cdata CERT_EMAIL=you@example.com bash deploy/setup-vps.sh
 #
 # Optional env vars:
+#   GETL1_BASE                    parent folder for the 3 GetL1 folders (default /var/www)
 #   STAGING_USER / STAGING_PASS   staging login (asked interactively if unset)
 #   SKIP_SSL=1                    don't run certbot yet (e.g. DNS not pointed)
 # =============================================================================
@@ -20,9 +21,10 @@ set -euo pipefail
 DOMAIN="getl1.com"
 STAGING_DOMAIN="staging.getl1.com"
 REPO_SSH="git@github.com:chetanwpexperts/getl1.git"
-APP_ROOT="/var/www/getl1-staging"     # Laravel app (staging)
-SITE_ROOT="/var/www/getl1-site"       # checkout used only for landing/public
-DATA_DIR="/var/www/getl1-data"        # waitlist CSV (outside every web root)
+BASE="${GETL1_BASE:-/var/www}"; BASE="${BASE%/}"
+APP_ROOT="$BASE/getl1-staging"        # Laravel app (staging)
+SITE_ROOT="$BASE/getl1-site"          # checkout used only for landing/public
+DATA_DIR="$BASE/getl1-data"           # waitlist CSV (outside every web root)
 DB_NAME="getl1_staging"
 DB_USER="getl1_staging"
 DB_PASS_FILE="/root/.getl1-staging-db-pass"
@@ -39,7 +41,16 @@ DEPLOY_USER="${SUDO_USER:-}"
 [[ -n "$DEPLOY_USER" && "$DEPLOY_USER" != "root" ]] || die "Run via sudo from your own user (not a root login), so git uses your GitHub key."
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f "$REPO_DIR/artisan" ]] || die "Run this from inside the cloned getl1 repo."
-[[ "$REPO_DIR" == "$APP_ROOT" ]] || die "Clone the repo to $APP_ROOT first (see deploy/README.md). Found it at $REPO_DIR."
+[[ "$REPO_DIR" == "$APP_ROOT" ]] || die "Clone the repo to $APP_ROOT first (see deploy/README.md). Found it at $REPO_DIR. If you cloned inside another folder, pass GETL1_BASE=<that parent folder>."
+
+# nginx and PHP run as www-data and must be able to walk down to our folders.
+check_traverse() {
+  local p="$1"
+  if ! sudo -u www-data test -x "$p"; then
+    die "www-data can't enter $p, so nginx would show 403. Your existing project there works, so check its permissions, or run: sudo chmod o+x $p (only adds 'enter' permission, not read)."
+  fi
+}
+d="$BASE"; while [[ "$d" != "/" && -n "$d" ]]; do check_traverse "$d"; d="$(dirname "$d")"; done
 
 as_user() { sudo -u "$DEPLOY_USER" -H bash -lc "$*"; }
 as_web()  { sudo -u www-data -H bash -c "cd '$APP_ROOT' && $*"; }
@@ -249,7 +260,7 @@ install_site() { # template name root_placeholder root_value
     echo "$name already has SSL from certbot, leaving it as is"
     return
   fi
-  sed -e "s|__PHP_SOCK__|$PHP_SOCK|g" -e "s|$ph|$val|g" "$tpl" > "$dst"
+  sed -e "s|__PHP_SOCK__|$PHP_SOCK|g" -e "s|__DATA_DIR__|$DATA_DIR|g" -e "s|$ph|$val|g" "$tpl" > "$dst"
   ln -sf "$dst" "/etc/nginx/sites-enabled/$name"
 }
 install_site "$APP_ROOT/deploy/nginx/getl1.com.conf" "getl1.com" "__SITE_ROOT__" "$SITE_ROOT"

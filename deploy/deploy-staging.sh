@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Deploy the latest `main` to staging.getl1.com.
-# Run on the VPS as your own user:  bash /var/www/getl1-staging/deploy/deploy-staging.sh
+# Run on the VPS as your own user:  bash <base>/getl1-staging/deploy/deploy-staging.sh
 # (asks for your sudo password once, to run artisan as www-data)
 set -euo pipefail
 
-APP_ROOT="/var/www/getl1-staging"
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # this repo checkout
 BRANCH="${1:-main}"
 PHP_BIN="$(ls /usr/bin/php8.4 /usr/bin/php8.3 /usr/bin/php8.2 2>/dev/null | head -1)"
 [[ -n "$PHP_BIN" ]] || { echo "PHP 8.2+ not found"; exit 1; }
