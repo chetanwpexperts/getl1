@@ -81,7 +81,12 @@ class AuctionStress extends Command
         })->start()->wait();
 
         $totals = ['accepted' => 0, 'rejected' => 0, 'duplicates_ok' => 0, 'errors' => 0];
-        foreach ($results as $r) {
+        $reports = $results->collect();
+        if ($reports->count() !== $suppliers->count()) {
+            $totals['errors']++;
+            $this->warn("Expected {$suppliers->count()} worker reports, got {$reports->count()}.");
+        }
+        foreach ($reports as $r) {
             $line = collect(explode("\n", trim($r->output())))->last();
             $data = json_decode((string) $line, true);
             if (! $r->successful() || ! is_array($data)) {
