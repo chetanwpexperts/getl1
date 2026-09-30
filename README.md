@@ -29,6 +29,12 @@ Run tests (in-memory SQLite, no MySQL needed):
 php artisan test
 ```
 
+## Servers
+
+- **getl1.com**: coming-soon page in `landing/public` (static HTML + `subscribe.php` waitlist).
+- **staging.getl1.com**: this Laravel app, password-protected.
+- Setup and deploy steps: [`deploy/README.md`](deploy/README.md).
+
 ## Architecture notes
 
 - **Multi-tenant by `organization_id`.** `App\Support\Tenancy\CurrentOrganization` holds the org a

@@ -1,0 +1,5 @@
+created_at,email,role,company,city,source,ip
+2026-09-30T09:43:26+00:00,a@b.com,buyer,'=HYPERLINK(x),Mohali,,127.0.0.1
+2026-09-30T09:43:26+00:00,r1@y.com,buyer,,,,127.0.0.1
+2026-09-30T09:43:26+00:00,r2@y.com,buyer,,,,127.0.0.1
+2026-09-30T09:43:26+00:00,r3@y.com,buyer,,,,127.0.0.1
