@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\SupplierDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesOrganizations;
 use Tests\TestCase;
@@ -14,10 +15,22 @@ class KycTest extends TestCase
 {
     use CreatesOrganizations, RefreshDatabase;
 
+    private string $diskRoot;
+
     protected function setUp(): void
     {
         parent::setUp();
-        Storage::fake('local');
+
+        // Throwaway disk in the system temp dir: works whichever user runs the tests
+        // (storage/ on the server belongs to www-data).
+        $this->diskRoot = sys_get_temp_dir().'/getl1-test-'.bin2hex(random_bytes(6));
+        Storage::set('local', Storage::createLocalDriver(['root' => $this->diskRoot, 'throw' => true]));
+    }
+
+    protected function tearDown(): void
+    {
+        File::deleteDirectory($this->diskRoot);
+        parent::tearDown();
     }
 
     private function pdf(string $name = 'gst.pdf', string $body = "1 0 obj << /Type /Catalog >> endobj\n"): UploadedFile
