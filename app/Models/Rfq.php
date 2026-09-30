@@ -64,12 +64,15 @@ class Rfq extends Model
         return $this->status === RfqStatus::Cancelled;
     }
 
-    /** For badges: draft | open | closed | cancelled (later steps add auction states). */
+    /** For badges: draft | open | closed | auction | evaluating | awarded | cancelled */
     public function displayStatus(): string
     {
         return match (true) {
             $this->isDraft() => 'draft',
             $this->isCancelled() => 'cancelled',
+            $this->status === RfqStatus::Auction => 'auction',
+            $this->status === RfqStatus::Evaluating => 'evaluating',
+            $this->status === RfqStatus::Awarded => 'awarded',
             $this->isOpenForQuotes() => 'open',
             default => 'closed',
         };

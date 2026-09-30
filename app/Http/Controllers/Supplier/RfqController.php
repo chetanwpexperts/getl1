@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Supplier;
 
+use App\Enums\AuctionStatus;
 use App\Enums\InviteStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Auction;
+use App\Models\Bid;
 use App\Models\Quote;
 use App\Models\RfqAttachment;
 use App\Models\RfqInvite;
@@ -35,6 +38,7 @@ class RfqController extends Controller
                 ->latest()
                 ->paginate(20),
             'quotedRfqIds' => Quote::where('supplier_org_id', $this->current->id())->whereNotNull('submitted_at')->pluck('rfq_id')->all(),
+            'auctions' => $this->myAuctions()->get()->keyBy('rfq_id'),
         ]);
     }
 
@@ -48,10 +52,19 @@ class RfqController extends Controller
             'invite' => $invite,
             'rfq' => $rfq,
             'quote' => Quote::with('items')->where('rfq_id', $rfq->id)->where('supplier_org_id', $this->current->id())->first(),
+            'auction' => $this->myAuctions()->where('rfq_id', $rfq->id)->latest('id')->first(),
             'gstRates' => QuoteService::GST_RATES,
             'paymentTerms' => RfqService::PAYMENT_TERMS,
             'freightTerms' => RfqService::FREIGHT_TERMS,
         ]);
+    }
+
+    /** Non-cancelled auctions this supplier takes part in (it has an opening sealed bid). */
+    private function myAuctions()
+    {
+        return Auction::withoutGlobalScopes()
+            ->where('status', '!=', AuctionStatus::Cancelled)
+            ->whereIn('id', Bid::where('supplier_org_id', $this->current->id())->select('auction_id'));
     }
 
     public function accept(Request $request, int $invite, InviteService $invites): RedirectResponse

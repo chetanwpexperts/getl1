@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Private channel auth for live auctions: signed-in users only, rate-limited.
+    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web', 'auth', 'throttle:120,1']])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [SecurityHeaders::class]);
 

@@ -13,8 +13,11 @@ class Bid extends Model
 {
     public const UPDATED_AT = null;
 
+    public const KIND_SEALED = 'sealed';
+    public const KIND_LIVE = 'live';
+
     protected $fillable = [
-        'auction_id', 'supplier_org_id', 'user_id', 'rfq_item_id', 'amount', 'rank_at_submit', 'ip', 'user_agent',
+        'auction_id', 'supplier_org_id', 'user_id', 'rfq_item_id', 'kind', 'idempotency_key', 'amount', 'rank_at_submit', 'ip', 'user_agent',
     ];
 
     protected $dateFormat = 'Y-m-d H:i:s.u';

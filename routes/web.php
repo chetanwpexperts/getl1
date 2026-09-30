@@ -3,12 +3,14 @@
 use App\Http\Controllers\Admin\KycReviewController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Buyer\AuctionController as BuyerAuctionController;
 use App\Http\Controllers\Buyer\RfqController as BuyerRfqController;
 use App\Http\Controllers\Buyer\SupplierController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InviteLinkController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\Supplier\AuctionController as SupplierAuctionController;
 use App\Http\Controllers\Supplier\DocumentController;
 use App\Http\Controllers\Supplier\RfqController as SupplierRfqController;
 use Illuminate\Support\Facades\Route;
@@ -58,6 +60,11 @@ Route::middleware('auth')->group(function () {
             Route::get('/rfqs/{rfq}/attachments/{attachment}', [BuyerRfqController::class, 'downloadAttachment'])
                 ->whereNumber(['rfq', 'attachment'])->name('rfqs.attachments.download');
 
+            // Live auctions: everyone in the buyer company can watch
+            Route::get('/auctions/{auction}', [BuyerAuctionController::class, 'show'])->whereNumber('auction')->name('auctions.show');
+            Route::get('/auctions/{auction}/state', [BuyerAuctionController::class, 'state'])
+                ->whereNumber('auction')->middleware('throttle:120,1')->name('auctions.state');
+
             // Changing the list: admins and buyers, not approvers
             Route::middleware('org.role:buyer_admin,buyer_user')->group(function () {
                 Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
@@ -85,6 +92,10 @@ Route::middleware('auth')->group(function () {
                     ->whereNumber('rfq')->middleware('throttle:20,1')->name('rfqs.attachments.store');
                 Route::delete('/rfqs/{rfq}/attachments/{attachment}', [BuyerRfqController::class, 'removeAttachment'])
                     ->whereNumber(['rfq', 'attachment'])->name('rfqs.attachments.destroy');
+
+                Route::get('/rfqs/{rfq}/auction/create', [BuyerAuctionController::class, 'create'])->whereNumber('rfq')->name('auctions.create');
+                Route::post('/rfqs/{rfq}/auction', [BuyerAuctionController::class, 'store'])->whereNumber('rfq')->name('auctions.store');
+                Route::post('/auctions/{auction}/cancel', [BuyerAuctionController::class, 'cancel'])->whereNumber('auction')->name('auctions.cancel');
             });
         });
 
@@ -103,6 +114,12 @@ Route::middleware('auth')->group(function () {
                 ->whereNumber('invite')->middleware('throttle:20,1')->name('rfqs.quote');
             Route::get('/rfqs/{invite}/attachments/{attachment}', [SupplierRfqController::class, 'downloadAttachment'])
                 ->whereNumber(['invite', 'attachment'])->name('rfqs.attachments.download');
+
+            Route::get('/auctions/{auction}', [SupplierAuctionController::class, 'show'])->whereNumber('auction')->name('auctions.show');
+            Route::get('/auctions/{auction}/state', [SupplierAuctionController::class, 'state'])
+                ->whereNumber('auction')->middleware('throttle:120,1')->name('auctions.state');
+            Route::post('/auctions/{auction}/bid', [SupplierAuctionController::class, 'bid'])
+                ->whereNumber('auction')->middleware('throttle:60,1')->name('auctions.bid');
         });
     });
 });

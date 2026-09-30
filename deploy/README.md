@@ -81,6 +81,27 @@ sudo htpasswd -B /etc/nginx/.htpasswd-getl1-staging tester-name
 # logs
 tail -f $BASE/getl1-staging/storage/logs/laravel-*.log
 sudo supervisorctl status getl1-staging-worker
+sudo tail -f $BASE/getl1-staging/storage/logs/reverb.log
+```
+
+## 5. Live auctions (one time)
+
+Adds Redis (only if it isn't installed; an existing Redis is reused as is), one supervisor program
+(`getl1-staging-reverb`, listening on 127.0.0.1 only) and a `/app/` websocket location in the staging nginx
+site. Nothing else on the server changes. Tell Virendar before running it.
+
+```bash
+bash $BASE/getl1-staging/deploy/deploy-staging.sh                 # installs the websocket package
+sudo bash $BASE/getl1-staging/deploy/enable-live-auctions.sh      # safe to re-run
+sudo supervisorctl status getl1-staging-reverb
+```
+
+Without it, auction screens still work: they refresh every 2 seconds instead of instantly.
+
+Parallel bidding check (staging only; creates "Stress Test" companies once and reuses them):
+
+```bash
+cd $BASE/getl1-staging && sudo -u www-data php artisan getl1:auction-stress --suppliers=20 --seconds=15
 ```
 
 Demo logins on staging (password `password`): `buyer@getl1.test`, `supplier1@getl1.test` … `supplier5@getl1.test`.

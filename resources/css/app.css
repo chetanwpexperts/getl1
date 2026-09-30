@@ -9,3 +9,35 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* ---------------------------------------------------------------- live auction */
+@layer components {
+    .auction-status {
+        @apply inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700;
+    }
+    .auction-status[data-status='scheduled'] { @apply bg-sky-100 text-sky-800; }
+    .auction-status[data-status='live'] { @apply bg-emerald-100 text-emerald-800; }
+    .auction-status[data-status='live']::before {
+        content: '';
+        @apply size-2 animate-pulse rounded-full bg-emerald-600;
+    }
+    .auction-status[data-status='closed'] { @apply bg-slate-200 text-slate-700; }
+    .auction-status[data-status='cancelled'] { @apply bg-red-100 text-red-800; }
+
+    .auction-countdown { @apply text-4xl font-bold text-slate-900; }
+    .auction-countdown[data-urgent='1'] { @apply animate-pulse text-red-600; }
+
+    .auction-connection { @apply inline-flex items-center gap-1.5 text-slate-500; }
+    .auction-connection::before {
+        content: '';
+        @apply size-2 rounded-full bg-amber-500;
+    }
+    .auction-connection[data-state='up']::before { @apply bg-emerald-500; }
+
+    .auction-rank { @apply border-slate-200 bg-white text-slate-700; }
+    .auction-rank[data-rank='first'] { @apply border-emerald-600 bg-emerald-600 text-white; }
+
+    .auction-message:empty { display: none; }
+    .auction-message[data-tone='ok'] { @apply rounded-lg bg-emerald-50 p-3 text-emerald-800; }
+    .auction-message[data-tone='error'] { @apply rounded-lg bg-red-50 p-3 text-red-700; }
+}

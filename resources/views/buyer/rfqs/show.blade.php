@@ -73,6 +73,38 @@
         <div class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">This RFQ was cancelled. Invited suppliers were notified.</div>
     @endif
 
+    {{-- Live auction --}}
+    @if ($auction)
+        @php
+            $aStatus = \App\Services\Auction\Standings::effectiveStatus($auction)->value;
+        @endphp
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <div>
+                <p class="font-semibold">
+                    @if ($aStatus === 'scheduled') Live auction scheduled for {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST
+                    @elseif ($aStatus === 'live') Live auction in progress
+                    @else Live auction closed
+                    @endif
+                </p>
+                <p class="mt-1">
+                    Start price {{ \App\Support\Money::inr($auction->start_price) }}
+                    @if ($auction->current_l1 !== null) · Current L1 {{ \App\Support\Money::inr($auction->current_l1) }} @endif
+                </p>
+            </div>
+            <a href="{{ route('buyer.auctions.show', $auction->id) }}" class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">
+                {{ $aStatus === 'closed' ? 'View auction results' : 'Open auction console' }}
+            </a>
+        </div>
+    @elseif ($canScheduleAuction && $canManage)
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+            <div>
+                <p class="font-semibold">Push prices lower with a live auction</p>
+                <p class="mt-1 text-slate-600">{{ $quoteCount }} suppliers quoted. They start at their sealed price and bid down in real time.</p>
+            </div>
+            <a href="{{ route('buyer.auctions.create', $rfq->id) }}" class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Schedule live auction</a>
+        </div>
+    @endif
+
     {{-- Comparison --}}
     @if ($unsealed)
         <section class="mt-6 rounded-xl border border-slate-200 bg-white">

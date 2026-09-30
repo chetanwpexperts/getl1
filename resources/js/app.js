@@ -1,8 +1,10 @@
 import './bootstrap';
 import { initRfqItems } from './rfq-items';
+import { initAuction } from './auction';
 
 document.addEventListener('DOMContentLoaded', () => {
     initRfqItems();
+    initAuction();
 
     // Copy-to-clipboard buttons: <button data-copy="text">
     document.addEventListener('click', async (e) => {

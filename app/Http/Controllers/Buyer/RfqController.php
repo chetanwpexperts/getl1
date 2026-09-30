@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Buyer;
 
+use App\Enums\AuctionStatus;
 use App\Enums\RfqStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Auction;
 use App\Models\BuyerSupplier;
 use App\Models\Category;
 use App\Models\Quote;
 use App\Models\Rfq;
 use App\Models\RfqAttachment;
 use App\Models\RfqInvite;
+use App\Services\Auction\AuctionService;
 use App\Services\RfqService;
 use App\Support\Tenancy\CurrentOrganization;
 use Illuminate\Http\RedirectResponse;
@@ -60,12 +63,17 @@ class RfqController extends Controller
 
         $unsealed = $rfq->quotesAreUnsealed();
         $canInvite = $rfq->isDraft() || $rfq->isOpenForQuotes();
+        $quoteCount = Quote::where('rfq_id', $rfq->id)->whereNotNull('submitted_at')->count();
+        $auction = Auction::where('rfq_id', $rfq->id)->where('status', '!=', AuctionStatus::Cancelled)->latest('id')->first();
 
         return view('buyer.rfqs.show', [
             'rfq' => $rfq,
             'unsealed' => $unsealed,
             // Sealed: only a count, never amounts.
-            'quoteCount' => Quote::where('rfq_id', $rfq->id)->whereNotNull('submitted_at')->count(),
+            'quoteCount' => $quoteCount,
+            'auction' => $auction,
+            'canScheduleAuction' => ! $auction && $unsealed && $rfq->status === RfqStatus::Published
+                && $quoteCount >= AuctionService::MIN_PARTICIPANTS,
             'quotedSupplierIds' => Quote::where('rfq_id', $rfq->id)->whereNotNull('submitted_at')->pluck('supplier_org_id')->all(),
             'comparison' => $unsealed ? $this->rfqs->comparison($rfq) : collect(),
             'canInvite' => $canInvite,

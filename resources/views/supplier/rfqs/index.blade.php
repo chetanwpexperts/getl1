@@ -15,18 +15,28 @@
                 @forelse ($invites as $inv)
                     @php
                         $rfq = $inv->rfq;
+                        $myAuction = $auctions[$rfq->id] ?? null;
                         $state = match (true) {
                             $rfq->isCancelled() => 'cancelled',
+                            $myAuction !== null => ['scheduled' => 'scheduled', 'live' => 'live'][\App\Services\Auction\Standings::effectiveStatus($myAuction)->value] ?? 'evaluating',
                             $inv->status->value === 'declined' => 'declined',
                             in_array($rfq->id, $quotedRfqIds) => 'quoted',
                             ! $rfq->isOpenForQuotes() => 'closed',
                             default => $inv->status->value,
+                        };
+                        $auctionLabel = match ($state) {
+                            'live' => 'Join live auction →',
+                            'scheduled' => $myAuction ? 'Auction '.$myAuction->starts_at->ist()->format('d M, h:i A').' IST →' : '',
+                            default => 'View auction result →',
                         };
                     @endphp
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3">
                             <a href="{{ route('supplier.rfqs.show', $inv->id) }}" class="font-medium hover:underline">{{ $rfq->title }}</a>
                             <span class="block text-xs text-slate-500">{{ $rfq->ref_no }}</span>
+                            @if ($myAuction)
+                                <a href="{{ route('supplier.auctions.show', $myAuction->id) }}" class="mt-1 inline-block text-xs font-semibold text-emerald-700 hover:underline">{{ $auctionLabel }}</a>
+                            @endif
                         </td>
                         <td class="px-4 py-3">{{ $rfq->organization->name }}<span class="block text-xs text-slate-500">{{ $rfq->organization->city }}</span></td>
                         <td class="px-4 py-3">{{ $rfq->quote_deadline?->ist()->format('d M Y, h:i A') }}</td>

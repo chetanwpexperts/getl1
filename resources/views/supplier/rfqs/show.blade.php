@@ -32,6 +32,26 @@
 
     @error('rfq') <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $message }}</p> @enderror
 
+    @if ($auction)
+        @php
+            $aStatus = \App\Services\Auction\Standings::effectiveStatus($auction)->value;
+        @endphp
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <div>
+                <p class="font-semibold">
+                    @if ($aStatus === 'scheduled') You're invited to a live auction on {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST
+                    @elseif ($aStatus === 'live') The live auction is running now
+                    @else The live auction has closed
+                    @endif
+                </p>
+                <p class="mt-1">You start at your sealed quote. Other suppliers never see your name or price.</p>
+            </div>
+            <a href="{{ route('supplier.auctions.show', $auction->id) }}" class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">
+                {{ $aStatus === 'live' ? 'Join auction' : ($aStatus === 'scheduled' ? 'Open auction room' : 'View your result') }}
+            </a>
+        </div>
+    @endif
+
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             {{-- Accept / decline --}}

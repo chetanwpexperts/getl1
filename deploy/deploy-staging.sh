@@ -22,7 +22,13 @@ web down --retry=15 || true
 trap 'web up >/dev/null 2>&1 || true' EXIT
 
 echo "==> Composer"
-composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress --no-scripts
+COMPOSER_FLAGS=(--no-interaction --prefer-dist --optimize-autoloader --no-progress --no-scripts)
+# A package was added to composer.json since the lock was written: resolve only what changed.
+if [[ ! -f composer.lock ]] || composer install --dry-run "${COMPOSER_FLAGS[@]}" 2>&1 | grep -qi "not up to date"; then
+  echo "    composer.json changed, updating the lock file"
+  composer update --minimal-changes "${COMPOSER_FLAGS[@]}" 2>/dev/null || composer update "${COMPOSER_FLAGS[@]}"
+fi
+composer install "${COMPOSER_FLAGS[@]}"
 web package:discover --ansi >/dev/null
 
 echo "==> Migrations"
@@ -42,6 +48,8 @@ web config:cache >/dev/null
 web route:cache >/dev/null
 web view:cache >/dev/null
 web queue:restart >/dev/null
+# Live auctions: restart the websocket server so it loads the new code (no-op if not enabled yet).
+if web list --raw 2>/dev/null | grep -q '^reverb:restart'; then web reverb:restart >/dev/null || true; fi
 
 web up
 trap - EXIT

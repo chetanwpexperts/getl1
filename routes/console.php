@@ -32,3 +32,16 @@ Artisan::command('getl1:admin {email} {--revoke}', function (string $email) {
 
     return 0;
 })->purpose('Grant (or --revoke) GetL1 platform admin access');
+
+/*
+ * Live auctions: open and close on time, and push the change to connected browsers.
+ * Bids check the clock themselves, so this only tidies status and notifies screens.
+ */
+Artisan::command('auctions:tick', function (App\Services\Auction\AuctionService $auctions) {
+    $r = $auctions->tick();
+    if ($r['opened'] || $r['closed']) {
+        $this->info("opened {$r['opened']}, closed {$r['closed']}");
+    }
+})->purpose('Open and close live auctions by the server clock');
+
+Illuminate\Support\Facades\Schedule::command('auctions:tick')->everyFiveSeconds()->withoutOverlapping(1);

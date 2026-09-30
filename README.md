@@ -60,6 +60,10 @@ php artisan test
 - **Uploads:** KYC files go to the private disk (`storage/app/private/kyc/{org}`), typed by their bytes,
   PDFs with active content refused, and only streamed to the owner or a platform admin.
 - **Platform admin (GetL1 staff):** server-only, `php artisan getl1:admin you@example.com` (`--revoke` to remove).
+- **Live auctions:** every bid is checked and written inside one locked database transaction, and it's acknowledged
+  only after it's committed. Retries carry the same key and are recorded once. The server clock decides start, end
+  and extensions. Suppliers only ever receive their own rank and price (plus the L1 price if the buyer allows it),
+  on private channels. `php artisan getl1:auction-stress` (staging only) checks this under parallel load.
 - **Access rule:** records of another company always return 404, never 403, so IDs can't be probed.
 
 ## Build plan
@@ -67,7 +71,7 @@ php artisan test
 1. ✅ Base: auth, organizations, roles, trial, all 22 tables, models, seeders, tests
 2. ✅ Supplier profile + KYC (private uploads, admin review, verified badge), buyer supplier list + Excel/CSV import, security log
 3. ✅ RFQ builder (items, terms, attachments), invites by email + WhatsApp link (bound to one supplier), sealed quotes, ranked comparison after deadline
-4. Live auction engine: row-locked bids, ranks, auto-extend, Reverb broadcasting
+4. ✅ Live reverse auction: row-locked bids, idempotent retries, ranks, auto-extend, server clock, Reverb websockets with polling fallback, parallel stress test
 5. Award, approval, PO PDF, audit views
 6. Razorpay subscriptions, plan limits, savings report
 7. AI RFQ parsing, WhatsApp notifications
