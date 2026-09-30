@@ -221,7 +221,10 @@ class AuctionTest extends TestCase
         $this->travelTo($b->starts_at->copy()->addSecond());
         $this->actingAs($this->buyerUser)->post(route('buyer.auctions.cancel', $b->id), ['reason' => 'Too late now'])
             ->assertSessionHasErrors('reason');
-        $this->assertSame(AuctionStatus::Live, $this->fresh($b)->status);
+        // Refused and rolled back: not cancelled, and live by the server clock.
+        $this->assertNotSame(AuctionStatus::Cancelled, $this->fresh($b)->status);
+        $this->assertSame(AuctionStatus::Live, \App\Services\Auction\Standings::effectiveStatus($this->fresh($b)));
+        $this->assertSame(RfqStatus::Auction, $this->rfq->fresh()->status);
     }
 
     // ---------------------------------------------------------------- bidding rules
