@@ -34,6 +34,12 @@
             </div>
         </div>
 
+        <div data-show-when="closed" @if ($state['status'] !== 'closed') hidden @endif
+             class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <p><span class="font-semibold">Auction closed.</span> Award the order and the purchase order goes to the supplier automatically.</p>
+            <a href="{{ route('buyer.rfqs.show', $rfq->id) }}#award" class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Award this RFQ</a>
+        </div>
+
         <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
                 <p class="text-sm text-emerald-900">Current L1 (before GST)</p>

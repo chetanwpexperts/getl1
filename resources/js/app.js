@@ -26,6 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Award form: the "why not L1?" box appears only when a non-L1 supplier is picked.
+    document.addEventListener('change', (e) => {
+        const form = e.target.closest('[data-award-form]');
+        if (!form || e.target.name !== 'supplier_org_id') return;
+        const box = form.querySelector('[data-award-reason]');
+        if (box) box.hidden = e.target.dataset.rank === '1';
+    });
+
     // Confirm before destructive actions: <form data-confirm="Are you sure?">
     document.addEventListener('submit', (e) => {
         const msg = e.target.dataset?.confirm;

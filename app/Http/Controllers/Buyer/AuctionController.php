@@ -74,4 +74,33 @@ class AuctionController extends Controller
 
         return redirect()->route('buyer.rfqs.show', $auction->rfq_id)->with('status', 'Auction cancelled. You can schedule a new one.');
     }
+
+    /**
+     * Complete bid record for audit: every bid with time (to the microsecond), supplier, user
+     * and IP. Cells are neutralised so a spreadsheet never runs them as formulas.
+     */
+    public function bidsCsv(int $auction, \App\Services\AuditLogger $audit): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $auction = Auction::with('rfq')->findOrFail($auction);
+        $audit->log('bid_log_downloaded', $auction);
+
+        $safe = fn ($v) => is_string($v) && preg_match('/^[=+\-@\t\r]/', $v) ? "'".$v : $v;
+        $bids = \App\Models\Bid::with(['user:id,name,email', 'supplier:id,name,gstin'])
+            ->where('auction_id', $auction->id)->orderBy('created_at')->orderBy('id')->get();
+
+        return response()->streamDownload(function () use ($bids, $safe) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\u{FEFF}"); // Excel opens UTF-8 (₹, Hindi names) correctly
+            fputcsv($out, ['Time (IST)', 'Supplier', 'Supplier GSTIN', 'Bid by', 'Email', 'Type', 'Amount (₹, before GST)', 'Rank when placed', 'IP address']);
+            foreach ($bids as $b) {
+                fputcsv($out, array_map($safe, [
+                    $b->created_at->ist()->format('Y-m-d H:i:s.u'),
+                    $b->supplier?->name, $b->supplier?->gstin, $b->user?->name, $b->user?->email,
+                    $b->kind === \App\Models\Bid::KIND_SEALED ? 'Sealed quote' : 'Live bid',
+                    number_format((float) $b->amount, 2, '.', ''), $b->rank_at_submit, $b->ip,
+                ]));
+            }
+            fclose($out);
+        }, "bids-{$auction->rfq->ref_no}-auction-{$auction->id}.csv", ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
 }

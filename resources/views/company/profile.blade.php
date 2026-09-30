@@ -74,6 +74,29 @@
             </fieldset>
         @endif
 
+        @if ($org->isBuyer())
+            <fieldset @disabled(! $canEdit) class="rounded-xl border border-slate-200 bg-white p-5">
+                <legend class="px-1 text-sm font-semibold">Awards and purchase orders</legend>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="award_approval_limit" class="block text-sm font-medium text-slate-700">Approval needed for awards from (₹, before GST)</label>
+                        <input id="award_approval_limit" name="award_approval_limit" inputmode="decimal" placeholder="0"
+                               value="{{ old('award_approval_limit', $org->award_approval_limit !== null ? rtrim(rtrim((string) $org->award_approval_limit, '0'), '.') : '') }}"
+                               class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">
+                        <p class="mt-1 text-xs text-slate-500">Applies when your team has an Approver. Leave empty or 0 to approve every award. Below this amount, the PO goes out straight away.</p>
+                        @error('award_approval_limit') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="po_terms" class="block text-sm font-medium text-slate-700">Standard terms printed on every purchase order (one per line)</label>
+                        <textarea id="po_terms" name="po_terms" rows="4" maxlength="3000"
+                                  placeholder="Please quote this PO number on your invoice and delivery challan.&#10;Material will be inspected on receipt."
+                                  class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">{{ old('po_terms', $org->po_terms) }}</textarea>
+                        @error('po_terms') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            </fieldset>
+        @endif
+
         @if ($canEdit)
             <div class="max-w-xs"><x-button>Save profile</x-button></div>
         @endif

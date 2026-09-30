@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\KycReviewController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Buyer\AuctionController as BuyerAuctionController;
+use App\Http\Controllers\Buyer\AwardController as BuyerAwardController;
+use App\Http\Controllers\Supplier\OrderController as SupplierOrderController;
 use App\Http\Controllers\Buyer\RfqController as BuyerRfqController;
 use App\Http\Controllers\Buyer\SupplierController;
 use App\Http\Controllers\CompanyProfileController;
@@ -66,6 +68,16 @@ Route::middleware('auth')->group(function () {
             Route::get('/auctions/{auction}', [BuyerAuctionController::class, 'show'])->whereNumber('auction')->name('auctions.show');
             Route::get('/auctions/{auction}/state', [BuyerAuctionController::class, 'state'])
                 ->whereNumber('auction')->middleware('throttle:120,1')->name('auctions.state');
+            Route::get('/auctions/{auction}/bids.csv', [BuyerAuctionController::class, 'bidsCsv'])
+                ->whereNumber('auction')->middleware('throttle:20,1')->name('auctions.bids');
+
+            // Awards: everyone can see and download the PO; approvers and admins decide.
+            Route::get('/awards/{award}/po', [BuyerAwardController::class, 'po'])->whereNumber('award')->name('awards.po');
+            Route::middleware('org.role:buyer_admin,approver')->group(function () {
+                Route::get('/approvals', [BuyerAwardController::class, 'approvals'])->name('approvals.index');
+                Route::post('/awards/{award}/approve', [BuyerAwardController::class, 'approve'])->whereNumber('award')->name('awards.approve');
+                Route::post('/awards/{award}/reject', [BuyerAwardController::class, 'reject'])->whereNumber('award')->name('awards.reject');
+            });
 
             // Changing the list: admins and buyers, not approvers
             Route::middleware('org.role:buyer_admin,buyer_user')->group(function () {
@@ -98,6 +110,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/rfqs/{rfq}/auction/create', [BuyerAuctionController::class, 'create'])->whereNumber('rfq')->name('auctions.create');
                 Route::post('/rfqs/{rfq}/auction', [BuyerAuctionController::class, 'store'])->whereNumber('rfq')->name('auctions.store');
                 Route::post('/auctions/{auction}/cancel', [BuyerAuctionController::class, 'cancel'])->whereNumber('auction')->name('auctions.cancel');
+                Route::post('/rfqs/{rfq}/award', [BuyerAwardController::class, 'store'])->whereNumber('rfq')->middleware('throttle:20,1')->name('awards.store');
             });
         });
 
@@ -124,6 +137,11 @@ Route::middleware('auth')->group(function () {
                 ->whereNumber('auction')->middleware('throttle:120,1')->name('auctions.state');
             Route::post('/auctions/{auction}/bid', [SupplierAuctionController::class, 'bid'])
                 ->whereNumber('auction')->middleware('throttle:60,1')->name('auctions.bid');
+
+            Route::get('/orders', [SupplierOrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/{award}', [SupplierOrderController::class, 'show'])->whereNumber('award')->name('orders.show');
+            Route::get('/orders/{award}/po', [SupplierOrderController::class, 'po'])->whereNumber('award')->name('orders.po');
+            Route::post('/orders/{award}/accept', [SupplierOrderController::class, 'accept'])->whereNumber('award')->name('orders.accept');
         });
     });
 });

@@ -189,6 +189,9 @@
         </section>
     @endif
 
+    {{-- Award, approval and purchase order --}}
+    @include('buyer.rfqs._award')
+
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             {{-- Items --}}
@@ -349,4 +352,6 @@
             <p class="text-xs text-slate-500">Created by {{ $rfq->creator?->name }} on {{ $rfq->created_at->ist()->format('d M Y, h:i A') }}.</p>
         </div>
     </div>
+
+    @include('buyer.rfqs._activity')
 @endsection

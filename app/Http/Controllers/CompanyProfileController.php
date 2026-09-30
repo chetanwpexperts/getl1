@@ -57,6 +57,8 @@ class CompanyProfileController extends Controller
                 Rule::unique('organizations', 'gstin')->ignore($org->id)->whereNull('deleted_at')],
             'pan' => ['nullable', 'string', 'size:10', new Pan],
             'udyam_no' => ['nullable', 'string', 'max:19', new Udyam],
+            'award_approval_limit' => [Rule::excludeIf(! $org->isBuyer()), 'nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'po_terms' => [Rule::excludeIf(! $org->isBuyer()), 'nullable', 'string', 'max:3000'],
             'categories' => ['array', 'max:20'],
             'categories.*' => ['integer', Rule::exists('categories', 'id')->whereNotNull('parent_id')],
         ], [

@@ -64,6 +64,9 @@ php artisan test
   only after it's committed. Retries carry the same key and are recorded once. The server clock decides start, end
   and extensions. Suppliers only ever receive their own rank and price (plus the L1 price if the buyer allows it),
   on private channels. `php artisan getl1:auction-stress` (staging only) checks this under parallel load.
+- **Awards and POs:** PO lines are frozen on the award when it's made; PO numbers are sequential per company
+  (PO-2026-0001) and issuing is idempotent (a retried job never makes a second PO or re-sends emails).
+  PDFs are rendered with remote fetching, PHP and JavaScript disabled, and stored on the private disk.
 - **Access rule:** records of another company always return 404, never 403, so IDs can't be probed.
 
 ## Build plan
@@ -72,6 +75,6 @@ php artisan test
 2. ✅ Supplier profile + KYC (private uploads, admin review, verified badge), buyer supplier list + Excel/CSV import, security log
 3. ✅ RFQ builder (items, terms, attachments), invites by email + WhatsApp link (bound to one supplier), sealed quotes, ranked comparison after deadline
 4. ✅ Live reverse auction: row-locked bids, idempotent retries, ranks, auto-extend, server clock, Reverb websockets with polling fallback, parallel stress test
-5. Award, approval, PO PDF, audit views
+5. ✅ Award (L1 default, reason if not L1), approval with company limit and no self-approval, automatic PO (PDF with GSTIN, CGST/SGST or IGST, amount in words) emailed to the winner, supplier Orders with accept, RFQ activity timeline, auction bid log CSV
 6. Razorpay subscriptions, plan limits, savings report
 7. AI RFQ parsing, WhatsApp notifications

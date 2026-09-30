@@ -5,8 +5,16 @@
     @if ($currentOrg->isBuyer())
         <a href="{{ route('buyer.rfqs.index') }}" class="{{ $link }} {{ request()->routeIs('buyer.rfqs.*') ? $active : '' }}">RFQs</a>
         <a href="{{ route('buyer.suppliers.index') }}" class="{{ $link }} {{ request()->routeIs('buyer.suppliers.*') ? $active : '' }}">Suppliers</a>
+        @if (in_array($currentRole?->value, ['buyer_admin', 'approver'], true))
+            <a href="{{ route('buyer.approvals.index') }}" class="{{ $link }} {{ request()->routeIs('buyer.approvals.*') ? $active : '' }}">
+                Approvals @if (($pendingApprovals ?? 0) > 0)<span class="ml-0.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{{ $pendingApprovals }}</span>@endif
+            </a>
+        @endif
     @else
         <a href="{{ route('supplier.rfqs.index') }}" class="{{ $link }} {{ request()->routeIs('supplier.rfqs.*') ? $active : '' }}">RFQs</a>
+        <a href="{{ route('supplier.orders.index') }}" class="{{ $link }} {{ request()->routeIs('supplier.orders.*') ? $active : '' }}">
+            Orders @if (($openOrders ?? 0) > 0)<span class="ml-0.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{{ $openOrders }}</span>@endif
+        </a>
         <a href="{{ route('supplier.documents.index') }}" class="{{ $link }} {{ request()->routeIs('supplier.documents.*') ? $active : '' }}">Documents</a>
     @endif
     <a href="{{ route('company.edit') }}" class="{{ $link }} {{ request()->routeIs('company.*') ? $active : '' }}">Company</a>

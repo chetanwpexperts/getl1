@@ -14,6 +14,8 @@ class Award extends Model
     protected $fillable = [
         'rfq_id', 'organization_id', 'supplier_org_id', 'rfq_item_id', 'qty', 'unit_price', 'total', 'status',
         'awarded_by', 'approved_by', 'approved_at', 'po_number', 'po_pdf_path', 'po_sent_at', 'remarks',
+        'source', 'auction_id', 'rank', 'reason', 'lines', 'gst_total', 'freight_total', 'grand_total',
+        'decision_note', 'supplier_accepted_at', 'supplier_accepted_by',
     ];
 
     protected function casts(): array
@@ -25,6 +27,11 @@ class Award extends Model
             'total' => 'decimal:2',
             'approved_at' => 'datetime',
             'po_sent_at' => 'datetime',
+            'lines' => 'array',
+            'gst_total' => 'decimal:2',
+            'freight_total' => 'decimal:2',
+            'grand_total' => 'decimal:2',
+            'supplier_accepted_at' => 'datetime',
         ];
     }
 
@@ -51,5 +58,26 @@ class Award extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function auction(): BelongsTo
+    {
+        return $this->belongsTo(Auction::class)->withoutGlobalScope('organization');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === AwardStatus::PendingApproval;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === AwardStatus::Rejected;
+    }
+
+    /** Approved and the PO has been (or is being) issued. */
+    public function isFinal(): bool
+    {
+        return in_array($this->status, [AwardStatus::Approved, AwardStatus::PoSent], true);
     }
 }

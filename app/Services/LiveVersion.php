@@ -32,6 +32,7 @@ class LiveVersion
             RfqInvite::where('rfq_id', $rfq->id)->orderBy('id')->get(['id', 'status'])->map(fn ($i) => $i->id.$i->status->value)->implode(','),
             RfqAttachment::where('rfq_id', $rfq->id)->count(),
             self::auctionPart($auction),
+            self::awardPart($rfq->id),
         ], [$rfq->isOpenForQuotes() ? $rfq->quote_deadline : null, ...self::auctionTimes($auction)]);
     }
 
@@ -47,6 +48,7 @@ class LiveVersion
             Quote::where('rfq_id', $rfq->id)->where('supplier_org_id', $invite->supplier_org_id)->value('submitted_at'),
             RfqAttachment::where('rfq_id', $rfq->id)->count(),
             self::auctionPart($auction, false),
+            self::awardPart($rfq->id, $invite->supplier_org_id),
         ], [$rfq->isOpenForQuotes() ? $rfq->quote_deadline : null, ...self::auctionTimes($auction)]);
     }
 
@@ -87,6 +89,14 @@ class LiveVersion
             ->where('status', '!=', AuctionStatus::Cancelled->value)
             ->when($participantOrgId, fn ($q) => $q->whereIn('id', Bid::where('supplier_org_id', $participantOrgId)->select('auction_id')))
             ->latest('id')->first();
+    }
+
+    private static function awardPart(int $rfqId, ?int $supplierOrgId = null): string
+    {
+        return \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfqId)
+            ->when($supplierOrgId, fn ($q) => $q->where('supplier_org_id', $supplierOrgId))
+            ->orderBy('id')->get(['id', 'status', 'po_number', 'supplier_accepted_at'])
+            ->map(fn ($a) => $a->id.$a->status->value.$a->po_number.$a->supplier_accepted_at)->implode(',') ?: '-';
     }
 
     private static function auctionPart(?Auction $a, bool $withPrice = true): string

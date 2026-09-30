@@ -86,9 +86,22 @@ class RfqController extends Controller
         $quoteCount = Quote::where('rfq_id', $rfq->id)->whereNotNull('submitted_at')->count();
         $auction = Auction::where('rfq_id', $rfq->id)->where('status', '!=', AuctionStatus::Cancelled)->latest('id')->first();
 
+        $awards = app(\App\Services\AwardService::class);
+        $currentAward = $unsealed ? $awards->current($rfq) : null;
+        $awardBlocker = $unsealed && ! $currentAward ? $awards->blocker($rfq) : null;
+
         return view('buyer.rfqs.show', [
             'rfq' => $rfq,
             'live' => LiveVersion::buyerRfq($rfq),
+            'award' => $currentAward?->load(['supplier', 'awarder', 'approver']),
+            'canDecide' => $currentAward && $awards->canDecide($currentAward, request()->user()),
+            'awardBlocker' => $awardBlocker,
+            'candidates' => $unsealed && ! $currentAward && ! $awardBlocker ? $awards->candidates($rfq) : collect(),
+            'rejectedAwards' => \App\Models\Award::with(['supplier', 'approver'])->where('rfq_id', $rfq->id)
+                ->where('status', \App\Enums\AwardStatus::Rejected)->latest()->get(),
+            'approvalLimit' => $this->current->get()->award_approval_limit,
+            'hasApprover' => $this->current->get()->users()->wherePivot('role', \App\Enums\OrgRole::Approver->value)->exists(),
+            'activity' => self::activity($rfq),
             'unsealed' => $unsealed,
             // Sealed: only a count, never amounts.
             'quoteCount' => $quoteCount,
@@ -216,5 +229,31 @@ class RfqController extends Controller
             'paymentTerms' => RfqService::PAYMENT_TERMS,
             'freightTerms' => RfqService::FREIGHT_TERMS,
         ];
+    }
+
+    /**
+     * Everything that happened on this RFQ, newest first: from the append-only audit log of
+     * the RFQ, its invites, quotes, auctions and awards. Buyer company only.
+     */
+    public static function activity(Rfq $rfq): \Illuminate\Support\Collection
+    {
+        $ids = [
+            'rfq' => [$rfq->id],
+            'rfq_invite' => \App\Models\RfqInvite::where('rfq_id', $rfq->id)->pluck('id')->all(),
+            'quote' => Quote::where('rfq_id', $rfq->id)->pluck('id')->all(),
+            'auction' => \App\Models\Auction::withoutGlobalScopes()->where('rfq_id', $rfq->id)->pluck('id')->all(),
+            'award' => \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->pluck('id')->all(),
+        ];
+
+        return \App\Models\AuditLog::with('user:id,name')
+            ->where('organization_id', $rfq->organization_id)
+            ->where(function ($q) use ($ids) {
+                foreach ($ids as $type => $list) {
+                    if ($list) {
+                        $q->orWhere(fn ($w) => $w->where('auditable_type', $type)->whereIn('auditable_id', $list));
+                    }
+                }
+            })
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(200)->get();
     }
 }

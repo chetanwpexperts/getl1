@@ -287,6 +287,7 @@ export function initAuction() {
             setText('[data-status]', { scheduled: 'Scheduled', live: 'Live', closed: 'Closed', cancelled: 'Cancelled' }[state.status] ?? state.status);
             const statusEl = $('[data-status]');
             if (statusEl) statusEl.dataset.status = state.status;
+            $$('[data-show-when]').forEach((el) => { el.hidden = el.dataset.showWhen !== state.status; });
             (cfg.role === 'buyer' ? renderBuyer : renderSupplier)();
             firstPaint = false;
         }

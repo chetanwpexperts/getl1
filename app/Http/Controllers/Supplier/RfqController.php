@@ -72,6 +72,8 @@ class RfqController extends Controller
             'rfq' => $rfq,
             'quote' => Quote::with('items')->where('rfq_id', $rfq->id)->where('supplier_org_id', $this->current->id())->first(),
             'auction' => $this->myAuctions()->where('rfq_id', $rfq->id)->latest('id')->first(),
+            'order' => \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)
+                ->where('supplier_org_id', $this->current->id())->where('status', \App\Enums\AwardStatus::PoSent->value)->first(),
             'gstRates' => QuoteService::GST_RATES,
             'paymentTerms' => RfqService::PAYMENT_TERMS,
             'freightTerms' => RfqService::FREIGHT_TERMS,

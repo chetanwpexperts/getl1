@@ -19,6 +19,7 @@ class Organization extends Model
     protected $fillable = [
         'type', 'name', 'slug', 'gstin', 'pan', 'udyam_no', 'email', 'phone',
         'address', 'city', 'state', 'pincode', 'locale', 'verified_at', 'status',
+        'award_approval_limit', 'po_terms',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class Organization extends Model
         return [
             'type' => OrganizationType::class,
             'verified_at' => 'datetime',
+            'award_approval_limit' => 'decimal:2',
         ];
     }
 

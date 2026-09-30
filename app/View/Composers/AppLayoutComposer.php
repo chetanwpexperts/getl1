@@ -35,6 +35,15 @@ class AppLayoutComposer
             $view->with('currentOrg', $org);
             $view->with('currentRole', $user->roleIn($org));
 
+            // Menu badges: awards waiting for approval (buyer) / orders not yet accepted (supplier).
+            $badgeKey = 'getl1.badges.'.$org->id;
+            if (! request()->attributes->has($badgeKey)) {
+                request()->attributes->set($badgeKey, $org->isBuyer()
+                    ? ['pendingApprovals' => \App\Models\Award::withoutGlobalScopes()->where('organization_id', $org->id)->where('status', \App\Enums\AwardStatus::PendingApproval->value)->count()]
+                    : ['openOrders' => \App\Models\Award::withoutGlobalScopes()->where('supplier_org_id', $org->id)->where('status', \App\Enums\AwardStatus::PoSent->value)->whereNull('supplier_accepted_at')->count()]);
+            }
+            $view->with(request()->attributes->get($badgeKey));
+
             // Running or starting-soon auction: shown as a button in the header on every page.
             // Same result for the header and both menus: look it up once per request.
             $memo = 'getl1.active_auction.'.$org->id;

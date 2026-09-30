@@ -34,6 +34,16 @@
 
     @error('rfq') <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $message }}</p> @enderror
 
+    @if ($order)
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600 bg-emerald-600 p-4 text-sm text-white">
+            <div>
+                <p class="font-semibold">You won this order: purchase order {{ $order->po_number }}</p>
+                <p class="mt-0.5 text-emerald-50">{{ \App\Support\Money::inr($order->grand_total) }} incl. GST · {{ $order->supplier_accepted_at ? 'accepted' : 'please review and accept' }}</p>
+            </div>
+            <a href="{{ route('supplier.orders.show', $order->id) }}" class="rounded-lg bg-white px-4 py-2 font-semibold text-emerald-800 hover:bg-emerald-50">{{ $order->supplier_accepted_at ? 'View order' : 'Review and accept' }}</a>
+        </div>
+    @endif
+
     @if ($auction)
         @php
             $aStatus = \App\Services\Auction\Standings::effectiveStatus($auction)->value;
