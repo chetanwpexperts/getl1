@@ -130,6 +130,62 @@ export function initAuction() {
         if (el) el.textContent = value;
     }
 
+    // ------------------------------------------------------------------ motion
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let firstPaint = true;
+
+    function replay(el, cls) {
+        if (!el || reduceMotion || firstPaint) return;
+        el.classList.remove(cls);
+        void el.offsetWidth; // restart the animation
+        el.classList.add(cls);
+    }
+
+    /** Set text; pulse the element when the value actually changes. */
+    function setLive(sel, value) {
+        const el = $(sel);
+        if (!el || el.textContent === value) return;
+        el.textContent = value;
+        replay(el, 'anim-pop');
+    }
+
+    /**
+     * Keyed list update with FLIP: rows that move slide from their old position, new rows
+     * slide in, rows whose content changed flash once.
+     */
+    function renderList(container, items, key, build, sig = null) {
+        const before = new Map();
+        for (const el of container.children) {
+            if (el.dataset.key) before.set(el.dataset.key, { top: el.getBoundingClientRect().top, sig: el.dataset.sig });
+        }
+        const nodes = items.map((item) => {
+            const el = build(item);
+            el.dataset.key = key(item);
+            el.dataset.sig = sig ? sig(item) : el.textContent;
+            return el;
+        });
+        container.replaceChildren(...nodes);
+        if (reduceMotion || firstPaint) return;
+
+        for (const el of nodes) {
+            const old = before.get(el.dataset.key);
+            if (!old) {
+                el.classList.add('anim-enter');
+                continue;
+            }
+            if (old.sig !== el.dataset.sig) el.classList.add('anim-flash');
+            const delta = old.top - el.getBoundingClientRect().top;
+            if (Math.abs(delta) > 1) {
+                el.style.transform = `translateY(${delta}px)`;
+                el.style.transition = 'none';
+                requestAnimationFrame(() => {
+                    el.style.transition = 'transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+                    el.style.transform = '';
+                });
+            }
+        }
+    }
+
     function row(cells) {
         const tr = document.createElement('tr');
         for (const [text, cls] of cells) {
@@ -142,15 +198,15 @@ export function initAuction() {
     }
 
     function renderBuyer() {
-        setText('[data-l1]', fmt(state.current_l1));
+        setLive('[data-l1]', fmt(state.current_l1));
         setText('[data-start-price]', fmt(state.start_price));
-        setText('[data-savings]', state.savings_pct === null ? '—' : `${state.savings_pct.toFixed(2)}%`);
-        setText('[data-bid-count]', String(state.bid_count));
-        setText('[data-extensions]', `${state.extensions_used} of ${state.max_extensions}`);
+        setLive('[data-savings]', state.savings_pct === null ? '—' : `${state.savings_pct.toFixed(2)}%`);
+        setLive('[data-bid-count]', String(state.bid_count));
+        setLive('[data-extensions]', `${state.extensions_used} of ${state.max_extensions}`);
 
         const tbody = $('[data-standings]');
         if (tbody) {
-            tbody.replaceChildren(...state.standings.map((s) => {
+            renderList(tbody, state.standings, (s) => `s${s.id}`, (s) => {
                 const tr = row([
                     [`L${s.rank}`, 'px-4 py-3 font-semibold'],
                     [s.supplier + (s.verified ? ' ✓' : ''), 'px-4 py-3'],
@@ -160,12 +216,12 @@ export function initAuction() {
                 ]);
                 if (s.rank === 1) tr.className = 'bg-emerald-50';
                 return tr;
-            }));
+            }, (s) => `${s.amount}|${s.bids}`); // flash on a new price; rank moves just slide
         }
 
         const feed = $('[data-recent]');
         if (feed) {
-            feed.replaceChildren(...(state.recent.length ? state.recent : [null]).map((b) => {
+            renderList(feed, state.recent.length ? state.recent : [null], (b) => (b ? `b${b.at}-${b.amount}-${b.supplier}` : 'empty'), (b) => {
                 const li = document.createElement('li');
                 li.className = 'flex justify-between gap-3 px-4 py-2';
                 if (!b) {
@@ -180,15 +236,17 @@ export function initAuction() {
                 right.textContent = time(b.at);
                 li.append(left, right);
                 return li;
-            }));
+            });
         }
     }
 
     function renderSupplier() {
-        setText('[data-my-rank]', state.my_rank ? `L${state.my_rank}` : '—');
+        const rankBefore = $('[data-my-rank]')?.textContent;
+        setLive('[data-my-rank]', state.my_rank ? `L${state.my_rank}` : '—');
+        if (rankBefore !== $('[data-my-rank]')?.textContent) replay($('[data-rank-badge]'), 'anim-flash');
         setText('[data-participants]', String(state.participants));
-        setText('[data-my-amount]', fmt(state.my_amount));
-        setText('[data-l1]', state.l1_amount === null ? 'Hidden by buyer' : fmt(state.l1_amount));
+        setLive('[data-my-amount]', fmt(state.my_amount));
+        setLive('[data-l1]', state.l1_amount === null ? 'Hidden by buyer' : fmt(state.l1_amount));
         setText('[data-max-next]', fmt(state.max_next_bid));
         setText('[data-min-dec]', fmt(state.min_decrement));
         setText('[data-extensions]', `${state.extensions_used} of ${state.max_extensions}`);
@@ -207,7 +265,7 @@ export function initAuction() {
 
         const list = $('[data-my-bids]');
         if (list) {
-            list.replaceChildren(...state.my_bids.map((b) => {
+            renderList(list, state.my_bids, (b) => `m${b.at}-${b.amount}`, (b) => {
                 const li = document.createElement('li');
                 li.className = 'flex justify-between gap-3 px-4 py-2';
                 const left = document.createElement('span');
@@ -217,7 +275,7 @@ export function initAuction() {
                 right.textContent = `${b.rank ? `L${b.rank} · ` : ''}${time(b.at)}`;
                 li.append(left, right);
                 return li;
-            }));
+            });
         }
     }
 
@@ -230,6 +288,7 @@ export function initAuction() {
             const statusEl = $('[data-status]');
             if (statusEl) statusEl.dataset.status = state.status;
             (cfg.role === 'buyer' ? renderBuyer : renderSupplier)();
+            firstPaint = false;
         }
         requestAnimationFrame(render);
     }

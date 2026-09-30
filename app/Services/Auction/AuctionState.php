@@ -31,6 +31,7 @@ class AuctionState
             'savings_pct' => $auction->savingsPct(),
             'bid_count' => $auction->bid_count,
             'standings' => $standings->map(fn ($s) => [
+                'id' => $s['supplier_org_id'],
                 'rank' => $s['rank'],
                 'supplier' => $names[$s['supplier_org_id']]->name ?? 'Supplier',
                 'verified' => (bool) ($names[$s['supplier_org_id']]->verified_at ?? false),

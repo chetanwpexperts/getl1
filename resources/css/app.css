@@ -41,3 +41,25 @@
     .auction-message[data-tone='ok'] { @apply rounded-lg bg-emerald-50 p-3 text-emerald-800; }
     .auction-message[data-tone='error'] { @apply rounded-lg bg-red-50 p-3 text-red-700; }
 }
+
+/* Live auction motion: new rows slide in, changed values flash or pulse. */
+@keyframes auction-enter {
+    from { opacity: 0; transform: translateY(-10px); background-color: rgb(209 250 229); }
+    60% { opacity: 1; transform: none; background-color: rgb(209 250 229); }
+    to { background-color: transparent; }
+}
+@keyframes auction-flash {
+    from { background-color: rgb(254 240 138 / 0.7); }
+    to { background-color: transparent; }
+}
+@keyframes auction-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+.anim-enter { animation: auction-enter 900ms ease-out; }
+.anim-flash { animation: auction-flash 1200ms ease-out; }
+.anim-pop { animation: auction-pop 450ms ease-out; transform-origin: left center; }
+@media (prefers-reduced-motion: reduce) {
+    .anim-enter, .anim-flash, .anim-pop { animation: none; }
+}
