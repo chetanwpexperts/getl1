@@ -7,6 +7,35 @@
     <h1 class="text-2xl font-semibold">RFQs</h1>
     <p class="mt-1 text-sm text-slate-600">Requests you've been invited to quote on. Your prices stay sealed until each deadline.</p>
 
+    {{-- Upcoming and running auctions, impossible to miss --}}
+    @php
+        $activeAuctions = $auctions->filter(fn ($a) => in_array(\App\Services\Auction\Standings::effectiveStatus($a)->value, ['scheduled', 'live'], true))
+            ->sortBy('starts_at');
+    @endphp
+    @foreach ($activeAuctions as $a)
+        @php
+            $isLive = \App\Services\Auction\Standings::effectiveStatus($a)->value === 'live';
+            $aRfq = $invites->firstWhere('rfq_id', $a->rfq_id)?->rfq;
+        @endphp
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 {{ $isLive ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-emerald-200 bg-emerald-50 text-emerald-900' }}">
+            <div>
+                <p class="font-semibold">
+                    @if ($isLive) Live auction running now @else Live auction {{ $a->starts_at->ist()->format('d M, h:i A') }} IST @endif
+                    @if ($aRfq) · {{ $aRfq->title }} @endif
+                </p>
+                <p class="mt-0.5 text-sm {{ $isLive ? 'text-emerald-50' : '' }}">
+                    @if ($isLive) Ends in <span class="font-semibold tabular-nums" data-countdown-to="{{ $a->ends_at->getTimestampMs() }}"></span>
+                    @else Starts in <span class="font-semibold tabular-nums" data-countdown-to="{{ $a->starts_at->getTimestampMs() }}"></span>. You start at your sealed quote.
+                    @endif
+                </p>
+            </div>
+            <a href="{{ route('supplier.auctions.show', $a->id) }}"
+               class="rounded-lg px-5 py-2.5 text-sm font-semibold {{ $isLive ? 'bg-white text-emerald-800 hover:bg-emerald-50' : 'bg-emerald-700 text-white hover:bg-emerald-800' }}">
+                {{ $isLive ? 'Join auction now' : 'Open auction room' }}
+            </a>
+        </div>
+    @endforeach
+
     <div class="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table class="w-full min-w-[640px] text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">

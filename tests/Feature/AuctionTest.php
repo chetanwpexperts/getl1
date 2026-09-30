@@ -167,7 +167,7 @@ class AuctionTest extends TestCase
         // Pages link to the console.
         $this->actingAs($this->buyerUser)->get(route('buyer.rfqs.show', $this->rfq->id))->assertSee('Open auction console');
         $this->actingAs($this->buyerUser)->get(route('buyer.auctions.show', $a->id))->assertOk()->assertSee('Standings');
-        $this->actingAs($this->s['A'][1])->get(route('supplier.rfqs.index'))->assertOk()->assertSee(route('supplier.auctions.show', $a->id));
+        $this->actingAs($this->s['A'][1])->get(route('supplier.rfqs.index'))->assertOk()->assertSee(route('supplier.auctions.show', $a->id))->assertSee('Open auction room');
         $this->actingAs($this->s['A'][1])->get(route('supplier.auctions.show', $a->id))->assertOk()->assertSee('Place a bid');
     }
 
