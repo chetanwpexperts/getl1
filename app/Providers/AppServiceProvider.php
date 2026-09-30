@@ -11,8 +11,10 @@ use App\Models\Rfq;
 use App\Models\RfqInvite;
 use App\Models\User;
 use App\Support\Tenancy\CurrentOrganization;
+use App\View\Composers\AppLayoutComposer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+
+        // Same header and menu on every authenticated page.
+        View::composer(['layouts.app', 'layouts.nav-links'], AppLayoutComposer::class);
 
         // Short, stable names in polymorphic columns (audit_logs, ai_jobs, whatsapp_messages).
         Relation::enforceMorphMap([

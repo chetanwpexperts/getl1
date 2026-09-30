@@ -1,12 +1,16 @@
+@php($link = 'whitespace-nowrap hover:text-slate-900')
+@php($active = 'text-slate-900')
 @isset($currentOrg)
-    <a href="{{ route('dashboard') }}" class="whitespace-nowrap hover:text-slate-900 {{ request()->routeIs('dashboard') ? 'text-slate-900' : '' }}">Dashboard</a>
+    <a href="{{ route('dashboard') }}" class="{{ $link }} {{ request()->routeIs('dashboard') ? $active : '' }}">Dashboard</a>
     @if ($currentOrg->isBuyer())
-        <a href="{{ route('buyer.suppliers.index') }}" class="whitespace-nowrap hover:text-slate-900 {{ request()->routeIs('buyer.suppliers.*') ? 'text-slate-900' : '' }}">Suppliers</a>
+        <a href="{{ route('buyer.suppliers.index') }}" class="{{ $link }} {{ request()->routeIs('buyer.suppliers.*') ? $active : '' }}">Suppliers</a>
     @else
-        <a href="{{ route('supplier.documents.index') }}" class="whitespace-nowrap hover:text-slate-900 {{ request()->routeIs('supplier.documents.*') ? 'text-slate-900' : '' }}">Documents</a>
+        <a href="{{ route('supplier.documents.index') }}" class="{{ $link }} {{ request()->routeIs('supplier.documents.*') ? $active : '' }}">Documents</a>
     @endif
-    <a href="{{ route('company.edit') }}" class="whitespace-nowrap hover:text-slate-900 {{ request()->routeIs('company.*') ? 'text-slate-900' : '' }}">Company</a>
+    <a href="{{ route('company.edit') }}" class="{{ $link }} {{ request()->routeIs('company.*') ? $active : '' }}">Company</a>
 @endisset
 @if (auth()->user()?->is_platform_admin)
-    <a href="{{ route('admin.kyc.index') }}" class="whitespace-nowrap text-amber-700 hover:text-amber-900">Admin · KYC</a>
+    <a href="{{ route('admin.kyc.index') }}" class="{{ $link }} {{ request()->routeIs('admin.*') ? $active : '' }}">
+        KYC review <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Staff</span>
+    </a>
 @endif
