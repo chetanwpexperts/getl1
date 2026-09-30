@@ -54,7 +54,7 @@ class RfqFlowTest extends TestCase
 
     private function listEntry(string $company, array $contact): BuyerSupplier
     {
-        return BuyerSupplier::create(['buyer_org_id' => $this->buyer->id, 'company_name' => $company, 'status' => 'active'] + $contact);
+        return BuyerSupplier::create(array_merge(['buyer_org_id' => $this->buyer->id, 'company_name' => $company, 'status' => 'active'], $contact));
     }
 
     /** Supplier company + user + an entry in the buyer's list pointing at them (linked). */
