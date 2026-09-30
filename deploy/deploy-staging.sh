@@ -24,7 +24,8 @@ trap 'web up >/dev/null 2>&1 || true' EXIT
 echo "==> Composer"
 COMPOSER_FLAGS=(--no-interaction --prefer-dist --optimize-autoloader --no-progress --no-scripts)
 # A package was added to composer.json since the lock was written: resolve only what changed.
-if [[ ! -f composer.lock ]] || composer install --dry-run "${COMPOSER_FLAGS[@]}" 2>&1 | grep -qi "not up to date"; then
+DRY_RUN="$(composer install --dry-run "${COMPOSER_FLAGS[@]}" 2>&1 || true)"   # exits non-zero when the lock is stale
+if [[ ! -f composer.lock ]] || grep -qiE "not up to date|not present in the lock file" <<<"$DRY_RUN"; then
   echo "    composer.json changed, updating the lock file"
   composer update --minimal-changes "${COMPOSER_FLAGS[@]}" 2>/dev/null || composer update "${COMPOSER_FLAGS[@]}"
 fi
