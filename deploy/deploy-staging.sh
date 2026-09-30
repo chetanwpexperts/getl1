@@ -30,6 +30,9 @@ if [[ ! -f composer.lock ]] || grep -qiE "not up to date|not present in the lock
   composer update --minimal-changes "${COMPOSER_FLAGS[@]}" 2>/dev/null || composer update "${COMPOSER_FLAGS[@]}"
 fi
 composer install "${COMPOSER_FLAGS[@]}"
+# Drop the cached config before artisan runs: a newly added package may need config keys the
+# old cache doesn't have, and then every artisan command (even config:clear) would fail.
+sudo -u www-data rm -f "$APP_ROOT/bootstrap/cache/config.php"
 web package:discover --ansi >/dev/null
 
 echo "==> Migrations"
