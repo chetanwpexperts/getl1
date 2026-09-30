@@ -73,7 +73,7 @@ class AutomationsTest extends TestCase
         QuoteItem::create(['quote_id' => $q->id, 'rfq_item_id' => $item->id, 'unit_price' => $unitPrice, 'gst_rate' => 18, 'freight' => 0]);
     }
 
-    private function run(): array
+    private function automate(): array
     {
         return app(Automations::class)->run();
     }
@@ -84,18 +84,18 @@ class AutomationsTest extends TestCase
 
         // 3-hour window → reminder when 45 minutes are left.
         $this->travelTo($this->rfq->quote_deadline->copy()->subMinutes(60));
-        $this->run();
+        $this->automate();
         Mail::assertNotQueued(RfqReminderMail::class);
 
         $this->travelTo($this->rfq->quote_deadline->copy()->subMinutes(44));
-        $this->assertSame(2, $this->run()['reminders']);
+        $this->assertSame(2, $this->automate()['reminders']);
         Mail::assertQueued(RfqReminderMail::class, fn ($m) => $m->hasTo($this->s['B'][1]->email));
         Mail::assertQueued(RfqReminderMail::class, fn ($m) => $m->hasTo($this->s['C'][1]->email));
         Mail::assertNotQueued(RfqReminderMail::class, fn ($m) => $m->hasTo($this->s['A'][1]->email));
 
         // Never twice.
         $this->travel(5)->minutes();
-        $this->assertSame(0, $this->run()['reminders']);
+        $this->assertSame(0, $this->automate()['reminders']);
         Mail::assertQueued(RfqReminderMail::class, 2);
     }
 
@@ -103,7 +103,7 @@ class AutomationsTest extends TestCase
     {
         RfqInvite::where('supplier_org_id', $this->s['B'][0]->id)->update(['status' => 'declined']);
         $this->travelTo($this->rfq->quote_deadline->copy()->subMinutes(20));
-        $this->run();
+        $this->automate();
         Mail::assertNotQueued(RfqReminderMail::class, fn ($m) => $m->hasTo($this->s['B'][1]->email));
     }
 
@@ -112,11 +112,11 @@ class AutomationsTest extends TestCase
         $this->quote('A', 90);
         $this->quote('B', 85);
 
-        $this->run();
+        $this->automate();
         Mail::assertNotQueued(QuotesOpenedMail::class);
 
         $this->travelTo($this->rfq->quote_deadline->copy()->addSeconds(30));
-        $this->assertSame(1, $this->run()['quotes_opened']);
+        $this->assertSame(1, $this->automate()['quotes_opened']);
         Mail::assertQueued(QuotesOpenedMail::class, function (QuotesOpenedMail $m) {
             return $m->hasTo($this->buyerUser->email)
                 && $m->summary['quoted'] === 2
@@ -124,7 +124,7 @@ class AutomationsTest extends TestCase
                 && $m->summary['can_auction'] === true;
         });
 
-        $this->assertSame(0, $this->run()['quotes_opened']);
+        $this->assertSame(0, $this->automate()['quotes_opened']);
 
         // The email renders (Markdown-escaped names, links).
         $html = Mail::queued(QuotesOpenedMail::class)->first()->render();
@@ -137,7 +137,7 @@ class AutomationsTest extends TestCase
         $this->quote('A', 90);
         $this->quote('B', 85);
         $this->travelTo($this->rfq->quote_deadline->copy()->addMinute());
-        $this->run(); // quotes-opened mail
+        $this->automate(); // quotes-opened mail
 
         $auction = app(AuctionService::class)->schedule($this->rfq->fresh(), $this->buyerUser, [
             'starts_at' => now()->addMinutes(40)->setTimezone('Asia/Kolkata')->format('Y-m-d\TH:i'),
@@ -147,9 +147,9 @@ class AutomationsTest extends TestCase
         ]);
 
         $this->travelTo($auction->starts_at->copy()->subMinutes(10));
-        $this->assertSame(2, $this->run()['auction_reminders']);
+        $this->assertSame(2, $this->automate()['auction_reminders']);
         Mail::assertQueued(AuctionReminderMail::class, 2);
-        $this->assertSame(0, $this->run()['auction_reminders']);
+        $this->assertSame(0, $this->automate()['auction_reminders']);
 
         // Live: A beats B.
         $this->travelTo($auction->starts_at->copy()->addMinute());
@@ -159,7 +159,7 @@ class AutomationsTest extends TestCase
         app(AuctionService::class)->tick();
         app(CurrentOrganization::class)->set(null);
 
-        $r = $this->run();
+        $r = $this->automate();
         $this->assertSame(3, $r['auction_results']); // buyer + 2 suppliers
         Mail::assertQueued(AuctionResultBuyerMail::class, fn ($m) => $m->hasTo($this->buyerUser->email));
         Mail::assertQueued(AuctionResultSupplierMail::class, fn ($m) => $m->hasTo($this->s['A'][1]->email) && $m->rank === 1);
@@ -169,13 +169,13 @@ class AutomationsTest extends TestCase
         $html = Mail::queued(AuctionResultSupplierMail::class, fn ($m) => $m->rank === 2)->first()->render();
         $this->assertStringNotContainsString('Alpha', $html);
 
-        $this->assertSame(0, $this->run()['auction_results']);
+        $this->assertSame(0, $this->automate()['auction_results']);
     }
 
     public function test_old_rfqs_are_not_mailed_after_an_upgrade(): void
     {
         $this->travelTo($this->rfq->quote_deadline->copy()->addDays(3));
-        $this->assertSame(0, $this->run()['quotes_opened']);
+        $this->assertSame(0, $this->automate()['quotes_opened']);
     }
 
     public function test_automations_command_runs(): void
