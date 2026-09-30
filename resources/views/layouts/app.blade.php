@@ -15,8 +15,7 @@
                     Get<span class="text-emerald-700">L1</span>
                 </a>
                 <nav class="hidden gap-4 text-sm font-medium text-slate-600 sm:flex">
-                    <a href="{{ route('dashboard') }}" class="hover:text-slate-900">Dashboard</a>
-                    @yield('nav')
+                    @include('layouts.nav-links')
                 </nav>
             </div>
 
@@ -52,12 +51,21 @@
                 </form>
             </div>
         </div>
+        <nav class="flex gap-5 overflow-x-auto border-t border-slate-100 px-4 py-2 text-sm font-medium text-slate-600 sm:hidden">
+            @include('layouts.nav-links')
+        </nav>
     </header>
 
     <main class="mx-auto max-w-6xl px-4 py-8">
         @if (session('status'))
             <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 {{ session('status') }}
+            </div>
+        @endif
+
+        @if ($errors->any() && ! isset($inlineErrors))
+            <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                Please fix the highlighted fields.
             </div>
         @endif
 

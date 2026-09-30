@@ -38,5 +38,8 @@ abstract class TestCase extends BaseTestCase
 
         // Views use @vite; tests don't need built assets.
         $this->withoutVite();
+
+        // Don't write test noise into the real security log.
+        config(['logging.channels.security' => config('logging.channels.null')]);
     }
 }

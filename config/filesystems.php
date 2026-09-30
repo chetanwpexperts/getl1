@@ -33,8 +33,8 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
-            'throw' => false,
+            'serve' => false, // private files (KYC docs) are only served through authorised controllers
+            'throw' => true,
             'report' => false,
         ],
 

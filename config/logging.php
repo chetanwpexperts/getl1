@@ -52,6 +52,16 @@ return [
 
     'channels' => [
 
+        // Security events: failed logins, lockouts, 403/419/429, rejected uploads.
+        // Kept separate from app logs and for 90 days. Never log passwords or file contents.
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => 90,
+            'replace_placeholders' => true,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

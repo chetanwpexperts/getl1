@@ -54,12 +54,18 @@ php artisan test
 
 - **Money** is `DECIMAL(15,2)` INR. **Timestamps** are UTC; bid times keep microseconds so the
   earlier of two equal bids wins.
-- **Audit:** write every state change that matters through `App\Services\AuditLogger`.
+- **Audit:** write every state change that matters through `App\Services\AuditLogger` (table `audit_logs`).
+- **Security log:** `storage/logs/security-YYYY-MM-DD.log` (90 days) via `App\Services\SecurityLog`:
+  failed logins, lockouts, 403 / 419 / 429, rejected uploads. Never log passwords or file contents.
+- **Uploads:** KYC files go to the private disk (`storage/app/private/kyc/{org}`), typed by their bytes,
+  PDFs with active content refused, and only streamed to the owner or a platform admin.
+- **Platform admin (GetL1 staff):** server-only, `php artisan getl1:admin you@example.com` (`--revoke` to remove).
+- **Access rule:** records of another company always return 404, never 403, so IDs can't be probed.
 
 ## Build plan
 
 1. ✅ Base: auth, organizations, roles, trial, all 22 tables, models, seeders, tests
-2. Supplier onboarding, KYC upload, buyer supplier lists
+2. ✅ Supplier profile + KYC (private uploads, admin review, verified badge), buyer supplier list + Excel/CSV import, security log
 3. RFQ builder, invites (magic link), sealed quotes
 4. Live auction engine: row-locked bids, ranks, auto-extend, Reverb broadcasting
 5. Award, approval, PO PDF, audit views

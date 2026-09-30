@@ -9,7 +9,7 @@
     @unless ($verified)
         <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
             <p class="font-semibold">Get your verified badge</p>
-            <p class="mt-1">Verified suppliers get invited more often. Upload your GST, PAN or Udyam certificate (coming in the next build step).</p>
+            <p class="mt-1">Verified suppliers get invited more often. <a href="{{ route('supplier.documents.index') }}" class="font-medium underline">Upload your GST or Udyam certificate</a> and fill in your <a href="{{ route('company.edit') }}" class="font-medium underline">company profile</a>.</p>
         </div>
     @endunless
 

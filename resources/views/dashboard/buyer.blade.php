@@ -39,9 +39,9 @@
         <div class="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
             <h2 class="text-lg font-semibold">Run your first auction</h2>
             <p class="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                Add your suppliers, create a purchase requirement, and let them bid the price down live.
-                RFQ creation arrives in the next build step.
+                Start by adding your suppliers. RFQs and live auctions arrive in the next build step.
             </p>
+            <a href="{{ route('buyer.suppliers.index') }}" class="mt-4 inline-block rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Manage suppliers</a>
         </div>
     @else
         <div class="mt-8 rounded-xl border border-slate-200 bg-white">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Enums\OrganizationType;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\Gstin;
 use App\Services\AuditLogger;
 use App\Services\OrganizationService;
 use Illuminate\Http\RedirectResponse;
@@ -35,10 +36,9 @@ class RegisterController extends Controller
             'password' => ['required', 'confirmed', Password::min(8)],
             'company_name' => ['required', 'string', 'max:150'],
             'city' => ['required', 'string', 'max:100'],
-            'gstin' => ['nullable', 'string', 'size:15', 'regex:/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i'],
+            'gstin' => ['nullable', 'string', 'size:15', new Gstin],
         ], [
             'phone.regex' => 'Enter a 10-digit Indian mobile number.',
-            'gstin.regex' => 'That does not look like a valid GSTIN.',
         ]);
 
         $user = DB::transaction(function () use ($data, $orgs) {

@@ -89,12 +89,18 @@ class RegistrationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_gstin_with_wrong_check_digit_is_rejected(): void
+    {
+        $this->post('/register', $this->payload(['gstin' => '03AAACR5055K1Z5']))
+            ->assertSessionHasErrors('gstin');
+    }
+
     public function test_valid_gstin_is_saved_uppercase(): void
     {
-        $this->post('/register', $this->payload(['gstin' => '03aaacr5055k1z5']))
+        $this->post('/register', $this->payload(['gstin' => '03aaacr5055k1zh']))
             ->assertSessionHasNoErrors();
 
-        $this->assertSame('03AAACR5055K1Z5', User::first()->currentOrganization->gstin);
+        $this->assertSame('03AAACR5055K1ZH', User::first()->currentOrganization->gstin);
     }
 
     public function test_user_can_log_in_and_out(): void
