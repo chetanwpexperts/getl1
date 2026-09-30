@@ -32,7 +32,7 @@
 
     @if ($entry->exists)
         <form method="POST" action="{{ route('buyer.suppliers.destroy', $entry->id) }}" class="mt-4 max-w-2xl"
-              onsubmit="return confirm('Remove this supplier from your list?')">
+              data-confirm="Remove this supplier from your list?">
             @csrf @method('DELETE')
             <button class="text-sm text-red-700 hover:underline">Remove from my list</button>
         </form>

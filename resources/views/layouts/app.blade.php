@@ -21,7 +21,7 @@
 
             <div class="flex items-center gap-3 text-sm">
                 @isset($currentOrg)
-                    @php($orgs = auth()->user()->organizations)
+                    @php $orgs = auth()->user()->organizations; @endphp
                     @if ($orgs->count() > 1)
                         <details class="relative">
                             <summary class="cursor-pointer list-none rounded-lg border border-slate-200 px-3 py-1.5">

@@ -3,7 +3,7 @@
 @section('title', 'Suppliers')
 
 @section('content')
-    @php($canManage = in_array($currentRole?->value, ['buyer_admin', 'buyer_user'], true))
+    @php $canManage = in_array($currentRole?->value, ['buyer_admin', 'buyer_user'], true); @endphp
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>

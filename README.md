@@ -66,7 +66,7 @@ php artisan test
 
 1. ✅ Base: auth, organizations, roles, trial, all 22 tables, models, seeders, tests
 2. ✅ Supplier profile + KYC (private uploads, admin review, verified badge), buyer supplier list + Excel/CSV import, security log
-3. RFQ builder, invites (magic link), sealed quotes
+3. ✅ RFQ builder (items, terms, attachments), invites by email + WhatsApp link (bound to one supplier), sealed quotes, ranked comparison after deadline
 4. Live auction engine: row-locked bids, ranks, auto-extend, Reverb broadcasting
 5. Award, approval, PO PDF, audit views
 6. Razorpay subscriptions, plan limits, savings report

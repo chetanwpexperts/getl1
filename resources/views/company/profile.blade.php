@@ -54,7 +54,7 @@
                 <legend class="px-1 text-sm font-semibold">What do you supply?</legend>
                 <p class="mb-4 text-sm text-slate-600">Buyers find you by these categories. Pick up to 20.</p>
                 @error('categories') <p class="mb-3 text-sm text-red-600">{{ $message }}</p> @enderror
-                @php($chosen = old('categories', $selected))
+                @php $chosen = old('categories', $selected); @endphp
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ($categories as $parent)
                         <div>

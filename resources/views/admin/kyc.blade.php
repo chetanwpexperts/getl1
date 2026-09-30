@@ -23,7 +23,7 @@
                         <p class="font-semibold">{{ $doc->organization?->name ?? 'Deleted company' }}
                             <span class="ml-1 font-normal text-slate-500">· {{ $doc->organization?->city }}</span></p>
                         <p class="mt-1 text-slate-600">
-                            {{ strtoupper($doc->type) }} · {{ $doc->original_name }} · uploaded {{ $doc->created_at->format('d M Y H:i') }}
+                            {{ strtoupper($doc->type) }} · {{ $doc->original_name }} · uploaded {{ $doc->created_at->ist()->format('d M Y, h:i A') }}
                         </p>
                         <p class="mt-1 text-slate-600">
                             GSTIN on profile: <span class="font-mono">{{ $doc->organization?->gstin ?? '—' }}</span>

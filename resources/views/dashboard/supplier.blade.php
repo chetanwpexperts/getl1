@@ -29,10 +29,10 @@
         @forelse ($pendingInvites as $invite)
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3 text-sm last:border-0">
                 <span>
-                    <span class="font-medium">{{ $invite->rfq->title }}</span>
+                    <a href="{{ route('supplier.rfqs.show', $invite->id) }}" class="font-medium hover:underline">{{ $invite->rfq->title }}</a>
                     <span class="block text-slate-500">from {{ $invite->rfq->organization->name }}</span>
                 </span>
-                <span class="text-xs text-slate-500">{{ $invite->created_at->diffForHumans() }}</span>
+                <span class="text-xs text-slate-500">Quote by {{ $invite->rfq->quote_deadline?->ist()->format('d M, h:i A') }}</span>
             </div>
         @empty
             <p class="px-5 py-6 text-sm text-slate-600">No invitations yet. Buyers will invite you by WhatsApp or email.</p>

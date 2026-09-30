@@ -1,10 +1,12 @@
-@php($link = 'whitespace-nowrap hover:text-slate-900')
-@php($active = 'text-slate-900')
+@php $link = 'whitespace-nowrap hover:text-slate-900'; @endphp
+@php $active = 'text-slate-900'; @endphp
 @isset($currentOrg)
     <a href="{{ route('dashboard') }}" class="{{ $link }} {{ request()->routeIs('dashboard') ? $active : '' }}">Dashboard</a>
     @if ($currentOrg->isBuyer())
+        <a href="{{ route('buyer.rfqs.index') }}" class="{{ $link }} {{ request()->routeIs('buyer.rfqs.*') ? $active : '' }}">RFQs</a>
         <a href="{{ route('buyer.suppliers.index') }}" class="{{ $link }} {{ request()->routeIs('buyer.suppliers.*') ? $active : '' }}">Suppliers</a>
     @else
+        <a href="{{ route('supplier.rfqs.index') }}" class="{{ $link }} {{ request()->routeIs('supplier.rfqs.*') ? $active : '' }}">RFQs</a>
         <a href="{{ route('supplier.documents.index') }}" class="{{ $link }} {{ request()->routeIs('supplier.documents.*') ? $active : '' }}">Documents</a>
     @endif
     <a href="{{ route('company.edit') }}" class="{{ $link }} {{ request()->routeIs('company.*') ? $active : '' }}">Company</a>

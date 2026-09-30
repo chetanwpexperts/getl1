@@ -66,6 +66,6 @@ class RegisterController extends Controller
         $audit->log('registered', $user, after: ['account_type' => $data['account_type']], user: $user,
             organizationId: $user->current_organization_id);
 
-        return redirect()->route('dashboard')->with('status', 'Welcome to GetL1!');
+        return redirect()->intended(route('dashboard'))->with('status', 'Welcome to GetL1!');
     }
 }

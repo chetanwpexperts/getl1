@@ -57,12 +57,12 @@
                                 @default <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">Under review</span>
                             @endswitch
                         </td>
-                        <td class="px-4 py-3 text-slate-600">{{ $doc->created_at->format('d M Y') }}</td>
+                        <td class="px-4 py-3 text-slate-600">{{ $doc->created_at->ist()->format('d M Y') }}</td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             <a href="{{ route('supplier.documents.download', $doc->id) }}" class="text-emerald-700 hover:underline">Download</a>
                             @if ($doc->status !== 'verified')
                                 <form method="POST" action="{{ route('supplier.documents.destroy', $doc->id) }}" class="ml-3 inline"
-                                      onsubmit="return confirm('Delete this document?')">
+                                      data-confirm="Delete this document?">
                                     @csrf @method('DELETE')
                                     <button class="text-red-700 hover:underline">Delete</button>
                                 </form>

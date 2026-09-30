@@ -9,7 +9,7 @@
     <form method="POST" action="{{ route('register') }}" class="mt-6 space-y-5">
         @csrf
 
-        @php($selected = old('account_type', $as))
+        @php $selected = old('account_type', $as); @endphp
         <fieldset>
             <legend class="text-sm font-medium text-slate-700">I want to</legend>
             <div class="mt-2 grid gap-3 sm:grid-cols-2">

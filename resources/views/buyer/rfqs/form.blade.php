@@ -1,0 +1,109 @@
+@extends('layouts.app')
+
+@section('title', $rfq->exists ? 'Edit RFQ' : 'New RFQ')
+
+@section('content')
+    @php
+        $rows = old('items', $items->map(fn ($i) => [
+            'name' => $i->name, 'spec' => $i->spec, 'qty' => rtrim(rtrim((string) $i->qty, '0'), '.'), 'unit' => $i->unit,
+            'delivery_date' => $i->delivery_date?->format('Y-m-d'), 'last_purchase_price' => $i->last_purchase_price,
+        ])->all());
+        if (empty($rows)) {
+            $rows = [['name' => '', 'spec' => '', 'qty' => '', 'unit' => 'pcs', 'delivery_date' => '', 'last_purchase_price' => '']];
+        }
+        $terms = old('terms', $rfq->terms ?? []);
+        $input = 'mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20';
+    @endphp
+
+    <a href="{{ $rfq->exists ? route('buyer.rfqs.show', $rfq->id) : route('buyer.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← {{ $rfq->exists ? $rfq->ref_no : 'RFQs' }}</a>
+    <h1 class="mt-2 text-2xl font-semibold">{{ $rfq->exists ? 'Edit RFQ' : 'New RFQ' }}</h1>
+    <p class="mt-1 text-sm text-slate-600">Saved as a draft. You'll invite suppliers and publish on the next screen.</p>
+
+    <form method="POST" action="{{ $rfq->exists ? route('buyer.rfqs.update', $rfq->id) : route('buyer.rfqs.store') }}" class="mt-6 space-y-6">
+        @csrf
+        @if ($rfq->exists) @method('PUT') @endif
+
+        <section class="rounded-xl border border-slate-200 bg-white p-5">
+            <h2 class="text-sm font-semibold">Requirement</h2>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <x-field name="title" label="Title" :value="$rfq->title" required maxlength="150" placeholder="e.g. Corrugated boxes for October" />
+                </div>
+                <div>
+                    <label for="category_id" class="block text-sm font-medium text-slate-700">Category</label>
+                    <select id="category_id" name="category_id" class="{{ $input }}">
+                        <option value="">Select</option>
+                        @foreach ($categories as $parent)
+                            <optgroup label="{{ $parent->name }}">
+                                @foreach ($parent->children as $child)
+                                    <option value="{{ $child->id }}" @selected((int) old('category_id', $rfq->category_id) === $child->id)>{{ $child->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                    </select>
+                </div>
+                <x-field name="delivery_location" label="Delivery location" :value="$rfq->delivery_location" maxlength="190" placeholder="Factory address or city" />
+                <div class="sm:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-slate-700">Details for suppliers (optional)</label>
+                    <textarea id="description" name="description" rows="3" maxlength="5000" class="{{ $input }}">{{ old('description', $rfq->description) }}</textarea>
+                    @error('description') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold">Items</h2>
+                <span class="text-xs text-slate-500">Last purchase price is private: suppliers never see it.</span>
+            </div>
+            @error('items') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
+
+            <div class="mt-4 space-y-3" data-items>
+                @foreach ($rows as $i => $row)
+                    @include('buyer.rfqs._item-row', ['i' => $i, 'row' => $row])
+                @endforeach
+            </div>
+            <template data-item-template>
+                @include('buyer.rfqs._item-row', ['i' => '__i__', 'row' => ['name' => '', 'spec' => '', 'qty' => '', 'unit' => 'pcs', 'delivery_date' => '', 'last_purchase_price' => '']])
+            </template>
+            <button type="button" data-add-item class="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50">+ Add item</button>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-5">
+            <h2 class="text-sm font-semibold">Terms and deadline</h2>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="terms_payment" class="block text-sm font-medium text-slate-700">Payment terms</label>
+                    <select id="terms_payment" name="terms[payment]" class="{{ $input }}">
+                        <option value="">Select</option>
+                        @foreach ($paymentTerms as $k => $label)<option value="{{ $k }}" @selected(($terms['payment'] ?? '') === $k)>{{ $label }}</option>@endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="terms_freight" class="block text-sm font-medium text-slate-700">Freight</label>
+                    <select id="terms_freight" name="terms[freight]" class="{{ $input }}">
+                        <option value="">Select</option>
+                        @foreach ($freightTerms as $k => $label)<option value="{{ $k }}" @selected(($terms['freight'] ?? '') === $k)>{{ $label }}</option>@endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="terms_delivery" class="block text-sm font-medium text-slate-700">Delivery terms</label>
+                    <input id="terms_delivery" name="terms[delivery]" value="{{ $terms['delivery'] ?? '' }}" maxlength="255" class="{{ $input }}" placeholder="e.g. Within 7 days of PO">
+                </div>
+                <div>
+                    <label for="quote_deadline" class="block text-sm font-medium text-slate-700">Quote deadline (IST)</label>
+                    <input id="quote_deadline" name="quote_deadline" type="datetime-local" class="{{ $input }}"
+                           value="{{ old('quote_deadline', $rfq->quote_deadline?->ist()->format('Y-m-d\TH:i')) }}">
+                    <p class="mt-1 text-xs text-slate-500">At least 1 hour after you publish. Quotes stay sealed until then.</p>
+                    @error('quote_deadline') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="terms_other" class="block text-sm font-medium text-slate-700">Other terms (optional)</label>
+                    <textarea id="terms_other" name="terms[other]" rows="2" maxlength="1000" class="{{ $input }}">{{ $terms['other'] ?? '' }}</textarea>
+                </div>
+            </div>
+        </section>
+
+        <div class="sm:w-48"><x-button>Save draft</x-button></div>
+    </form>
+@endsection

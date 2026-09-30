@@ -3,7 +3,7 @@
 @section('title', 'Dashboard')
 
 @section('content')
-    @php($sub = $currentOrg->subscription)
+    @php $sub = $currentOrg->subscription; @endphp
 
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -14,7 +14,7 @@
             <div class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm">
                 <span class="font-medium">{{ $sub->plan->name }}</span>
                 @if ($sub->status->value === 'trialing' && $sub->trial_ends_at)
-                    <span class="text-slate-600">· trial ends {{ $sub->trial_ends_at->format('d M Y') }}
+                    <span class="text-slate-600">· trial ends {{ $sub->trial_ends_at->ist()->format('d M Y') }}
                         ({{ max(0, (int) now()->diffInDays($sub->trial_ends_at, false)) }} days left)</span>
                 @endif
             </div>
@@ -49,8 +49,8 @@
             <ul class="divide-y divide-slate-100">
                 @foreach ($recentRfqs as $rfq)
                     <li class="flex items-center justify-between px-5 py-3 text-sm">
-                        <span><span class="text-slate-500">{{ $rfq->ref_no }}</span> · {{ $rfq->title }}</span>
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{{ $rfq->status->label() }}</span>
+                        <a href="{{ route('buyer.rfqs.show', $rfq->id) }}" class="hover:underline"><span class="text-slate-500">{{ $rfq->ref_no }}</span> · {{ $rfq->title }}</a>
+                        <x-status-badge :status="$rfq->displayStatus()" />
                     </li>
                 @endforeach
             </ul>

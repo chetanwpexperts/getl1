@@ -20,6 +20,12 @@ class Rfq extends Model
         'approved_by', 'approved_at',
     ];
 
+    protected $attributes = [
+        'status' => 'draft',
+        'bid_basis' => 'lot_total',
+        'currency' => 'INR',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -29,6 +35,44 @@ class Rfq extends Model
             'published_at' => 'datetime',
             'approved_at' => 'datetime',
         ];
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === RfqStatus::Draft;
+    }
+
+    /** Published and the sealed-quote deadline hasn't passed (server time). */
+    public function isOpenForQuotes(): bool
+    {
+        return $this->status === RfqStatus::Published
+            && $this->quote_deadline !== null
+            && $this->quote_deadline->isFuture();
+    }
+
+    /** Sealed quotes may be opened only after the deadline. */
+    public function quotesAreUnsealed(): bool
+    {
+        return $this->status !== RfqStatus::Draft
+            && $this->status !== RfqStatus::Cancelled
+            && $this->quote_deadline !== null
+            && ! $this->quote_deadline->isFuture();
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === RfqStatus::Cancelled;
+    }
+
+    /** For badges: draft | open | closed | cancelled (later steps add auction states). */
+    public function displayStatus(): string
+    {
+        return match (true) {
+            $this->isDraft() => 'draft',
+            $this->isCancelled() => 'cancelled',
+            $this->isOpenForQuotes() => 'open',
+            default => 'closed',
+        };
     }
 
     protected static function booted(): void

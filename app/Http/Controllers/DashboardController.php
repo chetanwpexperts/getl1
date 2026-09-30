@@ -33,9 +33,11 @@ class DashboardController extends Controller
             'pendingInvites' => RfqInvite::with('rfq.organization')
                 ->where('supplier_org_id', $org->id)
                 ->where('status', InviteStatus::Invited)
+                ->whereHas('rfq', fn ($q) => $q->where('status', 'published')) // never show unsent drafts
                 ->latest()->limit(10)->get(),
             'acceptedCount' => RfqInvite::where('supplier_org_id', $org->id)
-                ->where('status', InviteStatus::Accepted)->count(),
+                ->where('status', InviteStatus::Accepted)
+                ->whereHas('rfq', fn ($q) => $q->where('status', 'published'))->count(),
             'verified' => $org->isVerified(),
         ]);
     }
