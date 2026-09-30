@@ -78,16 +78,31 @@ echo "nginx: $(nginx -v 2>&1 | cut -d/ -f2) (existing sites untouched)"
 
 # -----------------------------------------------------------------------------
 step "PHP ${MIN_PHP}+ with FPM"
+ver_ok() { dpkg --compare-versions "$1" ge "$MIN_PHP"; }
 PHPV=""
-for v in 8.4 8.3 8.2; do
-  if [[ -S /run/php/php${v}-fpm.sock ]] || have "php-fpm${v}"; then PHPV="$v"; break; fi
+# 1) Already installed FPM (any version >= 8.2, highest wins)
+for f in $(ls /usr/sbin/php-fpm[0-9]* 2>/dev/null | sort -V -r); do
+  v="${f##*php-fpm}"; if ver_ok "$v"; then PHPV="$v"; break; fi
 done
+# 2) Ubuntu/Debian's own PHP (e.g. 8.4/8.5 on newer releases)
 if [[ -z "$PHPV" ]]; then
-  echo "No PHP-FPM ${MIN_PHP}+ found, installing PHP 8.3"
-  if [[ "$ID" == "ubuntu" ]] && ! apt-cache policy | grep -q ondrej/php; then
-    apt_install software-properties-common
-    add-apt-repository -y ppa:ondrej/php >/dev/null
-    apt-get update -q >/dev/null
+  DISTRO_V="$(apt-cache depends php-fpm 2>/dev/null | grep -oE 'php[0-9]+\.[0-9]+-fpm' | head -1 | grep -oE '[0-9]+\.[0-9]+' || true)"
+  if [[ -n "$DISTRO_V" ]] && ver_ok "$DISTRO_V"; then
+    echo "Installing PHP $DISTRO_V from the $PRETTY_NAME repositories"
+    PHPV="$DISTRO_V"
+  fi
+fi
+# 3) Older OS: Ondrej PPA, but only if it supports this release
+if [[ -z "$PHPV" ]]; then
+  [[ "$ID" == "ubuntu" ]] || die "No PHP ${MIN_PHP}+ available from apt on $PRETTY_NAME."
+  if ! curl -fsI "https://ppa.launchpadcontent.net/ondrej/php/ubuntu/dists/${VERSION_CODENAME}/Release" >/dev/null; then
+    die "No PHP ${MIN_PHP}+ in this OS's repos and the ondrej/php PPA doesn't support ${VERSION_CODENAME}."
+  fi
+  apt_install software-properties-common
+  add-apt-repository -y ppa:ondrej/php >/dev/null
+  if ! apt-get update -q >/dev/null; then
+    add-apt-repository --remove -y ppa:ondrej/php >/dev/null || true
+    die "Adding the ondrej/php PPA failed; it was removed again."
   fi
   PHPV="8.3"
 fi

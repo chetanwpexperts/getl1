@@ -6,7 +6,7 @@ set -euo pipefail
 
 APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # this repo checkout
 BRANCH="${1:-main}"
-PHP_BIN="$(ls /usr/bin/php8.4 /usr/bin/php8.3 /usr/bin/php8.2 2>/dev/null | head -1)"
+PHP_BIN="$(ls /usr/bin/php[0-9]* 2>/dev/null | grep -E "php[0-9]+\.[0-9]+$" | sort -V | tail -1)"
 [[ -n "$PHP_BIN" ]] || { echo "PHP 8.2+ not found"; exit 1; }
 web() { sudo -u www-data "$PHP_BIN" "$APP_ROOT/artisan" "$@"; }
 
