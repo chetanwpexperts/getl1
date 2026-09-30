@@ -94,7 +94,10 @@
                     <label for="quote_deadline" class="block text-sm font-medium text-slate-700">Quote deadline (IST)</label>
                     <input id="quote_deadline" name="quote_deadline" type="datetime-local" class="{{ $input }}"
                            value="{{ old('quote_deadline', $rfq->quote_deadline?->ist()->format('Y-m-d\TH:i')) }}">
-                    <p class="mt-1 text-xs text-slate-500">At least 1 hour after you publish. Quotes stay sealed until then.</p>
+                    <p class="mt-1 text-xs text-slate-500">@php
+                        $minQ = \App\Services\RfqService::minDeadlineMinutes();
+                    @endphp
+                    At least {{ $minQ % 60 === 0 ? ($minQ / 60).' '.\Illuminate\Support\Str::plural('hour', $minQ / 60) : $minQ.' minutes' }} after you publish. Quotes stay sealed until then.</p>
                     @error('quote_deadline') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="sm:col-span-2">
