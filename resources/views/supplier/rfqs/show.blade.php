@@ -79,6 +79,10 @@
                 </section>
             @elseif ($declined)
                 <p class="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700">You declined this RFQ.</p>
+            @elseif (! $open && ! $quote && ! $rfq->isCancelled())
+                <p class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+                    You didn't submit a quote before the deadline, so you're not part of this RFQ's comparison or auction.
+                </p>
             @endif
 
             {{-- Quote form (accepted & open) or read-only items --}}
