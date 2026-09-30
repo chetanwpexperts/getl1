@@ -45,3 +45,16 @@ Artisan::command('auctions:tick', function (App\Services\Auction\AuctionService 
 })->purpose('Open and close live auctions by the server clock');
 
 Illuminate\Support\Facades\Schedule::command('auctions:tick')->everyFiveSeconds()->withoutOverlapping(1);
+
+/*
+ * Automatic next steps: supplier reminders, "quotes are in" for buyers, auction start
+ * reminders and results. Each message is sent once (marker columns).
+ */
+Artisan::command('getl1:automations', function (App\Services\Automations $automations) {
+    $r = array_filter($automations->run());
+    if ($r) {
+        $this->info(collect($r)->map(fn ($n, $k) => "{$k}: {$n}")->implode(', '));
+    }
+})->purpose('Send the automatic reminders and results that move each RFQ forward');
+
+Illuminate\Support\Facades\Schedule::command('getl1:automations')->everyMinute()->withoutOverlapping(5);

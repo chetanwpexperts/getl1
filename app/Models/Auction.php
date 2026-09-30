@@ -27,6 +27,8 @@ class Auction extends Model
             'min_decrement_value' => 'decimal:2',
             'max_decrement_pct' => 'decimal:2',
             'current_l1' => 'decimal:2',
+            'start_reminded_at' => 'datetime',
+            'results_notified_at' => 'datetime',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'original_ends_at' => 'datetime',

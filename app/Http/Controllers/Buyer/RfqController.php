@@ -13,8 +13,10 @@ use App\Models\Rfq;
 use App\Models\RfqAttachment;
 use App\Models\RfqInvite;
 use App\Services\Auction\AuctionService;
+use App\Services\LiveVersion;
 use App\Services\RfqService;
 use App\Support\Tenancy\CurrentOrganization;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -41,7 +43,25 @@ class RfqController extends Controller
                 ->paginate(20)
                 ->withQueryString(),
             'status' => $status,
+            'live' => LiveVersion::buyerIndex($this->current->id()),
         ]);
+    }
+
+    /** Fingerprint for self-refreshing pages (list). */
+    public function liveIndex(): JsonResponse
+    {
+        return $this->liveResponse(LiveVersion::buyerIndex($this->current->id()));
+    }
+
+    /** Fingerprint for self-refreshing pages (one RFQ). */
+    public function live(int $rfq): JsonResponse
+    {
+        return $this->liveResponse(LiveVersion::buyerRfq(Rfq::findOrFail($rfq)));
+    }
+
+    private function liveResponse(array $live): JsonResponse
+    {
+        return response()->json($live + ['server_time' => now()->getTimestampMs()])->header('Cache-Control', 'no-store');
     }
 
     public function create(): View
@@ -68,6 +88,7 @@ class RfqController extends Controller
 
         return view('buyer.rfqs.show', [
             'rfq' => $rfq,
+            'live' => LiveVersion::buyerRfq($rfq),
             'unsealed' => $unsealed,
             // Sealed: only a count, never amounts.
             'quoteCount' => $quoteCount,

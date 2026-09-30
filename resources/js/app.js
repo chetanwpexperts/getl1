@@ -2,11 +2,13 @@ import './bootstrap';
 import { initRfqItems } from './rfq-items';
 import { initAuction } from './auction';
 import { initQuoteForm } from './quote-form';
+import { initLivePage } from './live-page';
 
 document.addEventListener('DOMContentLoaded', () => {
     initRfqItems();
     initAuction();
     initQuoteForm();
+    initLivePage();
 
     // Copy-to-clipboard buttons: <button data-copy="text">
     document.addEventListener('click', async (e) => {

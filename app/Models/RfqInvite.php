@@ -21,6 +21,7 @@ class RfqInvite extends Model
             'accepted_terms_at' => 'datetime',
             'declined_at' => 'datetime',
             'last_sent_at' => 'datetime',
+            'reminded_at' => 'datetime',
         ];
     }
 

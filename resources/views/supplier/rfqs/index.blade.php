@@ -3,6 +3,7 @@
 @section('title', 'RFQs')
 
 @section('content')
+    <x-live-page :url="route('supplier.rfqs.live')" :live="$live" />
     <h1 class="text-2xl font-semibold">RFQs</h1>
     <p class="mt-1 text-sm text-slate-600">Requests you've been invited to quote on. Your prices stay sealed until each deadline.</p>
 

@@ -12,8 +12,10 @@ use App\Models\RfqAttachment;
 use App\Models\RfqInvite;
 use App\Services\InviteService;
 use App\Services\QuoteService;
+use App\Services\LiveVersion;
 use App\Services\RfqService;
 use App\Support\Tenancy\CurrentOrganization;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -39,7 +41,23 @@ class RfqController extends Controller
                 ->paginate(20),
             'quotedRfqIds' => Quote::where('supplier_org_id', $this->current->id())->whereNotNull('submitted_at')->pluck('rfq_id')->all(),
             'auctions' => $this->myAuctions()->get()->keyBy('rfq_id'),
+            'live' => LiveVersion::supplierIndex($this->current->id()),
         ]);
+    }
+
+    public function liveIndex(): JsonResponse
+    {
+        return $this->liveResponse(LiveVersion::supplierIndex($this->current->id()));
+    }
+
+    public function live(int $invite): JsonResponse
+    {
+        return $this->liveResponse(LiveVersion::supplierRfq($this->findOwn($invite)));
+    }
+
+    private function liveResponse(array $live): JsonResponse
+    {
+        return response()->json($live + ['server_time' => now()->getTimestampMs()])->header('Cache-Control', 'no-store');
     }
 
     public function show(int $invite): View
@@ -50,6 +68,7 @@ class RfqController extends Controller
 
         return view('supplier.rfqs.show', [
             'invite' => $invite,
+            'live' => LiveVersion::supplierRfq($invite),
             'rfq' => $rfq,
             'quote' => Quote::with('items')->where('rfq_id', $rfq->id)->where('supplier_org_id', $this->current->id())->first(),
             'auction' => $this->myAuctions()->where('rfq_id', $rfq->id)->latest('id')->first(),

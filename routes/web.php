@@ -56,7 +56,9 @@ Route::middleware('auth')->group(function () {
 
             // RFQs: everyone in the buyer company can view
             Route::get('/rfqs', [BuyerRfqController::class, 'index'])->name('rfqs.index');
+            Route::get('/rfqs/live', [BuyerRfqController::class, 'liveIndex'])->middleware('throttle:60,1')->name('rfqs.live');
             Route::get('/rfqs/{rfq}', [BuyerRfqController::class, 'show'])->whereNumber('rfq')->name('rfqs.show');
+            Route::get('/rfqs/{rfq}/live', [BuyerRfqController::class, 'live'])->whereNumber('rfq')->middleware('throttle:60,1')->name('rfqs.show.live');
             Route::get('/rfqs/{rfq}/attachments/{attachment}', [BuyerRfqController::class, 'downloadAttachment'])
                 ->whereNumber(['rfq', 'attachment'])->name('rfqs.attachments.download');
 
@@ -107,7 +109,9 @@ Route::middleware('auth')->group(function () {
             Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->whereNumber('document')->name('documents.destroy');
 
             Route::get('/rfqs', [SupplierRfqController::class, 'index'])->name('rfqs.index');
+            Route::get('/rfqs/live', [SupplierRfqController::class, 'liveIndex'])->middleware('throttle:60,1')->name('rfqs.live');
             Route::get('/rfqs/{invite}', [SupplierRfqController::class, 'show'])->whereNumber('invite')->name('rfqs.show');
+            Route::get('/rfqs/{invite}/live', [SupplierRfqController::class, 'live'])->whereNumber('invite')->middleware('throttle:60,1')->name('rfqs.show.live');
             Route::post('/rfqs/{invite}/accept', [SupplierRfqController::class, 'accept'])->whereNumber('invite')->name('rfqs.accept');
             Route::post('/rfqs/{invite}/decline', [SupplierRfqController::class, 'decline'])->whereNumber('invite')->name('rfqs.decline');
             Route::post('/rfqs/{invite}/quote', [SupplierRfqController::class, 'quote'])

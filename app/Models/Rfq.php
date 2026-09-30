@@ -33,6 +33,7 @@ class Rfq extends Model
             'terms' => 'array',
             'quote_deadline' => 'datetime',
             'published_at' => 'datetime',
+            'quotes_opened_notified_at' => 'datetime',
             'approved_at' => 'datetime',
         ];
     }

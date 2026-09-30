@@ -16,6 +16,7 @@
         };
     @endphp
 
+    <x-live-page :url="route('buyer.rfqs.show.live', $rfq->id)" :live="$live" />
     <a href="{{ route('buyer.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← RFQs</a>
 
     <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
@@ -71,7 +72,7 @@
     @if ($status === 'open')
         <div class="mt-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
             <p class="font-semibold">{{ $quoteCount }} of {{ $rfq->invites->count() }} suppliers have quoted.</p>
-            <p class="mt-1">Quotes are sealed. Prices unlock automatically at {{ $deadline }} IST.</p>
+            <p class="mt-1">Quotes are sealed. Prices unlock automatically at {{ $deadline }} IST (in <span class="font-semibold tabular-nums" data-countdown-to="{{ $rfq->quote_deadline->getTimestampMs() }}"></span>). This page updates on its own.</p>
         </div>
     @elseif ($status === 'cancelled')
         <div class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">This RFQ was cancelled. Invited suppliers were notified.</div>
@@ -85,7 +86,7 @@
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
             <div>
                 <p class="font-semibold">
-                    @if ($aStatus === 'scheduled') Live auction scheduled for {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST
+                    @if ($aStatus === 'scheduled') Live auction scheduled for {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST (starts in <span class="tabular-nums" data-countdown-to="{{ $auction->starts_at->getTimestampMs() }}"></span>)
                     @elseif ($aStatus === 'live') Live auction in progress
                     @else Live auction closed
                     @endif

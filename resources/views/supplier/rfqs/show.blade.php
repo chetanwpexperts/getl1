@@ -13,6 +13,7 @@
         $cls = 'block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20';
     @endphp
 
+    <x-live-page :url="route('supplier.rfqs.show.live', $invite->id)" :live="$live" />
     <a href="{{ route('supplier.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← RFQs</a>
 
     <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
@@ -25,6 +26,7 @@
         <div class="rounded-xl border px-4 py-2 text-sm {{ $open ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700' }}">
             @if ($rfq->isCancelled()) Cancelled by the buyer
             @elseif ($open) Quote by <span class="font-semibold">{{ $deadline }} IST</span>
+                <span class="block text-xs">Closes in <span class="font-semibold tabular-nums" data-countdown-to="{{ $rfq->quote_deadline->getTimestampMs() }}"></span></span>
             @else Quotes closed on {{ $deadline }} IST
             @endif
         </div>
@@ -39,7 +41,7 @@
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
             <div>
                 <p class="font-semibold">
-                    @if ($aStatus === 'scheduled') You're invited to a live auction on {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST
+                    @if ($aStatus === 'scheduled') You're invited to a live auction on {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST (starts in <span class="tabular-nums" data-countdown-to="{{ $auction->starts_at->getTimestampMs() }}"></span>)
                     @elseif ($aStatus === 'live') The live auction is running now
                     @else The live auction has closed
                     @endif

@@ -371,7 +371,8 @@ class RfqService
             });
     }
 
-    private function recipientEmail(RfqInvite $invite): ?string
+    /** Where a supplier's RFQ emails go: the contact in the buyer's list, else the company email. */
+    public static function recipientEmail(RfqInvite $invite): ?string
     {
         $invite->loadMissing(['listEntry', 'supplier']);
 

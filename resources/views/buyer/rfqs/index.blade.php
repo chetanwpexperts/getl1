@@ -5,6 +5,7 @@
 @section('content')
     @php $canManage = in_array($currentRole?->value, ['buyer_admin', 'buyer_user'], true); @endphp
 
+    <x-live-page :url="route('buyer.rfqs.live')" :live="$live" />
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
             <h1 class="text-2xl font-semibold">RFQs</h1>
