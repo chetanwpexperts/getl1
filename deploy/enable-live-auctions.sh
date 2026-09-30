@@ -5,8 +5,9 @@
 #   2. sudo bash <app>/deploy/enable-live-auctions.sh
 #
 # What it adds to the server, and nothing else:
-#   - Redis (only if not installed yet), listening on localhost only. An existing Redis
-#     is reused as is: GetL1 uses its own DB number (5) and its own pub/sub channel name.
+#   - Redis (only if nothing runs on port 6379 yet), localhost only. An existing Redis is
+#     reused as is: GetL1 uses its own DB number (5) and its own pub/sub channel name.
+#     USE_REDIS=0 skips Redis entirely (one websocket server, no scaling).
 #   - One supervisor program: getl1-staging-reverb (websocket server on 127.0.0.1).
 #   - One location block (/app/) inside the staging.getl1.com nginx site.
 #   - Reverb keys in the app's .env.
@@ -36,23 +37,32 @@ web list --raw 2>/dev/null | grep -q '^reverb:start' \
 
 # -----------------------------------------------------------------------------
 step "Redis"
-if ! command -v redis-server >/dev/null 2>&1; then
-  echo "    Installing redis-server (localhost only)"
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -q redis-server >/dev/null
-  systemctl enable --now redis-server >/dev/null 2>&1 || true
-else
-  echo "    Redis already installed, reusing it without changes"
-fi
+# USE_REDIS=0: one websocket server, no Redis (enough for thousands of connections).
+# Redis is only needed to run several websocket servers side by side.
+USE_REDIS="${USE_REDIS:-1}"
 REDIS_PASS="${REDIS_PASSWORD:-}"
-redis_cli() { if [[ -n "$REDIS_PASS" ]]; then REDISCLI_AUTH="$REDIS_PASS" redis-cli "$@"; else redis-cli "$@"; fi; }
-PONG="$(redis_cli -h 127.0.0.1 ping 2>&1 || true)"
-if [[ "$PONG" == *NOAUTH* ]]; then
-  die "Redis needs a password. Re-run with: sudo REDIS_PASSWORD='...' bash $0"
+if [[ "$USE_REDIS" == "0" ]]; then
+  echo "    Skipped (USE_REDIS=0): single websocket server"
+else
+  if ss -ltnH "( sport = :6379 )" | grep -q .; then
+    echo "    A Redis is already running on port 6379, reusing it without changes"
+  elif ! command -v redis-server >/dev/null 2>&1; then
+    echo "    Installing redis-server (localhost only)"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -q redis-server >/dev/null
+    systemctl enable --now redis-server >/dev/null 2>&1 || true
+  else
+    echo "    Redis already installed, reusing it without changes"
+  fi
+  redis_cli() { if [[ -n "$REDIS_PASS" ]]; then REDISCLI_AUTH="$REDIS_PASS" redis-cli "$@"; else redis-cli "$@"; fi; }
+  PONG="$(redis_cli -h 127.0.0.1 ping 2>&1 || true)"
+  if [[ "$PONG" == *NOAUTH* ]]; then
+    die "Redis needs a password. Re-run with: sudo REDIS_PASSWORD='...' bash $0"
+  fi
+  [[ "$PONG" == "PONG" ]] || die "Redis isn't answering on 127.0.0.1:6379 ($PONG)."
+  BIND="$(redis_cli -h 127.0.0.1 config get bind 2>/dev/null | tail -1 || true)"
+  [[ -z "$BIND" || "$BIND" =~ ^(127\.0\.0\.1|-?::1|\ )+$ ]] || warn "Redis bind is '$BIND'. Make sure port 6379 is firewalled from the internet."
+  echo "    Redis OK"
 fi
-[[ "$PONG" == "PONG" ]] || die "Redis isn't answering on 127.0.0.1:6379 ($PONG)."
-BIND="$(redis_cli -h 127.0.0.1 config get bind 2>/dev/null | tail -1 || true)"
-[[ -z "$BIND" || "$BIND" =~ ^(127\.0\.0\.1|-?::1|\ )+$ ]] || warn "Redis bind is '$BIND'. Make sure port 6379 is firewalled from the internet."
-echo "    Redis OK"
 
 # -----------------------------------------------------------------------------
 step "App settings (.env)"
@@ -87,7 +97,7 @@ env_set REVERB_SERVER_HOST 127.0.0.1
 env_set REVERB_SERVER_PORT "$PORT" force
 env_set REVERB_INTERNAL_HOST 127.0.0.1
 env_set REVERB_ALLOWED_ORIGINS "$STAGING_HOST"
-env_set REVERB_SCALING_ENABLED true force
+if [[ "$USE_REDIS" == "0" ]]; then env_set REVERB_SCALING_ENABLED false force; else env_set REVERB_SCALING_ENABLED true force; fi
 env_set REDIS_HOST 127.0.0.1
 env_set REDIS_PORT 6379
 [[ -n "$REDIS_PASS" ]] && env_set REDIS_PASSWORD "$REDIS_PASS" force
