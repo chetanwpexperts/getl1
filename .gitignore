@@ -22,3 +22,5 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+# Waitlist data is written outside git (see deploy/README.md)
+/landing/data/
