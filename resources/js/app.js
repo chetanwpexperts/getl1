@@ -5,6 +5,7 @@ import { initQuoteForm } from './quote-form';
 import { initLivePage } from './live-page';
 import { initCountdowns } from './countdowns';
 import { initBilling } from './billing';
+import { initPwa } from './pwa';
 
 document.addEventListener('DOMContentLoaded', () => {
     initRfqItems();
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLivePage();
     initCountdowns();
     initBilling();
+    initPwa();
 
     // Copy-to-clipboard buttons: <button data-copy="text">
     document.addEventListener('click', async (e) => {

@@ -7,6 +7,7 @@
     <meta name="robots" content="noindex">
     <title>@yield('title', config('site.name')) · {{ config('site.name') }}</title>
     <x-favicon />
+    <x-pwa />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-white font-sans text-slate-900 antialiased">
@@ -34,7 +35,8 @@
                 @endif
                 @yield('content')
             </div>
-            <p class="mt-10 text-center text-xs text-slate-500">
+            <p class="mt-8 text-center text-sm"><x-install-app class="font-medium text-emerald-700 hover:underline" /></p>
+            <p class="mt-4 text-center text-xs text-slate-500">
                 <a href="{{ route('site.terms') }}" class="hover:underline">Terms</a> ·
                 <a href="{{ route('site.privacy') }}" class="hover:underline">Privacy</a> ·
                 <a href="{{ route('site.contact') }}" class="hover:underline">Contact</a>

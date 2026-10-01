@@ -87,7 +87,7 @@ class LoginController extends Controller
      * Where to land after login when no page was requested: a supplier with an auction
      * running or starting soon goes straight into the auction room.
      */
-    private function landing(\App\Models\User $user): string
+    public function landing(\App\Models\User $user): string
     {
         if ($user->is_platform_admin && (config('site.mode') === 'website' || ! $user->organizations()->exists())) {
             return route('admin.dashboard');

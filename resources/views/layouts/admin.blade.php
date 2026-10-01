@@ -7,6 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Admin') · {{ config('site.name') }} Admin</title>
     <x-favicon />
+    <x-pwa />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased" data-server-time="{{ now()->getTimestampMs() }}">
@@ -47,6 +48,7 @@
                 @else
                     <a href="{{ route('dashboard') }}" class="hover:text-white">← Back to app</a>
                 @endif
+                <x-install-app class="hover:text-white" :up="true" />
                 <form method="POST" action="{{ route('logout') }}">@csrf<button class="hover:text-white">Log out</button></form>
             </div>
         </div>

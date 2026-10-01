@@ -23,6 +23,7 @@ use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InviteLinkController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\PwaController;
 use App\Http\Controllers\Supplier\AuctionController as SupplierAuctionController;
 use App\Http\Controllers\Supplier\DocumentController;
 use App\Http\Controllers\Supplier\RfqController as SupplierRfqController;
@@ -42,6 +43,14 @@ Route::name('site.')->group(function () {
     Route::get('/shipping', [SiteController::class, 'page'])->defaults('page', 'shipping')->name('shipping');
     Route::get('/sitemap.xml', [SiteController::class, 'sitemap'])->name('sitemap');
     Route::get('/robots.txt', [SiteController::class, 'robots'])->name('robots');
+});
+
+// Installable app: manifest, service worker, offline page, and where the home-screen icon opens.
+Route::controller(PwaController::class)->name('pwa.')->group(function () {
+    Route::get('/manifest.webmanifest', 'manifest')->name('manifest');
+    Route::get('/sw.js', 'worker')->name('worker');
+    Route::get('/offline', 'offline')->name('offline');
+    Route::get('/start', 'start')->name('start');
 });
 
 // Invitation link from email / WhatsApp. Public, but bound to one supplier on first use.

@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') · {{ config('site.name') }}</title>
     <x-favicon />
+    <x-pwa />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased" data-server-time="{{ now()->getTimestampMs() }}">
@@ -58,6 +59,7 @@
                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{{ $currentOrg->type->label() }}</span>
                 @endisset
 
+                <x-install-app class="text-slate-600 hover:text-slate-900" />
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="text-slate-600 hover:text-slate-900">Log out</button>
