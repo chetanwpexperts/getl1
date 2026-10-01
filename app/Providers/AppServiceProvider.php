@@ -32,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Website name, contact details and branding saved in Admin → Website.
         $this->app->make(\App\Services\WebsiteSettings::class)->apply();
+        // The queue worker runs for hours: re-read them before each job so emails use the latest values.
+        \Illuminate\Support\Facades\Queue::before(fn () => $this->app->make(\App\Services\WebsiteSettings::class)->apply());
 
         // Password reset email in GetL1's words.
         \Illuminate\Auth\Notifications\ResetPassword::toMailUsing(fn ($user, string $token) => (new \Illuminate\Notifications\Messages\MailMessage)
