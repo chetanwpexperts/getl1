@@ -35,7 +35,7 @@
                 @endif
                 @yield('content')
             </div>
-            <p class="mt-8 text-center text-sm"><x-install-app class="font-medium text-emerald-700 hover:underline" /></p>
+            <div class="mt-8 w-full {{ $wide ?? false ? 'max-w-2xl' : 'max-w-md' }}"><x-install-app variant="card" /></div>
             <p class="mt-4 text-center text-xs text-slate-500">
                 <a href="{{ route('site.terms') }}" class="hover:underline">Terms</a> ·
                 <a href="{{ route('site.privacy') }}" class="hover:underline">Privacy</a> ·

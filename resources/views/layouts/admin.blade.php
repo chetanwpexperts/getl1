@@ -48,7 +48,7 @@
                 @else
                     <a href="{{ route('dashboard') }}" class="hover:text-white">← Back to app</a>
                 @endif
-                <x-install-app class="hover:text-white" :up="true" />
+                <x-install-app variant="dark" />
                 <form method="POST" action="{{ route('logout') }}">@csrf<button class="hover:text-white">Log out</button></form>
             </div>
         </div>

@@ -59,7 +59,7 @@
                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{{ $currentOrg->type->label() }}</span>
                 @endisset
 
-                <x-install-app class="text-slate-600 hover:text-slate-900" />
+                <x-install-app />
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="text-slate-600 hover:text-slate-900">Log out</button>
