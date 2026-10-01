@@ -86,4 +86,16 @@ class BillingSettingsTest extends TestCase
         $this->assertSame('Sharma Ventures', config('billing.seller.name'));
         $this->assertSame('notifications@getl1.com', config('billing.seller.email'));
     }
+
+    public function test_typed_details_are_saved_even_when_they_match_the_default(): void
+    {
+        config(['site.email' => 'notifications@getl1.com', 'site.legal_name' => 'Chetan Sharma']);
+        $admin = $this->admin();
+        $this->asAdmin($admin)->post(route('admin.billing.update'), ['gst_rate' => 18, 'seller_name' => 'Chetan Sharma', 'seller_email' => 'notifications@getl1.com', 'reason' => 'Initial setup'])
+            ->assertSessionHas('status', 'Billing details saved. New receipts and invoices use them.');
+        $saved = app(BillingSettings::class)->saved();
+        $this->assertSame('Chetan Sharma', $saved['seller_name']);
+        $this->assertSame('notifications@getl1.com', $saved['seller_email']);
+        $this->assertArrayNotHasKey('gst_enabled', $saved); // switch left as it was
+    }
 }

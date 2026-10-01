@@ -148,11 +148,15 @@ class BillingSettings
                 default => filled($input[$field] ?? null) ? trim((string) $input[$field]) : null,
             };
             $old = $saved[$field] ?? null;
-            if ($new === $old || (! array_key_exists($field, $saved) && $new == $current[$field] && $type !== 'bool')) {
+            if ($new === $old) {
                 continue;
             }
-            if ($type === 'bool' && ! array_key_exists($field, $saved) && $new === (bool) $current[$field]) {
-                continue;
+            if (! array_key_exists($field, $saved)) {
+                // Never saved before: an empty box, or the switch/rate left as they already are, isn't a change.
+                // Anything typed in is saved, even when it matches the default in use today.
+                if ($new === null || (in_array($type, ['bool', 'rate'], true) && $new == $current[$field])) {
+                    continue;
+                }
             }
             DB::table('platform_settings')->updateOrInsert(['key' => self::PREFIX.$field],
                 ['value' => json_encode($new), 'updated_by' => $by->id, 'updated_at' => now(), 'created_at' => now()]);
