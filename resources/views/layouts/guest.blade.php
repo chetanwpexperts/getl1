@@ -41,6 +41,7 @@
                 <a href="{{ route('site.privacy') }}" class="hover:underline">Privacy</a> ·
                 <a href="{{ route('site.contact') }}" class="hover:underline">Contact</a>
             </p>
+            <p class="mt-2 text-center text-xs text-slate-400"><x-credit link-class="font-medium text-slate-500 hover:text-slate-700" /></p>
         </main>
     </div>
 </body>

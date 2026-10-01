@@ -23,5 +23,6 @@
         </div>
     </div>
     <p class="mt-6 text-sm text-slate-500">Need help? <a href="mailto:{{ config('site.email') }}" class="underline">{{ config('site.email') }}</a></p>
+    <p class="mt-2 text-xs text-slate-400"><x-credit link-class="text-slate-500 hover:text-slate-700" /></p>
 </body>
 </html>

@@ -183,4 +183,21 @@ class WebsiteTest extends TestCase
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])->assertSessionHasErrors('turnstile');
         $this->assertGuest();
     }
+
+    public function test_developer_credit_shows_everywhere_and_can_be_turned_off(): void
+    {
+        $this->get('/')->assertOk()->assertSee('Developed by')->assertSee('https://chetanbuilds.com', false);
+        $this->get('/login')->assertSee('ChetanBuilds');
+        [, $buyer] = $this->buyer();
+        $this->actingAs($buyer)->get(route('dashboard'))->assertSee('ChetanBuilds');
+        $this->post('/contact', $this->lead())->assertRedirect();
+        $this->assertStringContainsString('chetanbuilds.com', (new LeadReceivedMail(Lead::firstOrFail()))->render());
+
+        $this->app['auth']->forgetGuards();
+        $admin = $this->admin();
+        $this->asAdmin($admin)->get(route('admin.website'))->assertOk()->assertSee('Developer website');
+        $this->asAdmin($admin)->post(route('admin.website.update'), ['credit_text' => 'Designed and developed by'])->assertRedirect(); // checkbox left unticked: off
+        $this->app['auth']->forgetGuards();
+        $this->get('/')->assertDontSee('chetanbuilds.com', false);
+    }
 }

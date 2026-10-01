@@ -120,7 +120,10 @@ GSTIN {{ config('site.gstin') }}@endif</p>
                 </ul>
             </div>
         </div>
-        <p class="border-t border-slate-200 py-5 text-center text-xs text-slate-500">© {{ date('Y') }} {{ config('site.legal_name') }}. {{ config('site.footer_note') }}</p>
+        <div class="border-t border-slate-200"><div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-5 text-xs text-slate-500 sm:justify-between">
+            <span>© {{ date('Y') }} {{ config('site.legal_name') }}. {{ config('site.footer_note') }}</span>
+            <x-credit link-class="font-medium text-slate-700 hover:text-emerald-700" />
+        </div></div>
     </footer>
 </body>
 </html>

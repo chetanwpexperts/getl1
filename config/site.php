@@ -42,6 +42,11 @@ return [
     'social_x' => null,
     'social_youtube' => null,
     'footer_note' => 'Made in India.',
+    // "Developed by" credit in the website, app, admin and email footers.
+    'credit_on' => true,
+    'credit_text' => 'Developed by',
+    'credit_name' => 'ChetanBuilds',
+    'credit_url' => 'https://chetanbuilds.com',
     'ga4_id' => null,
     'google_verification' => null,
 ];

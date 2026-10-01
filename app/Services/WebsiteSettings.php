@@ -61,6 +61,10 @@ class WebsiteSettings
         ],
         'Footer' => [
             'footer_note' => ['text', 'Footer note', 'Small line at the very bottom, e.g. "Made in India."', 160],
+            'credit_on' => ['bool', 'Show the "Developed by" credit', 'Small credit line in the website, app, admin and email footers.', 0],
+            'credit_text' => ['text', 'Credit wording', 'e.g. "Developed by" or "Designed and developed by"', 60],
+            'credit_name' => ['text', 'Developer name', '', 80],
+            'credit_url' => ['url', 'Developer website', '', 255],
         ],
         'Analytics and search' => [
             'ga4_id' => ['ga4', 'Google Analytics ID', 'Measurement ID like G-ABC123XYZ. Leave empty for no analytics.', 20],

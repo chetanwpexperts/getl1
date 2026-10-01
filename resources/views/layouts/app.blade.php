@@ -90,7 +90,7 @@
 
     <footer class="mx-auto max-w-6xl px-4 pb-10 pt-4 text-xs text-slate-500">
         <div class="flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5">
-            <span>© {{ date('Y') }} {{ config('site.name') }} · Times shown in IST</span>
+            <span>© {{ date('Y') }} {{ config('site.name') }} · Times shown in IST<x-credit class="before:mx-1.5 before:content-['·']" link-class="font-medium text-slate-600 hover:text-slate-800" /></span>
             <span class="flex gap-4">
                 <a href="mailto:{{ config('site.email') }}" class="hover:text-slate-700">Help: {{ config('site.email') }}</a>
                 <a href="{{ route('site.terms') }}" class="hover:text-slate-700">Terms</a>

@@ -44,7 +44,7 @@
                                                    class="mt-2 block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200">
                                             @break
                                         @case('bool')
-                                            <label class="inline-flex items-center gap-2 text-sm"><input id="{{ $key }}" type="checkbox" name="{{ $key }}" value="1" @checked($val($key)) class="size-4 rounded border-slate-300 accent-emerald-700"> On</label>
+                                            <label class="inline-flex items-center gap-2 text-sm"><input id="{{ $key }}" type="checkbox" name="{{ $key }}" value="1" @checked(old($key, $saved[$key] ?? $default($key))) class="size-4 rounded border-slate-300 accent-emerald-700"> On</label>
                                             @break
                                         @case('textarea')
                                             <textarea id="{{ $key }}" name="{{ $key }}" rows="3" maxlength="{{ $max }}" placeholder="{{ $default($key) }}" class="{{ $input }}">{{ $val($key) }}</textarea>

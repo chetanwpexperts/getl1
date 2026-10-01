@@ -51,6 +51,7 @@
                 <x-install-app variant="dark" />
                 <form method="POST" action="{{ route('logout') }}">@csrf<button class="hover:text-white">Log out</button></form>
             </div>
+            <p class="mt-3 text-[11px] text-slate-500"><x-credit link-class="text-slate-400 hover:text-white" /></p>
         </div>
     </aside>
 
