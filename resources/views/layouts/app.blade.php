@@ -29,6 +29,7 @@
             $groups['Insights'] = [['buyer.reports.savings', 'Savings', 'savings', 'buyer.reports.*', null]];
             $groups['Company'] = [
                 ['company.edit', 'Company profile', 'company', 'company.*', null],
+                ['team.index', 'Team', 'team', 'team.*', null],
                 ['buyer.billing.index', 'Plan & billing', 'billing', 'buyer.billing.*', null],
             ];
         } else {
@@ -38,6 +39,7 @@
             ];
             $groups['Company'] = [
                 ['company.edit', 'Company profile', 'company', 'company.*', null],
+                ['team.index', 'Team', 'team', 'team.*', null],
                 ['supplier.documents.index', 'Documents & KYC', 'documents', 'supplier.documents.*', null],
             ];
         }

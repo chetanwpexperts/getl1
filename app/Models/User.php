@@ -22,6 +22,8 @@ class User extends Authenticatable
         'password',
         'current_organization_id',
         'last_login_at',
+        'invited_at',
+        'invited_by',
     ];
 
     protected $hidden = [
@@ -36,6 +38,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'invited_at' => 'datetime',
             'is_platform_admin' => 'boolean',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted',

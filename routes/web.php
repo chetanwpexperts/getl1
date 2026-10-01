@@ -53,6 +53,10 @@ Route::controller(PwaController::class)->name('pwa.')->group(function () {
     Route::get('/start', 'start')->name('start');
 });
 
+// Team invitation: set a password from the emailed link (signed, 7 days, works once).
+Route::get('/join/{user}', [\App\Http\Controllers\Auth\JoinController::class, 'show'])->whereNumber('user')->middleware('throttle:30,1')->name('team.join');
+Route::post('/join/{user}', [\App\Http\Controllers\Auth\JoinController::class, 'store'])->whereNumber('user')->middleware('throttle:10,1')->name('team.join.store');
+
 // Invitation link from email / WhatsApp. Public, but bound to one supplier on first use.
 Route::get('/i/{token}', [InviteLinkController::class, 'show'])->middleware('throttle:30,1')->name('invites.show');
 
@@ -141,6 +145,15 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/company', [CompanyProfileController::class, 'edit'])->name('company.edit');
         Route::put('/company', [CompanyProfileController::class, 'update'])->name('company.update');
+
+        // Team: who can sign in for this company, and their role.
+        Route::get('/team', [\App\Http\Controllers\TeamController::class, 'index'])->name('team.index');
+        Route::middleware('throttle:20,1')->group(function () {
+            Route::post('/team', [\App\Http\Controllers\TeamController::class, 'store'])->name('team.store');
+            Route::put('/team/{member}/role', [\App\Http\Controllers\TeamController::class, 'updateRole'])->whereNumber('member')->name('team.role');
+            Route::post('/team/{member}/resend', [\App\Http\Controllers\TeamController::class, 'resend'])->whereNumber('member')->name('team.resend');
+            Route::delete('/team/{member}', [\App\Http\Controllers\TeamController::class, 'destroy'])->whereNumber('member')->name('team.destroy');
+        });
 
         // Buyer area
         Route::middleware('org.type:buyer')->prefix('buyer')->name('buyer.')->group(function () {
