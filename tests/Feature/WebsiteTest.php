@@ -208,7 +208,7 @@ class WebsiteTest extends TestCase
         }
         $im = imagecreatetruecolor(400, 120);
         imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));
-        imagefilledrectangle($im, 100, 30, 300, 90, imagecolorallocate($im, 4, 120, 87));
+        imagefilledellipse($im, 200, 60, 200, 60, imagecolorallocate($im, 4, 120, 87)); // oval: corners stay white after trimming
         ob_start();
         imagepng($im);
         $out = imagecreatefromstring(\App\Services\WebsiteSettings::shrink((string) ob_get_clean(), 'png', [800, 200], trim: true));
