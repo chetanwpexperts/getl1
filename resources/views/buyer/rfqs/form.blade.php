@@ -25,7 +25,7 @@
 
     @if ($aiSource ?? null)
         @php $srcExt = $aiSource->input_file_path ? pathinfo($aiSource->input_file_path, PATHINFO_EXTENSION) : null; @endphp
-        <details class="mt-5 rounded-xl border border-slate-200 bg-white" @if (session('ai_job_id')) open @endif data-ai-original>
+        <details class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm" @if (session('ai_job_id')) open @endif data-ai-original>
             <summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">Compare with your original</summary>
             <div class="border-t border-slate-100 p-4">
                 @if (in_array($srcExt, ['jpg', 'png'], true))
@@ -60,7 +60,7 @@
         @if ($rfq->exists) @method('PUT') @endif
         @if ($aiSource ?? null)<input type="hidden" name="ai_job_id" value="{{ $aiSource->id }}">@endif
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5">
+        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <h2 class="text-sm font-semibold">Requirement</h2>
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
@@ -88,7 +88,7 @@
             </div>
         </section>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5">
+        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <div class="flex items-center justify-between">
                 <h2 class="text-sm font-semibold">Items</h2>
                 <span class="text-xs text-slate-500">Last purchase price is private: suppliers never see it.</span>
@@ -106,7 +106,7 @@
             <button type="button" data-add-item class="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50">+ Add item</button>
         </section>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5">
+        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <h2 class="text-sm font-semibold">Terms and deadline</h2>
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>

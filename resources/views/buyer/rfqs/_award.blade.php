@@ -78,7 +78,7 @@
             $l1 = $candidates->first();
             $source = $l1['source'];
         @endphp
-        <section class="mt-6 rounded-xl border border-slate-200 bg-white">
+        <section class="mt-8 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 px-5 py-3">
                 <h2 class="font-semibold">Award this RFQ</h2>
                 <p class="mt-0.5 text-sm text-slate-600">
@@ -131,7 +131,7 @@
         </section>
 
     @elseif ($awardBlocker && ! $rfq->isCancelled() && $rfq->quotesAreUnsealed())
-        <p class="mt-6 rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">{{ $awardBlocker }}</p>
+        <p class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm px-5 py-4 text-sm text-slate-600">{{ $awardBlocker }}</p>
     @endif
 
     @if ($rejectedAwards->isNotEmpty())

@@ -20,7 +20,7 @@
         <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
             <div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <h1 class="text-2xl font-semibold">{{ $rfq->title }}</h1>
+                    <h1 class="text-2xl font-semibold tracking-tight">{{ $rfq->title }}</h1>
                     <span data-status="{{ $state['status'] }}" class="auction-status">{{ ucfirst($state['status']) }}</span>
                 </div>
                 <p class="mt-1 text-sm text-slate-600">
@@ -46,24 +46,24 @@
                 <p class="text-sm text-emerald-900">Current L1 (before GST)</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums text-emerald-800" data-l1>—</p>
             </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                 <p class="text-sm text-slate-600">Saved vs best sealed quote</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums" data-savings>—</p>
                 <p class="mt-1 text-xs text-slate-500">Start price <span data-start-price>—</span></p>
             </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                 <p class="text-sm text-slate-600">Live bids</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums" data-bid-count>0</p>
             </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                 <p class="text-sm text-slate-600">Extensions used</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums" data-extensions>0</p>
             </div>
         </div>
 
         <div class="mt-6 grid gap-6 lg:grid-cols-3">
-            <section class="rounded-xl border border-slate-200 bg-white lg:col-span-2">
-                <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">Standings</h2>
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Standings</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[560px] text-sm">
                         <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -74,8 +74,8 @@
                 </div>
             </section>
 
-            <section class="rounded-xl border border-slate-200 bg-white">
-                <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">Bid feed</h2>
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Bid feed</h2>
                 <ul class="max-h-96 divide-y divide-slate-100 overflow-y-auto text-sm" data-recent></ul>
             </section>
         </div>
@@ -85,7 +85,7 @@
                 $roomUrl = route('supplier.auctions.show', $auction->id);
                 $when = $state['status'] === 'live' ? 'is live now' : 'starts '.$auction->starts_at->ist()->format('d M, h:i A').' IST';
             @endphp
-            <section class="mt-6 rounded-xl border border-slate-200 bg-white">
+            <section class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
                     <h2 class="font-semibold">Participants</h2>
                     <button type="button" data-copy="{{ $roomUrl }}" class="text-sm font-medium text-emerald-700 hover:underline">Copy auction room link</button>
@@ -112,7 +112,7 @@
         @endif
 
         @if ($canManage && $state['status'] === 'scheduled')
-            <details class="mt-6 max-w-xl rounded-xl border border-slate-200 bg-white p-5 text-sm">
+            <details class="mt-6 max-w-xl rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
                 <summary class="cursor-pointer text-red-700">Cancel this auction</summary>
                 <form method="POST" action="{{ route('buyer.auctions.cancel', $auction->id) }}" class="mt-3 flex flex-wrap gap-2" data-confirm="Cancel the scheduled auction?">
                     @csrf

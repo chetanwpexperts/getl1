@@ -8,7 +8,7 @@
     <p class="mt-1 text-sm text-slate-600">We'll send RFQ invites to this mobile (WhatsApp) and email. Add at least one.</p>
 
     <form method="POST" action="{{ $entry->exists ? route('buyer.suppliers.update', $entry->id) : route('buyer.suppliers.store') }}"
-          class="mt-6 max-w-2xl space-y-4 rounded-xl border border-slate-200 bg-white p-5">
+          class="mt-6 max-w-2xl space-y-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
         @csrf
         @if ($entry->exists) @method('PUT') @endif
 

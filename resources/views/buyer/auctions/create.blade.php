@@ -36,7 +36,7 @@
         <div class="mt-6 grid gap-6 lg:grid-cols-3">
             <form method="POST" action="{{ route('buyer.auctions.store', $rfq->id) }}" class="space-y-6 lg:col-span-2">
                 @csrf
-                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                     <h2 class="text-sm font-semibold">Timing</h2>
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>
@@ -79,7 +79,7 @@
                     <p class="mt-3 text-xs text-slate-500">Auto-extend stops "last-second sniping": everyone gets a fair chance to respond.</p>
                 </section>
 
-                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                     <h2 class="text-sm font-semibold">Bidding rules</h2>
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>
@@ -118,7 +118,7 @@
             </form>
 
             <aside class="space-y-4">
-                <section class="rounded-xl border border-slate-200 bg-white">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold">Participants ({{ $quotes->count() }})</h2>
                     <ul class="divide-y divide-slate-100 text-sm">
                         @foreach ($quotes as $q)

@@ -20,7 +20,7 @@
         <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
             <div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <h1 class="text-2xl font-semibold">{{ $rfq->title }}</h1>
+                    <h1 class="text-2xl font-semibold tracking-tight">{{ $rfq->title }}</h1>
                     <span data-status="{{ $state['status'] }}" class="auction-status">{{ ucfirst($state['status']) }}</span>
                 </div>
                 <p class="mt-1 text-sm text-slate-600">{{ $rfq->ref_no }} · {{ $rfq->organization->name }} · <span data-participants>{{ $state['participants'] }}</span> suppliers bidding</p>
@@ -37,18 +37,18 @@
                 <p class="text-sm">Your rank</p>
                 <p class="mt-1 text-5xl font-bold tabular-nums" data-my-rank>—</p>
             </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                 <p class="text-sm text-slate-600">Your current price (before GST)</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums" data-my-amount>—</p>
             </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-5">
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                 <p class="text-sm text-slate-600">Lowest price (L1)</p>
                 <p class="mt-1 text-2xl font-semibold tabular-nums" data-l1>—</p>
             </div>
         </div>
 
         <div class="mt-6 grid gap-6 lg:grid-cols-3">
-            <section class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 lg:col-span-2">
                 <h2 class="font-semibold">Place a bid</h2>
                 <p class="mt-1 text-sm text-slate-600">Total for the whole RFQ, before GST. Bid at most <span class="font-semibold" data-max-next>—</span> (at least <span data-min-dec>—</span> below your price).</p>
 
@@ -85,8 +85,8 @@
                 <p class="auction-message mt-3 text-sm" data-bid-message role="status" aria-live="polite"></p>
             </section>
 
-            <section class="rounded-xl border border-slate-200 bg-white">
-                <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">Your bids</h2>
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Your bids</h2>
                 <ul class="max-h-80 divide-y divide-slate-100 overflow-y-auto text-sm" data-my-bids></ul>
                 <p class="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">Extensions used: <span data-extensions>0</span></p>
             </section>

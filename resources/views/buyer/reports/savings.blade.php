@@ -11,7 +11,7 @@
 
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold">Savings report</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Savings report</h1>
             <p class="mt-1 text-sm text-slate-600">Money saved on finished awards, before GST. Share it with your management.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -33,17 +33,17 @@
             <p class="mt-1 text-3xl font-semibold tabular-nums text-emerald-800">{{ $t['vs_last_count'] ? $signed($t['vs_last']) : '—' }}</p>
             <p class="mt-1 text-xs text-emerald-900">{{ $t['vs_last_pct'] !== null ? $t['vs_last_pct'].'% lower' : 'Add last prices on RFQ items to see this' }}</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <p class="text-sm text-slate-600">Saved vs best sealed quote</p>
             <p class="mt-1 text-3xl font-semibold tabular-nums">{{ $signed($t['vs_sealed']) }}</p>
             <p class="mt-1 text-xs text-slate-500">{{ $t['vs_sealed_pct'] !== null ? $t['vs_sealed_pct'].'% from live auctions' : 'From live auctions' }}</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <p class="text-sm text-slate-600">Total awarded</p>
             <p class="mt-1 text-3xl font-semibold tabular-nums">{{ $inr($t['spend']) }}</p>
             <p class="mt-1 text-xs text-slate-500">{{ $t['awards'] }} {{ \Illuminate\Support\Str::plural('order', $t['awards']) }} · {{ $t['auctions'] }} via live auction</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <p class="text-sm text-slate-600">Competition</p>
             <p class="mt-1 text-3xl font-semibold tabular-nums">{{ $t['avg_quotes'] }}</p>
             <p class="mt-1 text-xs text-slate-500">quotes per RFQ on average · {{ $t['l1_rate'] }}% awarded to L1</p>
@@ -51,17 +51,17 @@
     </div>
 
     @if ($locked)
-        <div class="mt-6 rounded-xl border border-slate-200 bg-white p-6 text-center">
+        <div class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm p-6 text-center">
             <p class="font-semibold">See savings by order and category, and export for your accounts team</p>
             <p class="mt-1 text-sm text-slate-600">The detailed report and export are part of the Starter plan and above.</p>
             <a href="{{ route('buyer.billing.index') }}" class="mt-4 inline-block rounded-lg bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800">See plans</a>
         </div>
     @elseif ($r['rows']->isEmpty())
-        <p class="mt-6 rounded-xl border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-600">No finished awards in this period yet. Savings appear here as soon as a purchase order is issued.</p>
+        <p class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm px-5 py-10 text-center text-sm text-slate-600">No finished awards in this period yet. Savings appear here as soon as a purchase order is issued.</p>
     @else
         @if ($r['by_category']->count() > 1)
-            <section class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">By category</h2>
+            <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">By category</h2>
                 <table class="w-full min-w-[560px] text-sm">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                         <tr><th class="px-4 py-2">Category</th><th class="px-4 py-2 text-right">Orders</th><th class="px-4 py-2 text-right">Awarded</th><th class="px-4 py-2 text-right">vs sealed</th><th class="px-4 py-2 text-right">vs last price</th></tr>
@@ -81,8 +81,8 @@
             </section>
         @endif
 
-        <section class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-            <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">Orders</h2>
+        <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Orders</h2>
             <table class="w-full min-w-[820px] text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>

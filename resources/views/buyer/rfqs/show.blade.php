@@ -17,27 +17,31 @@
     @endphp
 
     <x-live-page :url="route('buyer.rfqs.show.live', $rfq->id)" :live="$live" />
-    <a href="{{ route('buyer.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← RFQs</a>
+    <nav class="flex items-center gap-1.5 text-sm text-slate-500" aria-label="Breadcrumb">
+        <a href="{{ route('buyer.rfqs.index') }}" class="hover:text-slate-900">RFQs &amp; auctions</a>
+        <x-icon name="right" class="size-3.5 text-slate-400" />
+        <span class="text-slate-700">{{ $rfq->ref_no }}</span>
+    </nav>
 
-    <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
-        <div>
-            <div class="flex flex-wrap items-center gap-2">
-                <h1 class="text-2xl font-semibold">{{ $rfq->title }}</h1>
+    <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-3">
+                <h1 class="text-2xl font-semibold tracking-tight">{{ $rfq->title }}</h1>
                 <x-status-badge :status="$status" />
             </div>
-            <p class="mt-1 text-sm text-slate-600">
-                {{ $rfq->ref_no }}
-                @if ($rfq->category) · {{ $rfq->category->name }} @endif
-                @if ($deadline) · Quote deadline <span class="font-medium text-slate-800">{{ $deadline }} IST</span> @endif
+            <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+                <span>{{ $rfq->ref_no }}</span>
+                @if ($rfq->category)<span>{{ $rfq->category->name }}</span>@endif
+                @if ($deadline)<span>Quotes close <span class="font-medium text-slate-800">{{ $deadline }} IST</span></span>@endif
             </p>
         </div>
 
         @if ($canManage && $rfq->isDraft())
             <div class="flex gap-2 text-sm">
-                <a href="{{ route('buyer.rfqs.edit', $rfq->id) }}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium hover:bg-slate-50">Edit</a>
+                <a href="{{ route('buyer.rfqs.edit', $rfq->id) }}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium shadow-sm hover:bg-slate-50">Edit</a>
                 <form method="POST" action="{{ route('buyer.rfqs.publish', $rfq->id) }}" data-confirm="Publish and send invitations to {{ $rfq->invites->count() }} supplier(s)?">
                     @csrf
-                    <button class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Publish &amp; send invites</button>
+                    <button class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white shadow-sm hover:bg-emerald-800">Publish &amp; send invites</button>
                 </form>
             </div>
         @endif
@@ -70,12 +74,12 @@
 
     {{-- Sealed / unsealed banner --}}
     @if ($status === 'open')
-        <div class="mt-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+        <div class="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
             <p class="font-semibold">{{ $quoteCount }} of {{ $rfq->invites->count() }} suppliers have quoted.</p>
             <p class="mt-1">Quotes are sealed. Prices unlock automatically at {{ $deadline }} IST (in <span class="font-semibold tabular-nums" data-countdown-to="{{ $rfq->quote_deadline->getTimestampMs() }}"></span>). This page updates on its own.</p>
         </div>
     @elseif ($status === 'cancelled')
-        <div class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">This RFQ was cancelled. Invited suppliers were notified.</div>
+        <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">This RFQ was cancelled. Invited suppliers were notified.</div>
     @endif
 
     {{-- Live auction --}}
@@ -83,7 +87,7 @@
         @php
             $aStatus = \App\Services\Auction\Standings::effectiveStatus($auction)->value;
         @endphp
-        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
             <div>
                 <p class="font-semibold">
                     @if ($aStatus === 'scheduled') Live auction scheduled for {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST (starts in <span class="tabular-nums" data-countdown-to="{{ $auction->starts_at->getTimestampMs() }}"></span>)
@@ -106,7 +110,7 @@
             </a>
         </div>
     @elseif ($canScheduleAuction && $canManage)
-        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 text-sm">
             <div>
                 <p class="font-semibold">Push prices lower with a live auction</p>
                 <p class="mt-1 text-slate-600">{{ $quoteCount }} suppliers quoted. They start at their sealed price and bid down in real time.</p>
@@ -117,7 +121,7 @@
 
     {{-- Comparison --}}
     @if ($unsealed)
-        <section class="mt-6 rounded-xl border border-slate-200 bg-white">
+        <section class="mt-8 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
                 @php
                     $auctionClosed = $auction && \App\Services\Auction\Standings::effectiveStatus($auction)->value === 'closed';
@@ -205,11 +209,11 @@
     {{-- Award, approval and purchase order --}}
     @include('buyer.rfqs._award')
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+    <div class="mt-8 grid gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             {{-- Items --}}
-            <section class="rounded-xl border border-slate-200 bg-white">
-                <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">Items</h2>
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Items</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[560px] text-sm">
                         <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -231,8 +235,8 @@
             </section>
 
             {{-- Suppliers --}}
-            <section class="rounded-xl border border-slate-200 bg-white">
-                <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">Invited suppliers ({{ $rfq->invites->count() }})</h2>
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Invited suppliers ({{ $rfq->invites->count() }})</h2>
                 @forelse ($rfq->invites as $inv)
                     @php
                         $name = $inv->supplier?->name ?? $inv->listEntry?->displayName() ?? 'Supplier';
@@ -296,7 +300,7 @@
 
         <div class="space-y-6">
             {{-- Terms --}}
-            <section class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
                 <h2 class="font-semibold">Terms</h2>
                 <dl class="mt-3 space-y-2">
                     <div><dt class="text-xs text-slate-500">Payment</dt><dd>{{ $paymentTerms[$rfq->terms['payment'] ?? ''] ?? '—' }}</dd></div>
@@ -309,7 +313,7 @@
             </section>
 
             {{-- Attachments --}}
-            <section class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
                 <h2 class="font-semibold">Attachments</h2>
                 <ul class="mt-3 space-y-2">
                     @forelse ($rfq->attachments as $att)
@@ -340,7 +344,7 @@
 
             {{-- Extend / cancel --}}
             @if ($canManage && in_array($status, ['draft', 'open', 'closed'], true))
-                <section class="space-y-4 rounded-xl border border-slate-200 bg-white p-5 text-sm">
+                <section class="space-y-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
                     @if ($rfq->status->value === 'published')
                         <form method="POST" action="{{ route('buyer.rfqs.extend', $rfq->id) }}" class="space-y-2">
                             @csrf

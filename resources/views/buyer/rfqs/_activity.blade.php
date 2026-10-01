@@ -14,7 +14,7 @@
 @endphp
 
 @if ($activity->isNotEmpty())
-    <section id="activity" class="mt-6 rounded-xl border border-slate-200 bg-white">
+    <section id="activity" class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
             <div>
                 <h2 class="font-semibold">Activity</h2>

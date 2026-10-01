@@ -5,7 +5,7 @@
 @section('content')
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-semibold">Company profile</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Company profile</h1>
             <p class="mt-1 text-sm text-slate-600">
                 @if ($org->isSupplier())
                     Buyers see your company name, city, categories and verified badge.
@@ -27,7 +27,7 @@
         @csrf
         @method('PUT')
 
-        <fieldset @disabled(! $canEdit) class="rounded-xl border border-slate-200 bg-white p-5">
+        <fieldset @disabled(! $canEdit) class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <legend class="px-1 text-sm font-semibold">Business details</legend>
             @unless ($canEdit)
                 <p class="mb-4 text-sm text-slate-600">Only your company admin can change these.</p>
@@ -50,7 +50,7 @@
         </fieldset>
 
         @if ($org->isSupplier())
-            <fieldset class="rounded-xl border border-slate-200 bg-white p-5">
+            <fieldset class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                 <legend class="px-1 text-sm font-semibold">What do you supply?</legend>
                 <p class="mb-4 text-sm text-slate-600">Buyers find you by these categories. Pick up to 20.</p>
                 @error('categories') <p class="mb-3 text-sm text-red-600">{{ $message }}</p> @enderror
@@ -75,7 +75,7 @@
         @endif
 
         @if ($org->isBuyer())
-            <fieldset @disabled(! $canEdit) class="rounded-xl border border-slate-200 bg-white p-5">
+            <fieldset @disabled(! $canEdit) class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                 <legend class="px-1 text-sm font-semibold">Awards and purchase orders</legend>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>

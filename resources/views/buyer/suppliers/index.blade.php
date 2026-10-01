@@ -7,7 +7,7 @@
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-semibold">Suppliers</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Suppliers</h1>
             <p class="mt-1 text-sm text-slate-600">Your private supplier list. Other buyers can't see it.</p>
         </div>
         @if ($canManage)
@@ -44,7 +44,7 @@
         <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 hover:bg-slate-50">Filter</button>
     </form>
 
-    <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div class="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[640px] text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr><th class="px-4 py-3">Supplier</th><th class="px-4 py-3">Contact</th><th class="px-4 py-3">Tag</th><th class="px-4 py-3">On GetL1</th><th class="px-4 py-3"></th></tr>

@@ -3,10 +3,10 @@
 @section('title', 'Orders')
 
 @section('content')
-    <h1 class="text-2xl font-semibold">Orders</h1>
+    <h1 class="text-2xl font-semibold tracking-tight">Orders</h1>
     <p class="mt-1 text-sm text-slate-600">Purchase orders you've won. Accept each one so the buyer knows you've received it.</p>
 
-    <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[720px] text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr><th class="px-4 py-3">PO</th><th class="px-4 py-3">Buyer</th><th class="px-4 py-3 text-right">Value</th><th class="px-4 py-3">Status</th></tr>

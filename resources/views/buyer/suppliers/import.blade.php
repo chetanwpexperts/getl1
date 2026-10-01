@@ -12,7 +12,7 @@
 
     <div class="mt-6 grid max-w-3xl gap-6 sm:grid-cols-[1fr_220px]">
         <form method="POST" action="{{ route('buyer.suppliers.import.store') }}" enctype="multipart/form-data"
-              class="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
+              class="space-y-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             @csrf
             <div>
                 <label for="file" class="block text-sm font-medium text-slate-700">Spreadsheet (max 1 MB)</label>
@@ -23,7 +23,7 @@
             <div class="sm:w-48"><x-button>Import</x-button></div>
         </form>
 
-        <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
             <p class="font-medium">Not sure about the format?</p>
             <p class="mt-1 text-slate-600">Download the template, fill it in Excel, save and upload.</p>
             <a href="{{ route('buyer.suppliers.template') }}" class="mt-3 inline-block font-medium text-emerald-700 hover:underline">Download template (.csv)</a>

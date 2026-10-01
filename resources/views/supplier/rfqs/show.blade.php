@@ -14,11 +14,15 @@
     @endphp
 
     <x-live-page :url="route('supplier.rfqs.show.live', $invite->id)" :live="$live" />
-    <a href="{{ route('supplier.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← RFQs</a>
+    <nav class="flex items-center gap-1.5 text-sm text-slate-500" aria-label="Breadcrumb">
+        <a href="{{ route('supplier.rfqs.index') }}" class="hover:text-slate-900">RFQs &amp; auctions</a>
+        <x-icon name="right" class="size-3.5 text-slate-400" />
+        <span class="text-slate-700">{{ $rfq->ref_no }}</span>
+    </nav>
 
     <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold">{{ $rfq->title }}</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">{{ $rfq->title }}</h1>
             <p class="mt-1 text-sm text-slate-600">
                 {{ $rfq->ref_no }} · <span class="font-medium text-slate-800">{{ $rfq->organization->name }}</span>, {{ $rfq->organization->city }}
             </p>
@@ -35,7 +39,7 @@
     @error('rfq') <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $message }}</p> @enderror
 
     @if ($order)
-        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600 bg-emerald-600 p-4 text-sm text-white">
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-600 bg-emerald-600 p-4 text-sm text-white">
             <div>
                 <p class="font-semibold">You won this order: purchase order {{ $order->po_number }}</p>
                 <p class="mt-0.5 text-emerald-50">{{ \App\Support\Money::inr($order->grand_total) }} incl. GST · {{ $order->supplier_accepted_at ? 'accepted' : 'please review and accept' }}</p>
@@ -48,7 +52,7 @@
         @php
             $aStatus = \App\Services\Auction\Standings::effectiveStatus($auction)->value;
         @endphp
-        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
             <div>
                 <p class="font-semibold">
                     @if ($aStatus === 'scheduled') You're invited to a live auction on {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST (starts in <span class="tabular-nums" data-countdown-to="{{ $auction->starts_at->getTimestampMs() }}"></span>)
@@ -68,11 +72,11 @@
         </div>
     @endif
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+    <div class="mt-8 grid gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             {{-- Accept / decline --}}
             @if ($open && ! $accepted && ! $declined)
-                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                     <h2 class="font-semibold">Will you quote?</h2>
                     <p class="mt-1 text-sm text-slate-600">Review the items and terms, then accept to submit your price. Your quote is sealed: the buyer sees it only after the deadline, and other suppliers never see it.</p>
                     <form method="POST" action="{{ route('supplier.rfqs.accept', $invite->id) }}" class="mt-4 space-y-3">
@@ -94,7 +98,7 @@
                     </details>
                 </section>
             @elseif ($declined)
-                <p class="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700">You declined this RFQ.</p>
+                <p class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm text-slate-700">You declined this RFQ.</p>
             @elseif (! $open && ! $quote && ! $rfq->isCancelled())
                 <p class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
                     You didn't submit a quote before the deadline, so you're not part of this RFQ's comparison or auction.
@@ -102,7 +106,7 @@
             @endif
 
             {{-- Quote form (accepted & open) or read-only items --}}
-            <section class="rounded-xl border border-slate-200 bg-white">
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
                     <h2 class="font-semibold">{{ $accepted && $open ? 'Your quote' : 'Items' }}</h2>
                     @if ($quote)<span class="text-xs text-slate-500">Last submitted {{ $quote->submitted_at?->ist()->format('d M Y, h:i A') }} IST</span>@endif
@@ -201,7 +205,7 @@
         </div>
 
         <div class="space-y-6">
-            <section class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
                 <h2 class="font-semibold">Buyer's terms</h2>
                 <dl class="mt-3 space-y-2">
                     <div><dt class="text-xs text-slate-500">Payment</dt><dd>{{ $paymentTerms[$rfq->terms['payment'] ?? ''] ?? '—' }}</dd></div>
@@ -214,7 +218,7 @@
             </section>
 
             @if ($rfq->attachments->isNotEmpty())
-                <section class="rounded-xl border border-slate-200 bg-white p-5 text-sm">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
                     <h2 class="font-semibold">Attachments</h2>
                     <ul class="mt-3 space-y-2">
                         @foreach ($rfq->attachments as $att)

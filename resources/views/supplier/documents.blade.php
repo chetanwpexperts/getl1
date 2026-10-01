@@ -5,7 +5,7 @@
 @section('content')
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-semibold">Business documents</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Business documents</h1>
             <p class="mt-1 text-sm text-slate-600">Upload your GST or Udyam certificate to get the verified badge. Only GetL1 staff can see these files, never buyers.</p>
         </div>
         @if ($org->isVerified())
@@ -16,7 +16,7 @@
     </div>
 
     <form method="POST" action="{{ route('supplier.documents.store') }}" enctype="multipart/form-data"
-          class="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-[200px_1fr_auto] sm:items-end">
+          class="mt-6 grid gap-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:grid-cols-[200px_1fr_auto] sm:items-end">
         @csrf
         <div>
             <label for="type" class="block text-sm font-medium text-slate-700">Document type</label>
@@ -36,7 +36,7 @@
         <div><x-button class="sm:w-auto">Upload</x-button></div>
     </form>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr><th class="px-4 py-3">Document</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Uploaded</th><th class="px-4 py-3"></th></tr>

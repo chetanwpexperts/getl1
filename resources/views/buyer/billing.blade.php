@@ -15,7 +15,7 @@
          data-credits-url="{{ route('buyer.billing.credits') }}" data-credits-confirm-url="{{ route('buyer.billing.credits.confirm') }}"
          data-ai-packs-url="{{ route('buyer.billing.ai-packs') }}">
 
-        <h1 class="text-2xl font-semibold">Billing</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">Billing</h1>
         <p class="mt-1 text-sm text-slate-600">Your plan, usage and invoices. Suppliers always use GetL1 free.</p>
 
         @if (! $canPay)
@@ -27,7 +27,7 @@
 
         {{-- Current plan and usage --}}
         <div class="mt-6 grid gap-4 lg:grid-cols-3">
-            <section class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 lg:col-span-2">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Current plan</p>
                 <div class="mt-1 flex flex-wrap items-baseline justify-between gap-2">
                     <h2 class="text-xl font-semibold">{{ $current?->name ?? 'Free' }}</h2>
@@ -78,7 +78,7 @@
             </section>
 
             <div class="space-y-4">
-                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Extra auctions</p>
                     <p class="mt-1 text-xl font-semibold">{{ $allowance['credits'] }} <span class="text-sm font-normal text-slate-600">{{ \Illuminate\Support\Str::plural('credit', $allowance['credits']) }} available</span></p>
                     <p class="mt-1 text-sm text-slate-600">Used automatically when the month's limit is reached. Never expire.</p>
@@ -94,7 +94,7 @@
                     @endif
                 </section>
 
-                <section class="rounded-xl border border-slate-200 bg-white p-5" id="ai-reads">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5" id="ai-reads">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">AI reads</p>
                     <p class="mt-1 text-xl font-semibold">{{ $ai['credits'] }} <span class="text-sm font-normal text-slate-600">extra {{ \Illuminate\Support\Str::plural('read', $ai['credits']) }} available</span></p>
                     <p class="mt-1 text-sm text-slate-600">
@@ -173,8 +173,8 @@
         </div>
 
         {{-- Invoices --}}
-        <section class="mt-10 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-            <h2 class="border-b border-slate-200 px-5 py-3 font-semibold">Invoices</h2>
+        <section class="mt-10 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Invoices</h2>
             <table class="w-full min-w-[560px] text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Description</th><th class="px-4 py-2 text-right">Amount</th><th class="px-4 py-2"></th></tr>

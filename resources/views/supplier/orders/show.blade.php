@@ -12,7 +12,7 @@
 
     <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold">Purchase order {{ $award->po_number }}</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Purchase order {{ $award->po_number }}</h1>
             <p class="mt-1 text-sm text-slate-600">{{ $buyer->name }} · {{ $rfq->title }} ({{ $rfq->ref_no }}) · {{ $award->po_sent_at?->ist()->format('d M Y') }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -32,7 +32,7 @@
         <p class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Please review and accept this order. The buyer is notified as soon as you do.</p>
     @endif
 
-    <section class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[640px] text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2 text-right">Rate</th><th class="px-4 py-2 text-right">Amount</th><th class="px-4 py-2 text-right">GST</th></tr>

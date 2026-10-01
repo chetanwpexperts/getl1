@@ -3,10 +3,10 @@
 @section('title', 'Approvals')
 
 @section('content')
-    <h1 class="text-2xl font-semibold">Approvals</h1>
+    <h1 class="text-2xl font-semibold tracking-tight">Approvals</h1>
     <p class="mt-1 text-sm text-slate-600">Awards waiting for a decision. Approving sends the purchase order to the supplier automatically.</p>
 
-    <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[720px] text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr><th class="px-4 py-3">RFQ</th><th class="px-4 py-3">Supplier</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Awarded by</th><th class="px-4 py-3"></th></tr>
