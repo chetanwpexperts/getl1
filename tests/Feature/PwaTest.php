@@ -32,7 +32,7 @@ class PwaTest extends TestCase
         $this->assertStringContainsString("const VERSION = '".PwaController::VERSION."'", $sw->getContent());
         $this->assertStringNotContainsString('__VERSION__', $sw->getContent());
 
-        $this->get('/offline')->assertOk()->assertSee("You're offline");
+        $this->get('/offline')->assertOk()->assertSee("You're offline", false);
     }
 
     public function test_home_screen_icon_opens_the_right_page(): void
