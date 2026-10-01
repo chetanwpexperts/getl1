@@ -66,12 +66,12 @@
 <div class="flex min-h-full flex-col">
     <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         {{-- Row 1: logo and company, actions and account --}}
-        <div class="mx-auto flex h-[4.25rem] max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-            <a href="{{ route('dashboard') }}" class="shrink-0" aria-label="Dashboard"><x-logo size="text-xl" height="h-10" /></a>
+        <div class="mx-auto flex h-20 max-w-7xl items-center gap-5 px-4 sm:px-6 lg:px-8">
+            <a href="{{ route('dashboard') }}" class="shrink-0" aria-label="Dashboard"><x-logo size="text-2xl" height="h-11" /></a>
 
             @isset($currentOrg)
                 @php $orgs = $user->organizations; @endphp
-                <span class="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
+                <span class="hidden h-8 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
                 <details class="relative hidden min-w-0 sm:block" data-dropdown>
                     <summary class="flex max-w-xs cursor-pointer list-none items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
                         <span class="flex size-7 shrink-0 items-center justify-center rounded-md {{ $isBuyer ? 'bg-emerald-700' : 'bg-sky-700' }} text-xs font-bold text-white">{{ mb_strtoupper(mb_substr($currentOrg->name, 0, 1)) }}</span>
@@ -157,13 +157,13 @@
         </div>
 
         {{-- Row 2: main menu --}}
-        <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Main menu">
-            <ul class="-mb-px flex items-center gap-6 overflow-x-auto text-sm font-medium [scrollbar-width:none] lg:overflow-visible">
+        <nav class="border-t border-slate-100" aria-label="Main menu"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <ul class="-mb-px flex items-center gap-8 overflow-x-auto text-sm font-medium [scrollbar-width:none] lg:overflow-visible">
                 @foreach ($tabs as [$route, $label, $icon, $pattern, $badge])
                     @php $on = $is($pattern); @endphp
                     <li class="shrink-0">
                         <a href="{{ route($route) }}" @if ($on) aria-current="page" @endif
-                           class="flex items-center gap-2 border-b-2 px-0.5 pb-3 pt-2 transition {{ $on ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
+                           class="flex items-center gap-2 border-b-2 px-0.5 py-3.5 transition {{ $on ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
                             <x-icon :name="$icon" class="size-[18px] {{ $on ? 'text-emerald-700' : 'text-slate-400' }}" />
                             {{ $label }}
                             @if ($badge)<span class="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{{ $badge }}</span>@endif
@@ -173,7 +173,7 @@
                 @if ($companyItems)
                     <li class="shrink-0">
                         <details class="relative" data-dropdown>
-                            <summary class="flex cursor-pointer list-none items-center gap-2 border-b-2 px-0.5 pb-3 pt-2 transition [&::-webkit-details-marker]:hidden {{ $companyOn ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
+                            <summary class="flex cursor-pointer list-none items-center gap-2 border-b-2 px-0.5 py-3.5 transition [&::-webkit-details-marker]:hidden {{ $companyOn ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
                                 <x-icon name="company" class="size-[18px] {{ $companyOn ? 'text-emerald-700' : 'text-slate-400' }}" /> Company <x-icon name="down" class="size-3.5" />
                             </summary>
                             <div class="fixed z-40 mt-1 w-60 rounded-xl border border-slate-200 bg-white p-1 shadow-xl lg:absolute lg:left-0 lg:top-full">
@@ -187,10 +187,10 @@
                     </li>
                 @endif
             </ul>
-        </nav>
+        </div></nav>
     </header>
 
-    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         @if (session('status'))
             <div class="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
                 <span class="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white" aria-hidden="true">✓</span>

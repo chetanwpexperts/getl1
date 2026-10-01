@@ -216,6 +216,7 @@ class WebsiteSettings
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
         if ($trim && $ext === 'png') {
             self::clearWhiteBackground($dst);
+            $dst = self::cropToVisible($dst);
         }
         ob_start();
         $ok = $ext === 'png' ? imagepng($dst, null, 9) : imagejpeg($dst, null, 85);
@@ -283,6 +284,29 @@ class WebsiteSettings
                 imagesetpixel($img, $x, $y, imagecolorallocatealpha($img, $un($c['red']), $un($c['green']), $un($c['blue']), (int) round(127 * (1 - $a))));
             }
         }
+    }
+
+    /** Cuts away fully see-through margins so the logo fills the height it's shown at. */
+    private static function cropToVisible(\GdImage $img): \GdImage
+    {
+        [$w, $h] = [imagesx($img), imagesy($img)];
+        [$x0, $y0, $x1, $y1] = [$w, $h, -1, -1];
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                if ((imagecolorat($img, $x, $y) >> 24) < 120) { // visible pixel
+                    $x0 = min($x0, $x); $x1 = max($x1, $x); $y0 = min($y0, $y); $y1 = max($y1, $y);
+                }
+            }
+        }
+        if ($x1 < 0 || ($x0 === 0 && $y0 === 0 && $x1 === $w - 1 && $y1 === $h - 1)) {
+            return $img;
+        }
+        $out = imagecreatetruecolor($x1 - $x0 + 1, $y1 - $y0 + 1);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+        imagecopy($out, $img, 0, 0, $x0, $y0, $x1 - $x0 + 1, $y1 - $y0 + 1);
+
+        return $out;
     }
 
     /** Public URL of an uploaded image setting, or null. */
