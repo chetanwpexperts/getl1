@@ -46,6 +46,13 @@ class Organization extends Model
         });
     }
 
+    /** Real customers only: leaves out the stress-test and demo companies (users on @getl1.test). */
+    public function scopeReal($query)
+    {
+        return $query->where('name', 'not like', 'Stress Test%')
+            ->whereDoesntHave('users', fn ($u) => $u->where('email', 'like', '%@getl1.test'));
+    }
+
     public function isBuyer(): bool
     {
         return $this->type === OrganizationType::Buyer;

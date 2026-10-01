@@ -28,41 +28,30 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ConsoleController extends Controller
 {
-    public function dashboard(): View
+    public function dashboard(Request $request): View
     {
-        $monthStart = now()->setTimezone(config('app.display_timezone'))->startOfMonth()->utc();
-        $weekAgo = now()->subDays(7);
-
-        $live = Subscription::with('plan')->whereIn('status', [SubscriptionStatus::Active->value, SubscriptionStatus::PastDue->value])->get();
-        $mrr = $live->sum(fn ($s) => $s->billing_cycle === 'yearly'
-            ? (float) $s->plan?->price_yearly / 12 : (float) $s->plan?->price_monthly);
-
+        $d = new \App\Services\Admin\Dashboard((string) $request->query('period', '30d'), $request->boolean('test'));
         $checks = app(\App\Services\SystemHealth::class)->checks();
 
         return view('admin.dashboard', [
+            'd' => $d,
+            'kpis' => $d->kpis(),
+            'charts' => $d->charts(),
+            'categories' => $d->categories(),
+            'topBuyers' => $d->topBuyers(),
+            'topSuppliers' => $d->topSuppliers(),
+            'live' => $d->liveAndNext(),
+            'activity' => $activity = $d->activity(),
+            'activityOrgs' => Organization::withTrashed()->whereIn('id', $activity->pluck('organization_id')->filter())->pluck('name', 'id'),
+            'includeTest' => $request->boolean('test'),
             'health' => \App\Services\SystemHealth::overall($checks),
             'healthIssues' => collect($checks)->where('status', '!=', 'ok')->pluck('label')->all(),
-            'stats' => [
-                'buyers' => Organization::where('type', OrganizationType::Buyer->value)->count(),
-                'suppliers' => Organization::where('type', OrganizationType::Supplier->value)->count(),
-                'new_week' => Organization::where('created_at', '>=', $weekAgo)->count(),
-                'trials' => Subscription::where('status', SubscriptionStatus::Trialing->value)->where('trial_ends_at', '>', now())->count(),
-                'paid' => $live->count(),
-                'past_due' => $live->where('status', SubscriptionStatus::PastDue)->count(),
-                'mrr' => round($mrr),
-                'revenue_month' => (float) Payment::where('status', 'paid')->where('paid_at', '>=', $monthStart)->sum('total'),
-                'rfqs_month' => Rfq::withoutGlobalScopes()->where('created_at', '>=', $monthStart)->count(),
-                'auctions_month' => Auction::withoutGlobalScopes()->where('status', AuctionStatus::Closed->value)->where('ends_at', '>=', $monthStart)->count(),
-                'live_now' => Auction::withoutGlobalScopes()->where('status', AuctionStatus::Live->value)->count(),
-                'po_value_month' => (float) Award::withoutGlobalScopes()->whereNotNull('po_sent_at')->where('po_sent_at', '>=', $monthStart)->sum('grand_total'),
-                'ai_reads_month' => AiJob::withoutGlobalScopes()->where('created_at', '>=', $monthStart)->where('status', 'done')->count(),
-                'ai_cost_month' => (float) AiJob::withoutGlobalScopes()->where('created_at', '>=', $monthStart)->sum('cost_inr'),
-                'kyc_pending' => SupplierDocument::where('status', 'pending')->count(),
-                'leads_new' => Lead::where('status', 'new')->count(),
+            'attention' => [
+                'kyc' => SupplierDocument::where('status', 'pending')->count(),
+                'leads' => Lead::where('status', 'new')->count(),
+                'past_due' => Subscription::where('status', SubscriptionStatus::PastDue->value)->count(),
+                'paused' => Auction::withoutGlobalScopes()->whereNotNull('paused_at')->where('status', AuctionStatus::Live->value)->count(),
             ],
-            'plans' => $live->groupBy(fn ($s) => $s->plan?->name ?? 'Unknown')->map->count(),
-            'recentOrgs' => Organization::latest()->limit(8)->get(),
-            'recentPayments' => Payment::with(['organization', 'plan'])->where('status', 'paid')->latest('paid_at')->limit(8)->get(),
         ]);
     }
 

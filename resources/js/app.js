@@ -75,6 +75,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('input', clearDoubt);
     document.addEventListener('change', clearDoubt);
 
+    // Admin Overview charts: only loaded on pages that have them.
+    if (document.querySelector('canvas[data-chart]')) {
+        import('./admin-charts').then(({ initAdminCharts }) => initAdminCharts()).catch(() => {});
+    }
+
     // Admin two-step setup: draw the authenticator QR code locally (the secret never leaves the page).
     const qr = document.querySelector('[data-qr]');
     if (qr) {

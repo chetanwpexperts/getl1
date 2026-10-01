@@ -256,4 +256,20 @@ class OperationsConsoleTest extends TestCase
         Mail::assertSent(HealthAlertMail::class, fn ($m) => $m->failing === [] && $m->recovered !== []);
         $this->asAdmin($this->admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('Scheduler (auction clock, reminders)');
     }
+
+    public function test_dashboard_periods_and_test_companies_hidden(): void
+    {
+        $this->live();
+        [$test] = $this->supplier('Stress Test Supplier 1');
+        foreach (['7d', '30d', '90d', 'fy'] as $p) {
+            $this->asAdmin($this->admin)->get(route('admin.dashboard', ['period' => $p]))->assertOk()
+                ->assertSee('Platform activity')->assertSee('Top suppliers')->assertSee('data-chart', false);
+        }
+        $this->asAdmin($this->admin)->get(route('admin.dashboard'))->assertSee('1 test or demo company is hidden');
+        $hidden = new \App\Services\Admin\Dashboard('30d');
+        $all = new \App\Services\Admin\Dashboard('30d', true);
+        $this->assertSame($all->kpis()['now']['suppliers'] - 1, $hidden->kpis()['now']['suppliers']);
+        $this->assertSame(1, $hidden->kpis()['now']['rfqs']);
+        $this->assertCount(30, $hidden->charts()['labels']);
+    }
 }
