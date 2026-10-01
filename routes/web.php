@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\CompanyController as AdminCompanies;
+use App\Http\Controllers\Admin\ConsoleController as AdminConsole;
 use App\Http\Controllers\Admin\KycReviewController;
+use App\Http\Controllers\Admin\LeadController as AdminLeads;
+use App\Http\Controllers\Admin\TwoFactorController as AdminTwoFactor;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Buyer\AuctionController as BuyerAuctionController;
@@ -39,12 +43,35 @@ Route::middleware('auth')->group(function () {
     Route::post('/organizations/{organization}/switch', [OrganizationController::class, 'switch'])
         ->name('organizations.switch');
 
-    // GetL1 staff only. No organization context needed.
+    // GetL1 staff console. Platform admins only, and every page needs the two-step login.
     Route::middleware('platform.admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/kyc', [KycReviewController::class, 'index'])->name('kyc.index');
-        Route::get('/kyc/{document}/download', [KycReviewController::class, 'download'])->name('kyc.download');
-        Route::post('/kyc/{document}/approve', [KycReviewController::class, 'approve'])->name('kyc.approve');
-        Route::post('/kyc/{document}/reject', [KycReviewController::class, 'reject'])->name('kyc.reject');
+        Route::get('/two-step/setup', [AdminTwoFactor::class, 'setup'])->name('2fa.setup');
+        Route::post('/two-step/setup', [AdminTwoFactor::class, 'confirm'])->middleware('throttle:10,1')->name('2fa.confirm');
+        Route::get('/two-step', [AdminTwoFactor::class, 'challenge'])->name('2fa.challenge');
+        Route::post('/two-step', [AdminTwoFactor::class, 'verify'])->middleware('throttle:10,1')->name('2fa.verify');
+
+        Route::middleware('admin.2fa')->group(function () {
+            Route::get('/', [AdminConsole::class, 'dashboard'])->name('dashboard');
+            Route::get('/companies', [AdminCompanies::class, 'index'])->name('companies.index');
+            Route::get('/companies/{organization}', [AdminCompanies::class, 'show'])->whereNumber('organization')->name('companies.show');
+            Route::middleware('throttle:30,1')->group(function () {
+                Route::post('/companies/{organization}/trial', [AdminCompanies::class, 'extendTrial'])->whereNumber('organization')->name('companies.trial');
+                Route::post('/companies/{organization}/credits', [AdminCompanies::class, 'grantCredits'])->whereNumber('organization')->name('companies.credits');
+                Route::post('/companies/{organization}/suspend', [AdminCompanies::class, 'suspend'])->whereNumber('organization')->name('companies.suspend');
+                Route::post('/companies/{organization}/restore', [AdminCompanies::class, 'restore'])->whereNumber('organization')->name('companies.restore');
+                Route::post('/leads/{lead}', [AdminLeads::class, 'update'])->whereNumber('lead')->name('leads.update');
+            });
+            Route::get('/kyc', [KycReviewController::class, 'index'])->name('kyc.index');
+            Route::get('/kyc/{document}/download', [KycReviewController::class, 'download'])->name('kyc.download');
+            Route::post('/kyc/{document}/approve', [KycReviewController::class, 'approve'])->name('kyc.approve');
+            Route::post('/kyc/{document}/reject', [KycReviewController::class, 'reject'])->name('kyc.reject');
+            Route::get('/payments', [AdminConsole::class, 'payments'])->name('payments');
+            Route::get('/payments/{payment}/invoice', [AdminConsole::class, 'invoice'])->whereNumber('payment')->name('payments.invoice');
+            Route::get('/ai', [AdminConsole::class, 'ai'])->name('ai');
+            Route::get('/leads', [AdminLeads::class, 'index'])->name('leads');
+            Route::get('/audit', [AdminConsole::class, 'audit'])->name('audit');
+            Route::get('/security', [AdminConsole::class, 'security'])->name('security');
+        });
     });
 
     // Everything below acts on behalf of the current organization.

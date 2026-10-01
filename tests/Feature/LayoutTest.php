@@ -18,12 +18,12 @@ class LayoutTest extends TestCase
         [, $user] = $this->buyer('Acme Buyers');
         $user->forceFill(['is_platform_admin' => true])->save();
 
-        foreach (['/dashboard', '/buyer/suppliers', '/company', '/admin/kyc'] as $url) {
+        foreach (['/dashboard', '/buyer/suppliers', '/company'] as $url) {
             $this->actingAs($user)->get($url)->assertOk()
                 ->assertSee('Acme Buyers')
                 ->assertSee('Suppliers')
                 ->assertSee('Company')
-                ->assertSee('KYC review');
+                ->assertSee('Admin console');
         }
     }
 
@@ -31,7 +31,7 @@ class LayoutTest extends TestCase
     {
         [, $user] = $this->buyer();
 
-        $this->actingAs($user)->get('/dashboard')->assertOk()->assertDontSee('KYC review');
+        $this->actingAs($user)->get('/dashboard')->assertOk()->assertDontSee('Admin console');
     }
 
     public function test_no_developer_wording_on_customer_pages(): void

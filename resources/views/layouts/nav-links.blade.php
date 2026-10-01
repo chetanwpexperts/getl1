@@ -22,7 +22,7 @@
     <a href="{{ route('company.edit') }}" class="{{ $link }} {{ request()->routeIs('company.*') ? $active : '' }}">Company</a>
 @endisset
 @if (auth()->user()?->is_platform_admin)
-    <a href="{{ route('admin.kyc.index') }}" class="{{ $link }} {{ request()->routeIs('admin.*') ? $active : '' }}">
-        KYC review <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Staff</span>
+    <a href="{{ route('admin.dashboard') }}" class="{{ $link }} {{ request()->routeIs('admin.*') ? $active : '' }}">
+        Admin console <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Staff</span>
     </a>
 @endif

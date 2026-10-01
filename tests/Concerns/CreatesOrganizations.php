@@ -36,11 +36,23 @@ trait CreatesOrganizations
         return $u;
     }
 
+    /** A GetL1 staff user with two-step login already set up. */
     protected function admin(): User
     {
         $u = User::factory()->create();
-        $u->forceFill(['is_platform_admin' => true])->save();
+        $u->forceFill([
+            'is_platform_admin' => true,
+            'two_factor_secret' => app(\App\Services\Security\TwoFactor::class)->newSecret(),
+            'two_factor_recovery_codes' => json_encode([]),
+            'two_factor_confirmed_at' => now(),
+        ])->save();
 
         return $u;
+    }
+
+    /** Acts as a staff user who has passed the two-step login in this session. */
+    protected function asAdmin(User $u): static
+    {
+        return $this->actingAs($u)->withSession([\App\Http\Middleware\EnsureAdminTwoFactor::SESSION => ['user' => $u->id, 'at' => time(), 'seen' => time()]]);
     }
 }

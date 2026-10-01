@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'org.type' => EnsureOrganizationType::class,
             'org.role' => EnsureOrgRole::class,
             'platform.admin' => EnsurePlatformAdmin::class,
+            'admin.2fa' => \App\Http\Middleware\EnsureAdminTwoFactor::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));

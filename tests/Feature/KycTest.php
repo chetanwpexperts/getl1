@@ -99,7 +99,7 @@ class KycTest extends TestCase
         $this->actingAs($buyer)->get("/supplier/documents/{$doc->id}/download")->assertForbidden();
         $this->actingAs($buyer)->get("/admin/kyc/{$doc->id}/download")->assertForbidden();
 
-        $this->actingAs($this->admin())->get("/admin/kyc/{$doc->id}/download")->assertOk();
+        $this->asAdmin($this->admin())->get("/admin/kyc/{$doc->id}/download")->assertOk();
         $this->assertTrue(AuditLog::where('action', 'kyc_document_viewed_by_admin')->exists());
     }
 
@@ -121,10 +121,10 @@ class KycTest extends TestCase
         $doc = SupplierDocument::firstOrFail();
         $admin = $this->admin();
 
-        $this->actingAs($admin)->post("/admin/kyc/{$doc->id}/approve")->assertRedirect();
+        $this->asAdmin($admin)->post("/admin/kyc/{$doc->id}/approve")->assertRedirect();
         $this->assertNotNull($org->fresh()->verified_at);
 
-        $this->actingAs($admin)->post("/admin/kyc/{$doc->id}/reject", ['remarks' => 'Name does not match'])->assertRedirect();
+        $this->asAdmin($admin)->post("/admin/kyc/{$doc->id}/reject", ['remarks' => 'Name does not match'])->assertRedirect();
         $this->assertNull($org->fresh()->verified_at);
         $this->assertSame('Name does not match', $doc->fresh()->remarks);
     }
@@ -134,7 +134,7 @@ class KycTest extends TestCase
         [, $user] = $this->supplier();
         $this->upload($user, $this->pdf());
         $doc = SupplierDocument::firstOrFail();
-        $this->actingAs($this->admin())->post("/admin/kyc/{$doc->id}/approve");
+        $this->asAdmin($this->admin())->post("/admin/kyc/{$doc->id}/approve");
 
         $this->actingAs($user)->delete("/supplier/documents/{$doc->id}")->assertSessionHasErrors('file');
         $this->assertNotNull($doc->fresh());

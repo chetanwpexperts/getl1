@@ -75,6 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('input', clearDoubt);
     document.addEventListener('change', clearDoubt);
 
+    // Admin two-step setup: draw the authenticator QR code locally (the secret never leaves the page).
+    const qr = document.querySelector('[data-qr]');
+    if (qr) {
+        import('qrcode').then(({ default: QRCode }) => QRCode.toCanvas(qr, qr.dataset.qr, { width: 208, margin: 1 }))
+            .catch(() => { qr.hidden = true; });
+    }
+
     // Award form: the "why not L1?" box appears only when a non-L1 supplier is picked.
     document.addEventListener('change', (e) => {
         const form = e.target.closest('[data-award-form]');
