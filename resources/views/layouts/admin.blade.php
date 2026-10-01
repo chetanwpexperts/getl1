@@ -29,18 +29,18 @@
     ];
 @endphp
 <div class="lg:flex">
-    <aside class="bg-slate-900 text-slate-300 lg:fixed lg:inset-y-0 lg:w-60">
-        <div class="flex items-center justify-between px-5 py-4 lg:block">
+    <aside class="bg-slate-900 text-slate-300 lg:fixed lg:inset-y-0 lg:flex lg:w-60 lg:flex-col">
+        <div class="flex items-center justify-between px-5 py-4 lg:block lg:shrink-0">
             <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-1 text-white"><x-logo :dark="true" size="text-lg" height="h-6" />
                 <span class="ml-1 rounded bg-slate-800 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wider text-slate-400">Admin</span></a>
         </div>
-        <nav class="flex gap-1 overflow-x-auto px-3 pb-3 text-sm lg:block lg:space-y-0.5 lg:overflow-visible">
+        <nav class="flex gap-1 overflow-x-auto px-3 pb-3 text-sm lg:block lg:min-h-0 lg:flex-1 lg:space-y-0.5 lg:overflow-y-auto">
             @foreach ($items as [$route, $label, $pattern])
                 <a href="{{ route($route) }}"
                    class="block whitespace-nowrap rounded-lg px-3 py-2 {{ request()->routeIs($pattern) ? 'bg-slate-800 font-semibold text-white' : 'hover:bg-slate-800/60 hover:text-white' }}">{{ $label }}</a>
             @endforeach
         </nav>
-        <div class="hidden border-t border-slate-800 px-5 py-4 text-xs lg:absolute lg:inset-x-0 lg:bottom-0 lg:block">
+        <div class="hidden border-t border-slate-800 px-5 py-4 text-xs lg:block lg:shrink-0">
             <p class="truncate text-slate-400">{{ auth()->user()->email }}</p>
             <div class="mt-2 flex items-center justify-between">
                 @if (config('site.mode') === 'website')
