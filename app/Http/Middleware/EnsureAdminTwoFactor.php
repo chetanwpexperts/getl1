@@ -27,7 +27,7 @@ class EnsureAdminTwoFactor
         }
 
         $s = $request->session()->get(self::SESSION);
-        $now = time();
+        $now = now()->getTimestamp();
         if (! is_array($s) || ($s['user'] ?? null) !== $user->id
             || $now - ($s['at'] ?? 0) > self::MAX_AGE || $now - ($s['seen'] ?? 0) > self::IDLE) {
             $request->session()->forget(self::SESSION);
@@ -50,6 +50,6 @@ class EnsureAdminTwoFactor
     public static function markVerified(Request $request): void
     {
         $request->session()->regenerate();
-        $request->session()->put(self::SESSION, ['user' => $request->user()->id, 'at' => time(), 'seen' => time()]);
+        $request->session()->put(self::SESSION, ['user' => $request->user()->id, 'at' => now()->getTimestamp(), 'seen' => now()->getTimestamp()]);
     }
 }

@@ -129,8 +129,9 @@ web migrate --force
 web db:seed --class=PlanSeeder --force >/dev/null
 as_user "cd '$WWW_ROOT' && (npm ci --no-audit --no-fund 2>/dev/null || npm install --no-audit --no-fund) >/dev/null && npm run build >/dev/null"
 if [[ -f "$DATA_DIR/waitlist.csv" ]]; then
-  cp "$DATA_DIR/waitlist.csv" /tmp/getl1-waitlist.csv && chown www-data /tmp/getl1-waitlist.csv
-  web getl1:import-waitlist /tmp/getl1-waitlist.csv; rm -f /tmp/getl1-waitlist.csv
+  WL="$(mktemp)"; chmod 600 "$WL"; cp "$DATA_DIR/waitlist.csv" "$WL"; chown www-data "$WL"
+  web getl1:import-waitlist "$WL" || warn "Waitlist import failed; the CSV is untouched in $DATA_DIR."
+  rm -f "$WL"
 fi
 web optimize:clear >/dev/null
 web config:cache >/dev/null; web route:cache >/dev/null; web view:cache >/dev/null
@@ -143,13 +144,14 @@ BACKUP=""
 if [[ -f "$NGINX_SITE" ]]; then BACKUP="$BACKUP_DIR/getl1.com.$STAMP.conf"; cp -a "$NGINX_SITE" "$BACKUP"; echo "    backup: $BACKUP"; fi
 restore() {
   warn "Restoring the previous getl1.com site."
-  if [[ -n "$BACKUP" ]]; then cp -a "$BACKUP" "$NGINX_SITE"; fi
+  if [[ -n "$BACKUP" ]]; then cp -a "$BACKUP" "$NGINX_SITE"
+  else rm -f "$NGINX_SITE" /etc/nginx/sites-enabled/getl1.com; fi
   nginx -t >/dev/null 2>&1 && systemctl reload nginx
   die "$1"
 }
 sed -e "s|__PHP_SOCK__|$PHP_SOCK|g" -e "s|__APP_ROOT__|$WWW_ROOT|g" "$STAGING_ROOT/deploy/nginx/getl1.com-app.conf" > "$NGINX_SITE"
 ln -sf "$NGINX_SITE" /etc/nginx/sites-enabled/getl1.com
-nginx -t 2>/tmp/getl1-nginx-test || { cat /tmp/getl1-nginx-test; restore "nginx config test failed."; }
+NT="$(mktemp)"; nginx -t 2>"$NT" || { cat "$NT"; rm -f "$NT"; restore "nginx config test failed."; }; rm -f "$NT"
 
 if [[ -d "/etc/letsencrypt/live/$DOMAIN" ]]; then
   # Re-attach the existing certificate to the new config (no new certificate is issued).
@@ -167,7 +169,7 @@ systemctl reload nginx
 # -----------------------------------------------------------------------------
 step "Checking"
 sleep 1
-code() { curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$1"; }
+code() { curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$1" || true; }
 HOME_CODE="$(code "https://$DOMAIN/")"; LOGIN_CODE="$(code "https://$DOMAIN/login")"; WWW_CODE="$(code "https://www.$DOMAIN/")"
 echo "    https://$DOMAIN/        → $HOME_CODE (expect 200)"
 echo "    https://www.$DOMAIN/    → $WWW_CODE (expect 301 to getl1.com)"

@@ -45,7 +45,8 @@ class SiteController extends Controller
     {
         // Bots: a hidden field humans never fill, and a minimum time on the page.
         $started = rescue(fn () => (int) decrypt((string) $request->input('t')), 0, false);
-        if (filled($request->input('website')) || time() - $started < 3) {
+        $age = time() - $started;
+        if (filled($request->input('website')) || $age < 3 || $age > 2 * 3600) {
             SecurityLog::info('lead_bot_blocked');
 
             return redirect()->route('site.contact.thanks');
@@ -65,17 +66,22 @@ class SiteController extends Controller
 
         $data['email'] = strtolower($data['email']);
         $data['phone'] = substr(preg_replace('/\D/', '', $data['phone']), -10);
-        $data['source'] = $data['source'] ?: (parse_url((string) $request->headers->get('referer'), PHP_URL_HOST) ?: null);
+        $data['source'] = ($data['source'] ?? null) ?: (parse_url((string) $request->headers->get('referer'), PHP_URL_HOST) ?: null);
 
-        // The same person sending the form twice within a day updates their request instead of adding another.
-        $lead = Lead::where('email', $data['email'])->where('created_at', '>=', now()->subDay())->first();
+        // The same person (same email and network) sending the form again within a day updates their request.
+        $lead = Lead::where('email', $data['email'])->where('ip', $request->ip())->where('created_at', '>=', now()->subDay())->first();
         if ($lead) {
             $lead->update($data);
         } else {
             $lead = Lead::create($data + ['ip' => $request->ip()]);
         }
 
-        if ($lead->wasRecentlyCreated) {
+        // Confirmation emails go to whatever address is typed in, so cap them per network per day
+        // to keep the mailbox from being used to spam others. The lead is still saved.
+        $todayFromIp = Lead::where('ip', $request->ip())->where('created_at', '>=', now()->subDay())->count();
+        if ($todayFromIp > 5) {
+            SecurityLog::warning('lead_mail_capped', ['count' => $todayFromIp]);
+        } elseif ($lead->wasRecentlyCreated) {
             rescue(function () use ($lead) {
                 Mail::to(config('site.leads_to'))->queue(new LeadReceivedMail($lead));
                 Mail::to($lead->email)->queue(new LeadThanksMail($lead));

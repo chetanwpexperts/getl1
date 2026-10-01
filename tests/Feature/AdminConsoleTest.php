@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Security\TwoFactor;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\Concerns\CreatesOrganizations;
 use Tests\TestCase;
@@ -46,7 +47,7 @@ class AdminConsoleTest extends TestCase
         $u->refresh();
         $this->assertTrue($u->hasTwoFactor());
         $this->assertSame($secret, $u->two_factor_secret);
-        $this->assertNotSame($secret, \DB::table('users')->where('id', $u->id)->value('two_factor_secret'), 'Stored encrypted');
+        $this->assertNotSame($secret, DB::table('users')->where('id', $u->id)->value('two_factor_secret'), 'Stored encrypted');
         $this->assertCount(8, json_decode($u->two_factor_recovery_codes, true));
         $this->assertTrue(AuditLog::where('action', 'admin_2fa_enabled')->exists());
         $this->assertMatchesRegularExpression('/[a-z0-9]{5}-[a-z0-9]{5}/', $page->getContent());
@@ -96,11 +97,11 @@ class AdminConsoleTest extends TestCase
 
     public function test_customers_never_reach_the_console(): void
     {
+        $this->get('/admin')->assertRedirect(route('login'));
         [, $buyer] = $this->buyer();
         foreach (['/admin', '/admin/two-step', '/admin/two-step/setup', '/admin/companies', '/admin/leads'] as $url) {
             $this->actingAs($buyer)->get($url)->assertForbidden();
         }
-        $this->get('/admin')->assertRedirect(route('login'));
     }
 
     public function test_every_console_page_loads(): void
@@ -136,9 +137,9 @@ class AdminConsoleTest extends TestCase
         $this->assertSame(2, $org->auction_credits);
 
         $this->asAdmin($admin)->post(route('admin.companies.suspend', $org->id), ['reason' => 'Fake GST details'])->assertRedirect();
-        $this->actingAs($owner)->get('/dashboard')->assertForbidden();
+        $this->actingAs($owner->fresh())->get('/dashboard')->assertForbidden();
         $this->asAdmin($admin)->post(route('admin.companies.restore', $org->id), ['reason' => 'Documents checked'])->assertRedirect();
-        $this->actingAs($owner)->get('/dashboard')->assertOk();
+        $this->actingAs($owner->fresh())->get('/dashboard')->assertOk();
 
         foreach (['admin_trial_extended', 'admin_credits_granted', 'admin_company_suspended', 'admin_company_restored'] as $a) {
             $log = AuditLog::where('action', $a)->latest('id')->firstOrFail();

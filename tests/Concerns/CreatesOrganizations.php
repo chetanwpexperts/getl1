@@ -53,6 +53,6 @@ trait CreatesOrganizations
     /** Acts as a staff user who has passed the two-step login in this session. */
     protected function asAdmin(User $u): static
     {
-        return $this->actingAs($u)->withSession([\App\Http\Middleware\EnsureAdminTwoFactor::SESSION => ['user' => $u->id, 'at' => time(), 'seen' => time()]]);
+        return $this->actingAs($u)->withSession([\App\Http\Middleware\EnsureAdminTwoFactor::SESSION => ['user' => $u->id, 'at' => now()->getTimestamp(), 'seen' => now()->getTimestamp()]]);
     }
 }
