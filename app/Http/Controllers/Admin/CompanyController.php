@@ -76,7 +76,7 @@ class CompanyController extends Controller
                 'Orders won' => Award::withoutGlobalScopes()->where('supplier_org_id', $o->id)->whereNotNull('po_number')->count(),
             ],
             'documents' => $o->isSupplier() ? \App\Models\SupplierDocument::where('organization_id', $o->id)->latest()->get() : collect(),
-            'payments' => Payment::where('organization_id', $o->id)->latest('id')->limit(20)->get(),
+            'payments' => Payment::with('plan')->where('organization_id', $o->id)->latest('id')->limit(20)->get(),
             'activity' => AuditLog::with('user:id,name,email')->where('organization_id', $o->id)->latest('id')->limit(30)->get(),
         ]);
     }

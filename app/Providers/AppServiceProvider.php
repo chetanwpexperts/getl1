@@ -30,6 +30,16 @@ class AppServiceProvider extends ServiceProvider
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 
+        // Password reset email in GetL1's words.
+        \Illuminate\Auth\Notifications\ResetPassword::toMailUsing(fn ($user, string $token) => (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject('Reset your GetL1 password')
+            ->greeting('Hello '.\Illuminate\Support\Str::before((string) $user->name, ' ').',')
+            ->line('We received a request to reset the password for your GetL1 account.')
+            ->action('Choose a new password', route('password.reset', ['token' => $token, 'email' => $user->email]))
+            ->line('This link works once and expires in 60 minutes.')
+            ->line("If you didn't ask for this, you can ignore this email. Your password stays the same.")
+            ->salutation('GetL1'));
+
         // Same header and menu on every authenticated page.
         View::composer(['layouts.app', 'layouts.nav-links'], AppLayoutComposer::class);
 

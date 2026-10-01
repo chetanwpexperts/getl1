@@ -59,7 +59,7 @@ class ConsoleController extends Controller
             ],
             'plans' => $live->groupBy(fn ($s) => $s->plan?->name ?? 'Unknown')->map->count(),
             'recentOrgs' => Organization::latest()->limit(8)->get(),
-            'recentPayments' => Payment::with('organization')->where('status', 'paid')->latest('paid_at')->limit(8)->get(),
+            'recentPayments' => Payment::with(['organization', 'plan'])->where('status', 'paid')->latest('paid_at')->limit(8)->get(),
         ]);
     }
 

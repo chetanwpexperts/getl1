@@ -1,5 +1,5 @@
 @php $link = 'whitespace-nowrap hover:text-slate-900'; @endphp
-@php $active = 'text-slate-900'; @endphp
+@php $active = '!text-emerald-800 font-semibold'; @endphp
 @isset($currentOrg)
     <a href="{{ route('dashboard') }}" class="{{ $link }} {{ request()->routeIs('dashboard') ? $active : '' }}">Dashboard</a>
     @if ($currentOrg->isBuyer())
