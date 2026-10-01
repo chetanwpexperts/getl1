@@ -47,8 +47,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         setTimeout(poll, 1500);
     }
+    document.querySelector('[data-ai-example]')?.addEventListener('click', (e) => {
+        const box = document.getElementById('ai_text');
+        if (box) { box.value = e.currentTarget.dataset.example; box.focus(); }
+    });
     document.querySelector('[data-ai-form]')?.addEventListener('submit', (e) => {
-        const btn = e.currentTarget.querySelector('[data-ai-submit]');
+        const form = e.currentTarget;
+        if (!form.ai_text.value.trim() && !form.ai_file.files.length) {
+            e.preventDefault();
+            form.ai_text.focus();
+            form.ai_text.setCustomValidity('Paste your requirement here, or choose a file.');
+            form.ai_text.reportValidity();
+            form.ai_text.addEventListener('input', () => form.ai_text.setCustomValidity(''), { once: true });
+            return;
+        }
+        const btn = form.querySelector('[data-ai-submit]');
         if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
     });
 

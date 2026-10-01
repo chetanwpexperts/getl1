@@ -23,8 +23,13 @@
         @if ($usable)
             <form method="POST" action="{{ route('buyer.rfqs.ai.store') }}" enctype="multipart/form-data" class="space-y-3" data-ai-form>
                 @csrf
-                <textarea name="ai_text" rows="5" maxlength="30000"
-                          placeholder="e.g. Need 5000 corrugated boxes 5 ply 18x12x12 brown, 200 rolls BOPP tape 48mm, delivery Ludhiana by 20 Nov, 30 days credit"
+                <div class="flex items-center justify-between">
+                    <label for="ai_text" class="text-sm font-medium text-slate-700">Your requirement</label>
+                    <button type="button" class="text-xs font-semibold text-emerald-700 hover:underline" data-ai-example
+                            data-example="Need 5000 corrugated box 5 ply 18x12x12 inch brown, 200 roll BOPP tape 48mm, 50 kg stretch film 23 micron. Delivery at Focal Point Ludhiana by 20 Nov. 30 days credit, freight included.">Try an example</button>
+                </div>
+                <textarea id="ai_text" name="ai_text" rows="5" maxlength="30000"
+                          placeholder="Paste or type here: items, quantities, sizes, delivery place and date, payment terms…"
                           class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">{{ old('ai_text') }}</textarea>
                 @error('ai_text') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
                 <div class="flex flex-wrap items-center gap-3">
