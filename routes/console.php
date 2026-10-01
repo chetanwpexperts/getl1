@@ -101,3 +101,55 @@ Illuminate\Support\Facades\Schedule::call(function () {
             }
         });
 })->daily()->name('ai-inputs-cleanup')->withoutOverlapping();
+
+/*
+ * Moves sign-ups from the old coming-soon page (waitlist.csv) into Leads. Safe to re-run:
+ * an email that is already a lead is skipped.
+ */
+Artisan::command('getl1:import-waitlist {path}', function (string $path) {
+    if (! is_readable($path)) {
+        $this->error("Can't read {$path}");
+
+        return 1;
+    }
+    $fh = fopen($path, 'r');
+    $header = fgetcsv($fh, 0, ',', '"', '\\') ?: [];
+    $added = $skipped = 0;
+    while (($row = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
+        $r = array_combine(array_slice($header, 0, count($row)), array_slice($row, 0, count($header))) ?: [];
+        $email = strtolower(trim((string) ($r['email'] ?? '')));
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL) || App\Models\Lead::where('email', $email)->exists()) {
+            $skipped++;
+
+            continue;
+        }
+        $clean = fn ($v, $n) => mb_substr(ltrim(trim((string) $v), "='+-@"), 0, $n) ?: null;
+        $lead = App\Models\Lead::create([
+            'name' => 'Waitlist sign-up',
+            'company' => $clean($r['company'] ?? '', 160) ?? Illuminate\Support\Str::after($email, '@'),
+            'email' => $email,
+            'city' => $clean($r['city'] ?? '', 80),
+            'interest' => ($r['role'] ?? '') === 'supplier' ? 'supplier' : 'buyer',
+            'source' => $clean($r['source'] ?? '', 60) ?? 'waitlist',
+            'message' => 'Joined the waitlist on the coming-soon page.',
+            'ip' => $clean($r['ip'] ?? '', 45),
+        ]);
+        if ($ts = strtotime((string) ($r['created_at'] ?? ''))) {
+            $lead->forceFill(['created_at' => date('Y-m-d H:i:s', $ts)])->saveQuietly();
+        }
+        $added++;
+    }
+    fclose($fh);
+    $this->info("Waitlist: {$added} added, {$skipped} skipped.");
+
+    return 0;
+})->purpose('Import the old coming-soon waitlist CSV into Leads');
+
+/** Recent website leads, for website mode where the admin console isn't served. */
+Artisan::command('getl1:leads {--days=30}', function () {
+    $rows = App\Models\Lead::where('created_at', '>=', now()->subDays((int) $this->option('days')))->latest()->get()
+        ->map(fn ($l) => [$l->created_at->ist()->format('d M H:i'), $l->interest, $l->company, $l->name, $l->email, $l->phone, $l->city, $l->status]);
+    $this->table(['When (IST)', 'Type', 'Company', 'Name', 'Email', 'Phone', 'City', 'Status'], $rows);
+
+    return 0;
+})->purpose('List recent website leads');

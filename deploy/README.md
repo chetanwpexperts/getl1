@@ -122,3 +122,22 @@ Demo logins on staging (password `password`): `buyer@getl1.test`, `supplier1@get
   Send the printed error.
 - **Firewall**: if `sudo ufw status` is active and doesn't allow 80/443, run `sudo ufw allow 'Nginx Full'`
   (check with Virendar first, since the server is shared).
+
+## 5. New website on getl1.com (replaces the coming-soon page)
+
+`deploy/setup-website.sh` creates `<base>/getl1-www`: the same app with `SITE_MODE=website`, so only
+the public pages, policies and the early-access form answer. Login, signup and the product return
+404 there until launch. Old waitlist sign-ups are imported into Leads.
+
+```bash
+cd $BASE/getl1-staging && git pull
+sudo LEADS_TO=you@gmail.com bash $BASE/getl1-staging/deploy/setup-website.sh
+```
+
+- The previous getl1.com nginx config is backed up to `/root/getl1-backups/` and restored
+  automatically if any check fails. The existing SSL certificate is reused.
+- New leads are emailed to `LEADS_TO` and the visitor gets a confirmation email.
+- List leads: `sudo -u www-data php $BASE/getl1-www/artisan getl1:leads`
+- Update later: `bash $BASE/getl1-www/deploy/deploy-website.sh` (deploy and test staging first).
+- Launch day: set `SITE_MODE=app` plus the live Razorpay keys in `getl1-www/.env`, add the queue
+  worker and scheduler (same as staging), and run `deploy-website.sh`.

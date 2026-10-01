@@ -100,4 +100,23 @@ class WebsiteTest extends TestCase
         [, $user] = $this->buyer();
         $this->actingAs($user)->get('/')->assertOk()->assertSee('Dashboard');
     }
+
+    public function test_old_waitlist_imports_once(): void
+    {
+        $csv = tempnam(sys_get_temp_dir(), 'wl');
+        file_put_contents($csv, "created_at,email,role,company,city,source,ip\n"
+            ."2026-09-20T10:00:00+00:00,Owner@Acme.in,buyer,Acme Packaging,Ludhiana,linkedin,1.2.3.4\n"
+            ."2026-09-21T10:00:00+00:00,sales@steel.in,supplier,=HYPERLINK(1),Mohali,,\n"
+            ."bad,not-an-email,buyer,X,Y,,\n");
+
+        $this->artisan('getl1:import-waitlist', ['path' => $csv])->expectsOutput('Waitlist: 2 added, 1 skipped.')->assertExitCode(0);
+        $this->artisan('getl1:import-waitlist', ['path' => $csv])->expectsOutput('Waitlist: 0 added, 3 skipped.');
+        $a = Lead::where('email', 'owner@acme.in')->firstOrFail();
+        $this->assertSame('Acme Packaging', $a->company);
+        $this->assertSame('2026-09-20', $a->created_at->toDateString());
+        $this->assertSame('supplier', Lead::where('email', 'sales@steel.in')->value('interest'));
+        $this->assertStringStartsNotWith('=', Lead::where('email', 'sales@steel.in')->value('company'));
+        $this->artisan('getl1:leads')->assertExitCode(0);
+        unlink($csv);
+    }
 }
