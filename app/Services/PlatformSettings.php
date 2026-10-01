@@ -73,7 +73,8 @@ class PlatformSettings
             } elseif ($value === '') {
                 $value = null;
             }
-            if ($value === $current[$key]) {
+            $same = is_numeric($value) && is_numeric($current[$key]) ? (float) $value === (float) $current[$key] : $value === $current[$key];
+            if ($same) {
                 continue;
             }
             DB::table('platform_settings')->updateOrInsert(['key' => $key],

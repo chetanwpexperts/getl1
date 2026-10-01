@@ -112,7 +112,6 @@ Route::middleware('auth')->group(function () {
                 Route::post('/users/{user}/sign-out', [AdminUsers::class, 'signOut'])->whereNumber('user')->name('users.signout');
                 Route::post('/users/{user}/lock', [AdminUsers::class, 'lock'])->whereNumber('user')->name('users.lock');
                 Route::post('/users/{user}/unlock', [AdminUsers::class, 'unlock'])->whereNumber('user')->name('users.unlock');
-                Route::post('/users/{user}/reset-two-step', [AdminUsers::class, 'resetTwoFactor'])->whereNumber('user')->name('users.2fa-reset');
                 Route::post('/settings', [AdminSettings::class, 'update'])->name('settings.update');
             });
         });

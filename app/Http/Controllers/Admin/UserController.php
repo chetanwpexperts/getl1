@@ -16,7 +16,7 @@ use Illuminate\View\View;
 
 /**
  * Individual people (a company can have several). Staff can sign someone out everywhere,
- * lock or unlock them, and reset a colleague's two-step login. Each action needs a reason.
+ * and lock or unlock them. Each action needs a reason. Staff accounts are managed on the server only.
  */
 class UserController extends Controller
 {
@@ -58,16 +58,20 @@ class UserController extends Controller
     {
         $data = $request->validate(['reason' => ['required', 'string', 'min:5', 'max:200']]);
         $this->notSelf($request, $user);
+        $this->notStaff($user);
         $n = $this->endSessions($user);
         $this->record('admin_user_signed_out', $user, $data['reason'], ['sessions' => $n]);
 
-        return back()->with('status', "{$user->name} has been signed out of every device.");
+        return back()->with('status', config('session.driver') === 'database'
+            ? "{$user->name} has been signed out of every device."
+            : "Saved \"remember me\" logins were ended. Open sessions end when they expire (sessions aren't stored in the database here).");
     }
 
     public function lock(Request $request, User $user): RedirectResponse
     {
         $data = $request->validate(['reason' => ['required', 'string', 'min:5', 'max:200']]);
         $this->notSelf($request, $user);
+        $this->notStaff($user);
         abort_if($user->locked_at !== null, 409);
         $user->forceFill(['locked_at' => now(), 'locked_reason' => $data['reason']])->save();
         $this->endSessions($user);
@@ -87,23 +91,18 @@ class UserController extends Controller
         return back()->with('status', "{$user->name} can log in again.");
     }
 
-    /** For a colleague who lost their phone: they set up two-step login again at their next visit. */
-    public function resetTwoFactor(Request $request, User $user): RedirectResponse
-    {
-        $data = $request->validate(['reason' => ['required', 'string', 'min:5', 'max:200']]);
-        $this->notSelf($request, $user);
-        abort_unless($user->is_platform_admin && $user->two_factor_confirmed_at, 409);
-        $user->forceFill(['two_factor_secret' => null, 'two_factor_recovery_codes' => null, 'two_factor_confirmed_at' => null])->save();
-        $this->endSessions($user);
-        $this->record('admin_2fa_reset', $user, $data['reason']);
-        SecurityLog::warning('admin_2fa_reset', ['target_user_id' => $user->id]);
-
-        return back()->with('status', "Two-step login reset for {$user->name}. They set it up again at their next visit.");
-    }
-
     private function notSelf(Request $request, User $user): void
     {
         abort_if($request->user()->is($user), 422, 'You can\'t do this to your own account.');
+    }
+
+    /**
+     * Staff accounts are changed only from the server (artisan), never from the console, so one
+     * stolen admin session can't lock out or take over the other staff accounts.
+     */
+    private function notStaff(User $user): void
+    {
+        abort_if($user->is_platform_admin, 422, 'GetL1 staff accounts are managed on the server: php artisan getl1:admin --revoke or getl1:reset-two-step.');
     }
 
     /** Ends every login: database sessions are deleted and "remember me" cookies stop working. */

@@ -188,11 +188,16 @@ class OperationsConsoleTest extends TestCase
         $this->asAdmin($this->admin)->post(route('admin.users.signout', $target->id), ['reason' => 'Lost phone'])->assertRedirect();
         $this->asAdmin($this->admin)->post(route('admin.users.lock', $this->admin->id), ['reason' => 'Testing myself'])->assertStatus(422);
 
+        // Staff accounts can't be touched from the console (a stolen session can't lock out colleagues).
         $colleague = $this->admin();
-        $this->asAdmin($this->admin)->post(route('admin.users.2fa-reset', $colleague->id), ['reason' => 'Lost phone and codes'])->assertRedirect();
+        $this->asAdmin($this->admin)->post(route('admin.users.lock', $colleague->id), ['reason' => 'Trying to lock staff'])->assertStatus(422);
+        $this->asAdmin($this->admin)->post(route('admin.users.signout', $colleague->id), ['reason' => 'Trying to sign out'])->assertStatus(422);
+        $this->assertNull($colleague->fresh()->locked_at);
+        $this->artisan('getl1:reset-two-step', ['email' => $colleague->email])->assertExitCode(0);
         $this->assertFalse($colleague->fresh()->hasTwoFactor());
+        $this->assertTrue(AuditLog::where('action', 'admin_2fa_reset')->exists());
 
-        foreach (['admin_user_locked', 'admin_user_unlocked', 'admin_user_signed_out', 'admin_2fa_reset'] as $action) {
+        foreach (['admin_user_locked', 'admin_user_unlocked', 'admin_user_signed_out'] as $action) {
             $this->assertTrue(AuditLog::where('action', $action)->where('user_id', $this->admin->id)->exists(), $action);
         }
     }
@@ -247,7 +252,7 @@ class OperationsConsoleTest extends TestCase
         Mail::assertSent(HealthAlertMail::class, 1); // once an hour per problem
 
         Cache::put(SystemHealth::HEARTBEAT_KEY, now()->getTimestamp(), 3600);
-        $this->artisan('getl1:health')->assertExitCode(0);
+        $this->artisan('getl1:health'); // other checks (e.g. disk) depend on the machine, so only the mail is asserted
         Mail::assertSent(HealthAlertMail::class, fn ($m) => $m->failing === [] && $m->recovered !== []);
         $this->asAdmin($this->admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('Scheduler (auction clock, reminders)');
     }

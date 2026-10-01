@@ -184,7 +184,7 @@ class AuctionService
 
         $due = Auction::withoutGlobalScopes()
             ->where(fn ($q) => $q->where('status', AuctionStatus::Scheduled->value)->where('starts_at', '<=', now()))
-            ->orWhere(fn ($q) => $q->where('status', AuctionStatus::Live->value)->where('ends_at', '<=', now()))
+            ->orWhere(fn ($q) => $q->where('status', AuctionStatus::Live->value)->whereNull('paused_at')->where('ends_at', '<=', now()))
             ->pluck('id');
 
         foreach ($due as $id) {

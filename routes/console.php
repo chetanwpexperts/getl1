@@ -189,3 +189,23 @@ Artisan::command('getl1:health', function (App\Services\SystemHealth $health, Ap
     return $failing->isEmpty() ? 0 : 1;
 })->purpose('Check system health and email an alert if something fails');
 Illuminate\Support\Facades\Schedule::command('getl1:health')->everyFiveMinutes()->withoutOverlapping(4);
+
+/** A staff member lost their phone and recovery codes: they set up two-step login again at their next visit. */
+Artisan::command('getl1:reset-two-step {email}', function (string $email) {
+    $user = User::where('email', strtolower($email))->first();
+    if (! $user) {
+        $this->error("No user with email {$email}.");
+
+        return 1;
+    }
+    $user->forceFill(['two_factor_secret' => null, 'two_factor_recovery_codes' => null, 'two_factor_confirmed_at' => null,
+        'remember_token' => Illuminate\Support\Str::random(60)])->save();
+    if (config('session.driver') === 'database') {
+        Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+    }
+    app(AuditLogger::class)->log('admin_2fa_reset', $user, after: ['via' => 'artisan'], user: $user, organizationId: $user->current_organization_id);
+    App\Services\SecurityLog::warning('admin_2fa_reset', ['target_user_id' => $user->id, 'via' => 'artisan']);
+    $this->info("Two-step login reset for {$user->email}. They set it up again at their next visit to /admin.");
+
+    return 0;
+})->purpose('Reset a staff member\'s two-step login (lost phone)');

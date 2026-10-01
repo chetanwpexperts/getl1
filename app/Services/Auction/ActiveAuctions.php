@@ -21,7 +21,7 @@ class ActiveAuctions
     {
         $query = Auction::withoutGlobalScopes()
             ->whereIn('status', [AuctionStatus::Scheduled->value, AuctionStatus::Live->value])
-            ->where('ends_at', '>', now())
+            ->where(fn ($q) => $q->where('ends_at', '>', now())->orWhereNotNull('paused_at')) // paused: clock stopped
             ->where('starts_at', '<=', now()->addMinutes($soonMinutes));
 
         $org->isBuyer()

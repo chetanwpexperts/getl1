@@ -105,7 +105,8 @@ class LiveVersion
             return '-';
         }
 
-        return $a->id.':'.Standings::effectiveStatus($a)->value.':'.$a->starts_at->getTimestamp().($withPrice ? ':'.$a->current_l1 : '');
+        return $a->id.':'.Standings::effectiveStatus($a)->value.($a->isPaused() ? ':p' : '').':'.$a->starts_at->getTimestamp()
+            .':'.$a->ends_at->getTimestamp().($withPrice ? ':'.$a->current_l1 : '');
     }
 
     /** Start and end of a scheduled or live auction: moments the page must change. */

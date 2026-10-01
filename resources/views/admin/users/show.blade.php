@@ -53,8 +53,13 @@
         </div>
 
         <div class="space-y-4">
-            @if ($self)
-                <p class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">This is your own account. Another staff member has to make changes to it.</p>
+            @if ($self || $u->is_platform_admin)
+                <div class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                    <p class="font-semibold text-slate-800">{{ $self ? 'This is your own account.' : 'GetL1 staff account' }}</p>
+                    <p class="mt-1">For safety, staff accounts can't be locked or reset from the console. On the server:</p>
+                    <pre class="mt-2 overflow-x-auto rounded-lg bg-slate-50 p-2 font-mono text-xs">php artisan getl1:reset-two-step {{ $u->email }}
+php artisan getl1:admin {{ $u->email }} --revoke</pre>
+                </div>
             @else
                 <section class="rounded-xl border border-slate-200 bg-white p-4 text-sm">
                     <h2 class="font-semibold">Sign out everywhere</h2>
@@ -83,17 +88,6 @@
                         </form>
                     @endif
                 </section>
-                @if ($u->is_platform_admin && $u->two_factor_confirmed_at)
-                    <section class="rounded-xl border border-slate-200 bg-white p-4 text-sm">
-                        <h2 class="font-semibold">Reset two-step login</h2>
-                        <p class="mt-1 text-xs text-slate-500">If they lost their phone and recovery codes. They set it up again at their next visit.</p>
-                        <form method="POST" action="{{ route('admin.users.2fa-reset', $u->id) }}" class="mt-2 space-y-2" data-confirm="Reset two-step login for {{ $u->name }}?">
-                            @csrf
-                            <input name="reason" required minlength="5" maxlength="200" placeholder="Reason" class="{{ $input }}" aria-label="Reason">
-                            <button class="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold hover:bg-slate-50">Reset</button>
-                        </form>
-                    </section>
-                @endif
             @endif
         </div>
     </div>
