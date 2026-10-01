@@ -37,6 +37,7 @@ web package:discover --ansi >/dev/null
 
 echo "==> Migrations"
 web migrate --force
+web db:seed --class=PlanSeeder --force >/dev/null   # plans and prices (safe to re-run)
 
 echo "==> Assets"
 if command -v npm >/dev/null 2>&1; then

@@ -20,7 +20,12 @@ class DashboardController extends Controller
         if ($org->isBuyer()) {
             $org->load('subscription.plan');
 
+            $plans = app(\App\Services\Billing\PlanService::class);
+
             return view('dashboard.buyer', [
+                'plan' => $plans->current($org),
+                'savings' => app(\App\Services\Reports\SavingsReport::class)->build($org->id, 'this_fy')['totals'],
+                'liveSub' => $plans->liveSubscription($org),
                 'activeAuctions' => \App\Services\Auction\ActiveAuctions::for($org, 24 * 60),
                 'openRfqs' => Rfq::whereNotIn('status', [RfqStatus::Awarded, RfqStatus::Cancelled])->count(),
                 'liveAuctions' => Auction::where('status', AuctionStatus::Live)->count(),

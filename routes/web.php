@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Buyer\AuctionController as BuyerAuctionController;
 use App\Http\Controllers\Buyer\AwardController as BuyerAwardController;
+use App\Http\Controllers\Buyer\BillingController;
+use App\Http\Controllers\RazorpayWebhookController;
 use App\Http\Controllers\Supplier\OrderController as SupplierOrderController;
 use App\Http\Controllers\Buyer\RfqController as BuyerRfqController;
 use App\Http\Controllers\Buyer\SupplierController;
@@ -70,6 +72,20 @@ Route::middleware('auth')->group(function () {
                 ->whereNumber('auction')->middleware('throttle:120,1')->name('auctions.state');
             Route::get('/auctions/{auction}/bids.csv', [BuyerAuctionController::class, 'bidsCsv'])
                 ->whereNumber('auction')->middleware('throttle:20,1')->name('auctions.bids');
+
+            Route::get('/reports/savings', [\App\Http\Controllers\Buyer\ReportController::class, 'savings'])->name('reports.savings');
+            Route::get('/reports/savings.csv', [\App\Http\Controllers\Buyer\ReportController::class, 'savingsCsv'])->middleware('throttle:20,1')->name('reports.savings.csv');
+
+            // Billing: everyone can see the plan and invoices; only admins pay or cancel.
+            Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+            Route::get('/billing/invoices/{payment}', [BillingController::class, 'invoice'])->whereNumber('payment')->name('billing.invoice');
+            Route::middleware(['org.role:buyer_admin', 'throttle:20,1'])->group(function () {
+                Route::post('/billing/subscribe', [BillingController::class, 'subscribe'])->name('billing.subscribe');
+                Route::post('/billing/subscribe/confirm', [BillingController::class, 'confirmSubscription'])->name('billing.subscribe.confirm');
+                Route::post('/billing/credits', [BillingController::class, 'buyCredits'])->name('billing.credits');
+                Route::post('/billing/credits/confirm', [BillingController::class, 'confirmCredits'])->name('billing.credits.confirm');
+                Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+            });
 
             // Awards: everyone can see and download the PO; approvers and admins decide.
             Route::get('/awards/{award}/po', [BuyerAwardController::class, 'po'])->whereNumber('award')->name('awards.po');
@@ -145,3 +161,8 @@ Route::middleware('auth')->group(function () {
         });
     });
 });
+
+// Razorpay webhooks: signed by Razorpay, so no login or CSRF token.
+Route::post('/webhooks/razorpay', RazorpayWebhookController::class)
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])
+    ->middleware('throttle:120,1')->name('webhooks.razorpay');

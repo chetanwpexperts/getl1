@@ -10,7 +10,7 @@ class Plan extends Model
     protected $fillable = [
         'code', 'name', 'price_monthly', 'price_yearly', 'max_auctions_month', 'max_users',
         'max_ai_calls_month', 'features', 'razorpay_plan_id_monthly', 'razorpay_plan_id_yearly',
-        'is_active', 'sort',
+        'is_active', 'sort', 'contact_sales', 'tagline', 'razorpay_plan_amount_monthly', 'razorpay_plan_amount_yearly',
     ];
 
     protected function casts(): array
@@ -20,6 +20,7 @@ class Plan extends Model
             'price_yearly' => 'decimal:2',
             'features' => 'array',
             'is_active' => 'boolean',
+            'contact_sales' => 'boolean',
         ];
     }
 

@@ -3,25 +3,38 @@
 @section('title', 'Dashboard')
 
 @section('content')
-    @php $sub = $currentOrg->subscription; @endphp
+    @php $sub = $liveSub; @endphp
 
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold">Dashboard</h1>
             <p class="mt-1 text-sm text-slate-600">{{ $currentOrg->name }}, {{ $currentOrg->city }}</p>
         </div>
-        @if ($sub)
+        @if ($plan)
             <div class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm">
-                <span class="font-medium">{{ $sub->plan->name }}</span>
-                @if ($sub->status->value === 'trialing' && $sub->trial_ends_at)
+                <span class="font-medium">{{ $plan->name }} plan</span>
+                @if ($sub?->status->value === 'trialing' && $sub->trial_ends_at)
                     <span class="text-slate-600">· trial ends {{ $sub->trial_ends_at->ist()->format('d M Y') }}
                         ({{ max(0, (int) now()->diffInDays($sub->trial_ends_at, false)) }} days left)</span>
                 @endif
+                <a href="{{ route('buyer.billing.index') }}" class="ml-1 font-medium text-emerald-700 hover:underline">Plans</a>
             </div>
         @endif
     </div>
 
     <x-auction-cards :auctions="$activeAuctions" :org="$currentOrg" />
+
+    @if ($savings['awards'] > 0)
+        <a href="{{ route('buyer.reports.savings') }}" class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 hover:bg-emerald-100">
+            <div>
+                <p class="text-sm">Saved this financial year</p>
+                <p class="text-2xl font-semibold tabular-nums">
+                    {{ $savings['vs_last_count'] ? \App\Support\Money::inr(max(0, $savings['vs_last']), 0).' vs last prices' : \App\Support\Money::inr(max(0, $savings['vs_sealed']), 0).' in live auctions' }}
+                </p>
+            </div>
+            <span class="text-sm font-semibold">{{ $savings['awards'] }} {{ \Illuminate\Support\Str::plural('order', $savings['awards']) }} · View report →</span>
+        </a>
+    @endif
 
     <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ([

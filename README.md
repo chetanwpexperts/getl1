@@ -67,6 +67,9 @@ php artisan test
 - **Awards and POs:** PO lines are frozen on the award when it's made; PO numbers are sequential per company
   (PO-2026-0001) and issuing is idempotent (a retried job never makes a second PO or re-sends emails).
   PDFs are rendered with remote fetching, PHP and JavaScript disabled, and stored on the private disk.
+- **Billing:** money is credited only on proof from Razorpay (checkout signature or signed webhook); each
+  payment is recorded once (unique Razorpay payment id + row lock), so the browser callback and webhook can
+  both arrive in any order. Secrets live only in `.env`.
 - **Access rule:** records of another company always return 404, never 403, so IDs can't be probed.
 
 ## Build plan
@@ -76,5 +79,5 @@ php artisan test
 3. ✅ RFQ builder (items, terms, attachments), invites by email + WhatsApp link (bound to one supplier), sealed quotes, ranked comparison after deadline
 4. ✅ Live reverse auction: row-locked bids, idempotent retries, ranks, auto-extend, server clock, Reverb websockets with polling fallback, parallel stress test
 5. ✅ Award (L1 default, reason if not L1), approval with company limit and no self-approval, automatic PO (PDF with GSTIN, CGST/SGST or IGST, amount in words) emailed to the winner, supplier Orders with accept, RFQ activity timeline, auction bid log CSV
-6. Razorpay subscriptions, plan limits, savings report
+6. ✅ Plans (Free / Starter / Growth / Business-on-request + pay-per-auction credits), 14-day Growth trial falling back to Free, monthly auction limits, Razorpay subscriptions and orders (signature-verified, idempotent webhooks), GST-ready invoices, savings report with CSV
 7. AI RFQ parsing, WhatsApp notifications

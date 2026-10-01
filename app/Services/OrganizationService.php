@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class OrganizationService
 {
-    public const TRIAL_DAYS = 30;
+    public const TRIAL_DAYS = 14;
 
     /**
      * Create an organization with the given user as owner.
@@ -43,7 +43,8 @@ class OrganizationService
 
     public function startTrial(Organization $org): void
     {
-        $plan = Plan::where('code', 'trial')->first();
+        // New buyers try the full Growth plan; afterwards they continue on Free unless they subscribe.
+        $plan = Plan::where('code', \App\Services\Billing\PlanService::TRIAL_PLAN)->first();
 
         if (! $plan) {
             return; // plans not seeded yet (e.g. fresh install); trial can be added later

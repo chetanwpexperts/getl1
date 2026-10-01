@@ -172,6 +172,10 @@ class AuctionStress extends Command
         $buyerUser = $user('stress-buyer@getl1.test');
         $buyer = $buyerUser->organizations()->first()
             ?? $orgs->createWithOwner($buyerUser, ['name' => 'Stress Test Buyer', 'city' => 'Mohali'], OrganizationType::Buyer);
+        // Test company: never blocked by the monthly auction limit.
+        if ($buyer->auction_credits < 100) {
+            $buyer->forceFill(['auction_credits' => 1000])->save();
+        }
 
         $rfq = app(RfqService::class)->saveDraft($buyer, $buyerUser, [
             'title' => 'Stress test '.now()->format('Y-m-d H:i:s'),

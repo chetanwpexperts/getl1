@@ -19,7 +19,7 @@ class Organization extends Model
     protected $fillable = [
         'type', 'name', 'slug', 'gstin', 'pan', 'udyam_no', 'email', 'phone',
         'address', 'city', 'state', 'pincode', 'locale', 'verified_at', 'status',
-        'award_approval_limit', 'po_terms',
+        'award_approval_limit', 'po_terms', 'auction_credits',
     ];
 
     protected function casts(): array
@@ -78,19 +78,10 @@ class Organization extends Model
         return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
+    /** A paid plan or a running trial right now (otherwise the company is on Free). */
     public function hasUsableSubscription(): bool
     {
-        $sub = $this->subscription;
-
-        if (! $sub || ! $sub->status->allowsUse()) {
-            return false;
-        }
-
-        if ($sub->status === SubscriptionStatus::Trialing) {
-            return $sub->trial_ends_at === null || $sub->trial_ends_at->isFuture();
-        }
-
-        return true;
+        return app(\App\Services\Billing\PlanService::class)->liveSubscription($this) !== null;
     }
 
     // Supplier side

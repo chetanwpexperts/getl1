@@ -10,7 +10,7 @@ class Subscription extends Model
 {
     protected $fillable = [
         'organization_id', 'plan_id', 'billing_cycle', 'razorpay_subscription_id', 'status',
-        'trial_ends_at', 'current_period_end', 'cancelled_at',
+        'trial_ends_at', 'current_period_end', 'cancelled_at', 'current_period_start', 'cancel_at_period_end', 'created_by',
     ];
 
     protected function casts(): array
@@ -20,6 +20,8 @@ class Subscription extends Model
             'trial_ends_at' => 'datetime',
             'current_period_end' => 'datetime',
             'cancelled_at' => 'datetime',
+            'current_period_start' => 'datetime',
+            'cancel_at_period_end' => 'boolean',
         ];
     }
 

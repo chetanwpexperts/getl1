@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             'buyer_supplier' => \App\Models\BuyerSupplier::class,
             'subscription' => \App\Models\Subscription::class,
             'ai_job' => \App\Models\AiJob::class,
+            'payment' => \App\Models\Payment::class,
         ]);
     }
 }

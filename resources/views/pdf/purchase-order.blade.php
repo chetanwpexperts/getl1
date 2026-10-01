@@ -26,6 +26,8 @@
     .party { font-size: 11px; font-weight: bold; }
     .items th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 5px 6px; font-size: 8px; text-transform: uppercase; letter-spacing: .4px; text-align: left; }
     .items td { border: 1px solid #cbd5e1; padding: 5px 6px; vertical-align: top; }
+    .items th.r { text-align: right; }
+    .items th.c { text-align: center; }
     .r { text-align: right; }
     .c { text-align: center; }
     .totals td { padding: 3px 6px; }

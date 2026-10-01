@@ -4,6 +4,7 @@ import { initAuction } from './auction';
 import { initQuoteForm } from './quote-form';
 import { initLivePage } from './live-page';
 import { initCountdowns } from './countdowns';
+import { initBilling } from './billing';
 
 document.addEventListener('DOMContentLoaded', () => {
     initRfqItems();
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initQuoteForm();
     initLivePage();
     initCountdowns();
+    initBilling();
 
     // Copy-to-clipboard buttons: <button data-copy="text">
     document.addEventListener('click', async (e) => {

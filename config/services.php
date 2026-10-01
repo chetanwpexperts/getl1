@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // Razorpay: test keys (rzp_test_…) on staging, live keys only in production .env.
+    'razorpay' => [
+        'key_id' => env('RAZORPAY_KEY_ID'),
+        'key_secret' => env('RAZORPAY_KEY_SECRET'),
+        'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
+    ],
+
 ];

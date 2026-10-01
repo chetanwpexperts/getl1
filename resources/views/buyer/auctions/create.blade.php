@@ -12,6 +12,22 @@
     <h1 class="mt-2 text-2xl font-semibold">Schedule a live auction</h1>
     <p class="mt-1 text-sm text-slate-600">{{ $rfq->title }}. Suppliers who quoted start at their sealed price and bid it down live.</p>
 
+    @if ($allowance['left'] !== null)
+        @php
+            $blocked = $allowance['left'] === 0 && $allowance['credits'] === 0;
+        @endphp
+        <p class="mt-4 rounded-xl border px-4 py-3 text-sm {{ $blocked ? 'border-red-200 bg-red-50 text-red-900' : 'border-slate-200 bg-white text-slate-700' }}">
+            {{ $allowance['used'] }} of {{ $allowance['limit'] }} live {{ \Illuminate\Support\Str::plural('auction', $allowance['limit']) }} used this month on your {{ $allowance['plan']?->name }} plan.
+            @if ($allowance['left'] > 0)
+                This one is included.
+            @elseif ($allowance['credits'] > 0)
+                This one uses 1 of your {{ $allowance['credits'] }} auction {{ \Illuminate\Support\Str::plural('credit', $allowance['credits']) }}.
+            @else
+                <a href="{{ route('buyer.billing.index') }}" class="font-semibold underline">Upgrade or buy a single auction</a> to run this one.
+            @endif
+        </p>
+    @endif
+
     @if ($quotes->count() < $minParticipants)
         <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
             An auction needs at least {{ $minParticipants }} suppliers who quoted. Only {{ $quotes->count() }} quoted for this RFQ, so you can award directly from the comparison instead.

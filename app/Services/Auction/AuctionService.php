@@ -90,6 +90,9 @@ class AuctionService
                 throw ValidationException::withMessages(['starts_at' => 'An auction already exists for this RFQ.']);
             }
 
+            // Plan limit: live auctions per month. Beyond it, a prepaid auction credit is used.
+            $useCredit = $this->consumeAllowance($rfq->organization_id);
+
             $endsAt = $startsAt->copy()->addMinutes((int) $data['duration_min']);
             $best = $quotes->sortBy([['total', 'asc'], ['submitted_at', 'asc']])->first();
 
@@ -97,6 +100,7 @@ class AuctionService
                 'rfq_id' => $rfq->id,
                 'organization_id' => $rfq->organization_id,
                 'created_by' => $by->id,
+                'paid_with_credit' => $useCredit,
                 'format' => 'english_reverse',
                 'start_price' => $startPrice,
                 'min_decrement_type' => $data['min_decrement_type'],
@@ -154,6 +158,10 @@ class AuctionService
             }
 
             $a->update(['status' => AuctionStatus::Cancelled, 'cancel_reason' => $reason]);
+            if ($a->paid_with_credit) {
+                // Cancelled before it ran: the prepaid credit goes back.
+                \App\Models\Organization::whereKey($a->organization_id)->increment('auction_credits');
+            }
             Rfq::withoutGlobalScopes()->whereKey($a->rfq_id)->update(['status' => RfqStatus::Published->value]);
 
             $this->audit->log('auction_cancelled', $a, after: ['reason' => $reason], user: $by, organizationId: $a->organization_id);
@@ -219,5 +227,30 @@ class AuctionService
                 Mail::to($email)->queue(new AuctionScheduledMail($auction, $invite->supplier_org_id));
             }
         }
+    }
+
+    /**
+     * Inside the scheduling transaction: within the monthly plan limit → free; beyond it →
+     * one prepaid credit is taken (row lock, so two schedules can't share one credit);
+     * neither → a clear message with the way forward.
+     */
+    private function consumeAllowance(int $orgId): bool
+    {
+        $org = \App\Models\Organization::whereKey($orgId)->lockForUpdate()->firstOrFail();
+        $allowance = app(\App\Services\Billing\PlanService::class)->auctionAllowance($org);
+
+        if ($allowance['left'] === null || $allowance['left'] > 0) {
+            return false;
+        }
+        if ($org->auction_credits > 0) {
+            $org->decrement('auction_credits');
+
+            return true;
+        }
+
+        $plan = $allowance['plan']?->name ?? 'current';
+        throw ValidationException::withMessages(['starts_at' => "You've used all {$allowance['limit']} live "
+            .\Illuminate\Support\Str::plural('auction', (int) $allowance['limit'])." in your {$plan} plan this month. "
+            .'Upgrade your plan or buy a single auction from Billing to run this one.']);
     }
 }
