@@ -45,31 +45,42 @@
     $groups['Account'] = [['account.edit', 'My profile', 'profile', 'account.*', null]];
     $is = fn ($pattern) => request()->routeIs(...explode('|', $pattern));
 @endphp
-<body class="h-full bg-slate-50 font-sans text-slate-900 antialiased" data-server-time="{{ now()->getTimestampMs() }}">
-<div class="min-h-full lg:pl-64" data-shell>
-    {{-- Sidebar: fixed on large screens, a drawer on phones --}}
-    <div data-shell-backdrop hidden class="fixed inset-0 z-40 bg-slate-900/40 lg:hidden"></div>
-    <aside data-shell-nav class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-slate-200 bg-white transition-transform duration-200 lg:translate-x-0" aria-label="Main menu">
-        <div class="flex h-16 shrink-0 items-center justify-between px-5">
-            <a href="{{ route('dashboard') }}" aria-label="Dashboard"><x-logo size="text-xl" height="h-8" /></a>
-            <button type="button" data-shell-close class="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Close menu"><x-icon name="close" /></button>
-        </div>
+<body class="min-h-full bg-slate-50 font-sans text-slate-900 antialiased" data-server-time="{{ now()->getTimestampMs() }}">
+@php
+    // Top menu: the main pages as tabs; company pages under one "Company" menu.
+    $tabs = [];
+    $companyItems = [];
+    foreach ($groups as $heading => $items) {
+        foreach ($items as $item) {
+            if (in_array($heading, ['Company', 'Account'], true)) {
+                if ($heading === 'Company') { $companyItems[] = $item; }
+                continue;
+            }
+            $tabs[] = $item;
+        }
+    }
+    $companyOn = collect($companyItems)->contains(fn ($i) => $is($i[3]));
+@endphp
+<div class="flex min-h-full flex-col">
+    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        {{-- Row 1: logo and company, actions and account --}}
+        <div class="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+            <a href="{{ route('dashboard') }}" class="shrink-0" aria-label="Dashboard"><x-logo size="text-xl" height="h-8" /></a>
 
-        @isset($currentOrg)
-            {{-- Current company, with a switcher when the user belongs to more than one --}}
-            @php $orgs = $user->organizations; @endphp
-            <div class="px-3 pb-3">
-                <details class="group relative" data-dropdown>
-                    <summary class="flex cursor-pointer list-none items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
-                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $isBuyer ? 'bg-emerald-700' : 'bg-sky-700' }} text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($currentOrg->name, 0, 1)) }}</span>
-                        <span class="min-w-0 flex-1">
+            @isset($currentOrg)
+                @php $orgs = $user->organizations; @endphp
+                <span class="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
+                <details class="relative hidden min-w-0 sm:block" data-dropdown>
+                    <summary class="flex max-w-xs cursor-pointer list-none items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                        <span class="flex size-7 shrink-0 items-center justify-center rounded-md {{ $isBuyer ? 'bg-emerald-700' : 'bg-sky-700' }} text-xs font-bold text-white">{{ mb_strtoupper(mb_substr($currentOrg->name, 0, 1)) }}</span>
+                        <span class="min-w-0 leading-tight">
                             <span class="block truncate text-sm font-semibold">{{ $currentOrg->name }}</span>
-                            <span class="block truncate text-xs text-slate-500">{{ $currentOrg->type->label() }}{{ $currentRole ? ' · '.$currentRole->label() : '' }}</span>
+                            <span class="block truncate text-[11px] text-slate-500">{{ $currentOrg->type->label() }}{{ $currentRole ? ' · '.$currentRole->label() : '' }}</span>
                         </span>
                         @if ($orgs->count() > 1)<x-icon name="updown" class="size-4 text-slate-400" />@endif
                     </summary>
                     @if ($orgs->count() > 1)
-                        <div class="absolute inset-x-0 top-full z-10 mt-1 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                        <div class="absolute left-0 top-full z-40 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
                             <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Switch company</p>
                             @foreach ($orgs as $org)
                                 <form method="POST" action="{{ route('organizations.switch', $org) }}">
@@ -83,52 +94,7 @@
                         </div>
                     @endif
                 </details>
-            </div>
-        @endisset
-
-        <nav class="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
-            @foreach ($groups as $heading => $items)
-                <div>
-                    @if ($heading)<p class="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{{ $heading }}</p>@endif
-                    <ul class="space-y-0.5">
-                        @foreach ($items as [$route, $label, $icon, $pattern, $badge])
-                            @php $on = $is($pattern); @endphp
-                            <li>
-                                <a href="{{ route($route) }}" @if ($on) aria-current="page" @endif
-                                   class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition {{ $on ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
-                                    <x-icon :name="$icon" class="size-5 {{ $on ? 'text-emerald-700' : 'text-slate-400 group-hover:text-slate-500' }}" />
-                                    <span class="flex-1">{{ $label }}</span>
-                                    @if ($badge)<span class="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{{ $badge }}</span>@endif
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endforeach
-
-            @if ($user->is_platform_admin)
-                <div>
-                    <p class="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">GetL1 staff</p>
-                    <a href="{{ route('admin.dashboard') }}" class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                        <x-icon name="admin" class="size-5 text-slate-400 group-hover:text-slate-500" /> Admin console
-                    </a>
-                </div>
-            @endif
-        </nav>
-
-        <div class="shrink-0 space-y-2 border-t border-slate-100 p-3">
-            <a href="mailto:{{ config('site.email') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 hover:text-slate-800">
-                <x-icon name="help" class="size-5 text-slate-400" /> Help &amp; support
-            </a>
-        </div>
-    </aside>
-
-    {{-- Top bar --}}
-    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div class="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
-            <button type="button" data-shell-open class="-ml-1 rounded-md p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><x-icon name="menu" class="size-6" /></button>
-            <a href="{{ route('dashboard') }}" class="lg:hidden" aria-label="Dashboard"><x-logo size="text-lg" height="h-7" /></a>
-            <p class="hidden truncate text-sm text-slate-500 lg:block">@yield('title', 'Dashboard')</p>
+            @endisset
 
             <div class="ml-auto flex items-center gap-2 sm:gap-3">
                 @isset($navAuction)
@@ -153,7 +119,6 @@
                 @endif
 
                 <x-install-app />
-
                 {{-- Account menu --}}
                 <details class="relative" data-dropdown>
                     <summary class="flex cursor-pointer list-none items-center gap-2 rounded-full p-0.5 pr-1 hover:bg-slate-100 [&::-webkit-details-marker]:hidden" aria-label="Account menu">
@@ -164,6 +129,7 @@
                         <div class="border-b border-slate-100 px-4 py-3">
                             <p class="truncate text-sm font-semibold">{{ $user->name }}</p>
                             <p class="truncate text-xs text-slate-500">{{ $user->email }}</p>
+                            @isset($currentOrg)<p class="mt-2 truncate text-xs font-medium text-slate-700 sm:hidden">{{ $currentOrg->name }} · {{ $currentOrg->type->label() }}</p>@endisset
                         </div>
                         <div class="p-1 text-sm">
                             <a href="{{ route('account.edit') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"><x-icon name="profile" class="size-5 text-slate-400" /> My profile</a>
@@ -187,9 +153,42 @@
                 </details>
             </div>
         </div>
+
+        {{-- Row 2: main menu --}}
+        <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Main menu">
+            <ul class="-mb-px flex items-center gap-1 overflow-x-auto text-sm font-medium [scrollbar-width:none] lg:overflow-visible">
+                @foreach ($tabs as [$route, $label, $icon, $pattern, $badge])
+                    @php $on = $is($pattern); @endphp
+                    <li class="shrink-0">
+                        <a href="{{ route($route) }}" @if ($on) aria-current="page" @endif
+                           class="flex items-center gap-2 border-b-2 px-3 py-3 transition {{ $on ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
+                            <x-icon :name="$icon" class="size-[18px] {{ $on ? 'text-emerald-700' : 'text-slate-400' }}" />
+                            {{ $label }}
+                            @if ($badge)<span class="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{{ $badge }}</span>@endif
+                        </a>
+                    </li>
+                @endforeach
+                @if ($companyItems)
+                    <li class="shrink-0">
+                        <details class="relative" data-dropdown>
+                            <summary class="flex cursor-pointer list-none items-center gap-2 border-b-2 px-3 py-3 transition [&::-webkit-details-marker]:hidden {{ $companyOn ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
+                                <x-icon name="company" class="size-[18px] {{ $companyOn ? 'text-emerald-700' : 'text-slate-400' }}" /> Company <x-icon name="down" class="size-3.5" />
+                            </summary>
+                            <div class="fixed z-40 mt-1 w-60 rounded-xl border border-slate-200 bg-white p-1 shadow-xl lg:absolute lg:left-0 lg:top-full">
+                                @foreach ($companyItems as [$route, $label, $icon, $pattern])
+                                    <a href="{{ route($route) }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm {{ $is($pattern) ? 'bg-emerald-50 font-semibold text-emerald-800' : 'text-slate-700 hover:bg-slate-50' }}">
+                                        <x-icon :name="$icon" class="size-5 text-slate-400" /> {{ $label }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </details>
+                    </li>
+                @endif
+            </ul>
+        </nav>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         @if (session('status'))
             <div class="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
                 <span class="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white" aria-hidden="true">✓</span>
@@ -206,7 +205,7 @@
         @yield('content')
     </main>
 
-    <footer class="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+    <footer class="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
         <div class="flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500">
             <span>© {{ date('Y') }} {{ config('site.name') }} · Times shown in IST<x-credit class="before:mx-1.5 before:content-['·']" link-class="font-medium text-slate-600 hover:text-slate-800" /></span>
             <span class="flex gap-4">
