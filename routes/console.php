@@ -58,3 +58,33 @@ Artisan::command('getl1:automations', function (App\Services\Automations $automa
 })->purpose('Send the automatic reminders and results that move each RFQ forward');
 
 Illuminate\Support\Facades\Schedule::command('getl1:automations')->everyMinute()->withoutOverlapping(5);
+
+/*
+ * Send one test email right now (not queued) and report what the mail server said.
+ */
+Artisan::command('getl1:mail-test {to}', function (string $to) {
+    if (! filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        $this->error('That is not a valid email address.');
+
+        return 1;
+    }
+    $this->line('Mailer: '.config('mail.default').' · from '.config('mail.from.address').' · host '.config('mail.mailers.smtp.host').':'.config('mail.mailers.smtp.port'));
+    try {
+        $sent = Illuminate\Support\Facades\Mail::raw(
+            "This is a test email from GetL1 (".config('app.url').").\n\nIf you can read this, email delivery works.",
+            fn ($m) => $m->to($to)->subject('GetL1 test email')
+        );
+    } catch (Throwable $e) {
+        $this->error('Failed: '.$e->getMessage());
+
+        return 1;
+    }
+    if ($sent === null) {
+        $this->warn('Not sent: the address is blocked (test domain or not in MAIL_ALLOWLIST).');
+
+        return 1;
+    }
+    $this->info("Sent to {$to}. Check the inbox (and spam folder).");
+
+    return 0;
+})->purpose('Send a test email to check the mail settings');

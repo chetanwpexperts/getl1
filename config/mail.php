@@ -16,6 +16,10 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+    // Outside production, only these addresses/domains receive email (comma-separated).
+    // Empty = no restriction. Reserved test domains (*.test, example.com) never receive email.
+    'allowlist' => env('MAIL_ALLOWLIST'),
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations

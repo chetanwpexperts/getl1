@@ -40,6 +40,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Short, stable names in polymorphic columns (audit_logs, ai_jobs, whatsapp_messages).
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Mail\Events\MessageSending::class, \App\Listeners\GuardOutgoingMail::class);
+
         Relation::enforceMorphMap([
             'user' => User::class,
             'organization' => Organization::class,
