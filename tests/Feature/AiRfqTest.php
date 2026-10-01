@@ -201,20 +201,23 @@ class AiRfqTest extends TestCase
         $this->buyer->forceFill(['ai_credits' => 2])->save();
         $this->actingAs($this->admin)->get(route('buyer.rfqs.create'))->assertOk()->assertSee('Uses 1 of your 2 prepaid AI reads');
 
-        $this->aiReplies($this->good());
+        // Fakes stack (the first match wins), so one sequence: success, failure, success.
+        Http::fake(['api.anthropic.com/*' => Http::sequence()
+            ->pushResponse(Http::response(['model' => 'x', 'content' => [['type' => 'tool_use', 'id' => 't', 'name' => 'record_rfq', 'input' => $this->good()]], 'usage' => ['input_tokens' => 1, 'output_tokens' => 1]]))
+            ->push(['type' => 'error', 'error' => ['type' => 'api_error', 'message' => 'overloaded']], 529)
+            ->pushResponse(Http::response(['model' => 'x', 'content' => [['type' => 'tool_use', 'id' => 't', 'name' => 'record_rfq', 'input' => $this->good()]], 'usage' => ['input_tokens' => 1, 'output_tokens' => 1]]))]);
         $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes'])->assertRedirect();
         $this->assertSame(1, $this->buyer->fresh()->ai_credits);
         $this->assertTrue(AiJob::withoutGlobalScopes()->latest('id')->first()->paid_with_credit);
 
-        $this->aiReplies([], 529);
         $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes'])->assertRedirect();
+        $this->assertSame('failed', AiJob::withoutGlobalScopes()->latest('id')->first()->status);
         $this->assertSame(1, $this->buyer->fresh()->ai_credits, 'Failed read refunded');
 
         // Running the failure handler again never refunds twice.
         \App\Jobs\ParseRfqWithAi::fail(AiJob::withoutGlobalScopes()->latest('id')->first()->id, 'again');
         $this->assertSame(1, $this->buyer->fresh()->ai_credits);
 
-        $this->aiReplies($this->good());
         $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes']);
         $this->assertSame(0, $this->buyer->fresh()->ai_credits);
         $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes'])->assertSessionHasErrors('ai_text');
