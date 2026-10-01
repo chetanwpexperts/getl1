@@ -9,6 +9,7 @@
     <form method="POST" action="{{ route('password.email') }}" class="mt-6 space-y-4">
         @csrf
         <x-field name="email" label="Email" type="email" required autofocus autocomplete="email" />
+        <x-turnstile />
         <x-button>Send reset link</x-button>
     </form>
 

@@ -28,6 +28,7 @@ class PasswordResetController extends Controller
     public function email(Request $request): RedirectResponse
     {
         $data = $request->validate(['email' => ['required', 'email', 'max:190']]);
+        app(\App\Services\Turnstile::class)->check($request, 'password_reset');
         $status = Password::sendResetLink(['email' => strtolower($data['email'])]);
         SecurityLog::info('password_reset_requested', ['email' => strtolower($data['email']), 'result' => $status]);
 

@@ -42,6 +42,12 @@ return [
         'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
     ],
 
+    // Cloudflare Turnstile: bot check on signup, login, contact and password reset. Off until both keys are set.
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
     // Claude (Anthropic API) for reading requirements into RFQs. Key only in .env.
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),

@@ -161,4 +161,26 @@ class WebsiteTest extends TestCase
         $this->get('/')->assertDontSee('storage/site/logo-', false);
         \Illuminate\Support\Facades\Storage::disk('public')->assertMissing(json_decode($logo));
     }
+
+    public function test_turnstile_bot_check_when_enabled(): void
+    {
+        config(['services.turnstile.site_key' => '0x4AAAAAAAtest', 'services.turnstile.secret_key' => 'secret']);
+        $this->get('/contact')->assertOk()->assertSee('cf-turnstile', false)->assertSee('challenges.cloudflare.com', false);
+        $this->get('/login')->assertSee('cf-turnstile', false);
+
+        // No token: refused before anything is saved.
+        $this->post('/contact', $this->lead())->assertSessionHasErrors('turnstile');
+        \Illuminate\Support\Facades\Http::fake([\App\Services\Turnstile::URL => \Illuminate\Support\Facades\Http::sequence()
+            ->push(['success' => false, 'error-codes' => ['invalid-input-response']])
+            ->push(['success' => true])]);
+        $this->post('/contact', $this->lead(['cf-turnstile-response' => 'bad']))->assertSessionHasErrors('turnstile');
+        $this->assertSame(0, Lead::count());
+        $this->post('/contact', $this->lead(['cf-turnstile-response' => 'good-token']))->assertRedirect(route('site.contact.thanks'));
+        $this->assertSame(1, Lead::count());
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r['secret'] === 'secret' && $r['response'] === 'good-token');
+
+        [, $user] = $this->buyer();
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])->assertSessionHasErrors('turnstile');
+        $this->assertGuest();
+    }
 }

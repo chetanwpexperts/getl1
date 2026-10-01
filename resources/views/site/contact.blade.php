@@ -63,6 +63,7 @@
                 </div>
             </div>
             <div><label for="message" class="text-sm font-medium text-slate-700">What do you buy? (optional)</label><textarea id="message" name="message" rows="3" maxlength="2000" placeholder="e.g. packaging material, steel, chemicals, spare parts…" class="{{ $in }}">{{ old('message') }}</textarea></div>
+            <x-turnstile />
             <button class="w-full rounded-lg bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800">{{ $isSite ? 'Request early access' : 'Request a demo' }}</button>
             <p class="text-xs text-slate-500">We use these details only to contact you about GetL1. See our <a href="{{ route('site.privacy') }}" class="underline">privacy policy</a>.</p>
         </form>

@@ -28,6 +28,7 @@ class RegisterController extends Controller
 
     public function store(Request $request, OrganizationService $orgs, AuditLogger $audit): RedirectResponse
     {
+        app(\App\Services\Turnstile::class)->check($request, 'register');
         $data = $request->validate([
             'account_type' => ['required', Rule::enum(OrganizationType::class)],
             'name' => ['required', 'string', 'max:100'],

@@ -42,6 +42,7 @@
             <x-field name="password_confirmation" label="Confirm password" type="password" required autocomplete="new-password" />
         </div>
 
+        <x-turnstile />
         <x-button>Create account</x-button>
     </form>
 

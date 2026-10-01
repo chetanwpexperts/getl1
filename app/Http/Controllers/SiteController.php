@@ -52,6 +52,8 @@ class SiteController extends Controller
             return redirect()->route('site.contact.thanks');
         }
 
+        app(\App\Services\Turnstile::class)->check($request, 'contact');
+
         // People type numbers as "98765 43210" or "+91-98765-43210".
         $request->merge(['phone' => preg_replace('/[\s\-().]/', '', (string) $request->input('phone'))]);
         $data = $request->validate([

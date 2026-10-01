@@ -25,6 +25,8 @@
         <env name="RFQ_MIN_QUOTE_MINUTES" value="60"/>
         <env name="AUCTION_MIN_DURATION" value="10"/>
         <env name="MAIL_ALLOWLIST" value=""/>
+        <env name="TURNSTILE_SITE_KEY" value=""/>
+        <env name="TURNSTILE_SECRET_KEY" value=""/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>

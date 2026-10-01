@@ -33,6 +33,7 @@ class LoginController extends Controller
             'password' => ['required', 'string', 'max:200'],
         ]);
 
+        app(\App\Services\Turnstile::class)->check($request, 'login');
         $email = Str::lower($credentials['email']);
         $ipKey = 'login:'.Str::transliterate($email).'|'.$request->ip();
         $accountKey = 'login-account:'.sha1($email);

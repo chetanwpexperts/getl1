@@ -18,6 +18,7 @@
             <a href="{{ route('password.request') }}" class="text-sm font-medium text-emerald-700 hover:underline">Forgot password?</a>
         </div>
 
+        <x-turnstile />
         <x-button>Log in</x-button>
     </form>
 
