@@ -1,4 +1,4 @@
-@props(['dark' => false, 'size' => 'text-2xl', 'height' => 'h-8'])
+@props(['dark' => false, 'size' => 'text-2xl', 'height' => 'h-10'])
 {{-- The site logo from Admin → Website, or the text logo when none is uploaded. --}}
 @if (config('site.logo'))
     {{-- On dark backgrounds the uploaded logo sits on a white plate so a dark logo stays visible. --}}

@@ -31,7 +31,7 @@
 <div class="lg:flex">
     <aside class="bg-slate-900 text-slate-300 lg:fixed lg:inset-y-0 lg:flex lg:w-60 lg:flex-col">
         <div class="flex items-center justify-between px-5 py-4 lg:block lg:shrink-0">
-            <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-1 text-white"><x-logo :dark="true" size="text-lg" height="h-6" />
+            <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-1 text-white"><x-logo :dark="true" size="text-lg" height="h-7" />
                 <span class="ml-1 rounded bg-slate-800 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wider text-slate-400">Admin</span></a>
         </div>
         <nav class="flex gap-1 overflow-x-auto px-3 pb-3 text-sm lg:block lg:min-h-0 lg:flex-1 lg:space-y-0.5 lg:overflow-y-auto">

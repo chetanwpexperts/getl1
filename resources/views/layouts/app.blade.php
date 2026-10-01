@@ -13,7 +13,7 @@
     <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
             <div class="flex items-center gap-6">
-                <a href="{{ route('dashboard') }}" aria-label="Dashboard"><x-logo size="text-xl" height="h-7" /></a>
+                <a href="{{ route('dashboard') }}" aria-label="Dashboard"><x-logo size="text-xl" height="h-9" /></a>
                 <nav class="hidden gap-4 text-sm font-medium text-slate-600 sm:flex">
                     @include('layouts.nav-links')
                 </nav>

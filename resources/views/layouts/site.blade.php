@@ -85,7 +85,7 @@
     <footer class="border-t border-slate-200 bg-slate-50">
         <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div class="lg:col-span-2">
-                <a href="{{ route('home') }}" aria-label="{{ $siteName }} home"><x-logo size="text-xl" height="h-7" /></a>
+                <a href="{{ route('home') }}" aria-label="{{ $siteName }} home"><x-logo size="text-xl" height="h-9" /></a>
                 <p class="mt-3 max-w-sm text-slate-600">{{ config('site.tagline') }}</p>
                 <p class="mt-4 whitespace-pre-line text-slate-500">{{ config('site.legal_name') }}
 {{ config('site.address') }}@if (config('site.gstin'))

@@ -151,7 +151,7 @@ class WebsiteSettings
                 if (($files[$key] ?? null) instanceof UploadedFile) {
                     $ext = $guard->check($files[$key], [FileGuard::PNG, FileGuard::JPG], 2048, 'website_'.$key, $key);
                     $new = 'site/'.$key.'-'.Str::random(12).'.'.$ext;
-                    Storage::disk('public')->put($new, self::shrink((string) file_get_contents($files[$key]->getRealPath()), $ext, self::MAX_SIZE[$key] ?? [1200, 1200]));
+                    Storage::disk('public')->put($new, self::shrink((string) file_get_contents($files[$key]->getRealPath()), $ext, self::MAX_SIZE[$key] ?? [1200, 1200], trim: $key === 'logo'));
                 }
                 if ($new !== $old && $old) {
                     Storage::disk('public')->delete($old);
@@ -181,13 +181,21 @@ class WebsiteSettings
     private const MAX_SIZE = ['logo' => [800, 200], 'favicon' => [256, 256], 'og_image' => [1200, 630]];
 
     /**
-     * Scales an image down to fit the box and re-encodes it (which also drops anything hidden in the file).
+     * Scales an image down to fit the box (optionally trimming empty borders first) and re-encodes it (which also drops anything hidden in the file).
      * Without the GD extension, or if the image can't be read, the original is kept.
      */
-    public static function shrink(string $bytes, string $ext, array $box): string
+    public static function shrink(string $bytes, string $ext, array $box, bool $trim = false): string
     {
         if (! function_exists('imagecreatefromstring') || ! ($src = @imagecreatefromstring($bytes))) {
             return $bytes;
+        }
+        if ($trim) {
+            // Cut empty (transparent or plain-colour) borders so the logo fills the space it's given.
+            imagesavealpha($src, true);
+            $cropped = @imagecropauto($src, IMG_CROP_SIDES);
+            if ($cropped && imagesx($cropped) > 8 && imagesy($cropped) > 8) {
+                $src = $cropped;
+            }
         }
         [$w, $h] = [imagesx($src), imagesy($src)];
         $scale = min(1, $box[0] / $w, $box[1] / $h);
