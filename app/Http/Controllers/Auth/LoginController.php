@@ -59,6 +59,13 @@ class LoginController extends Controller
         }
 
         $user = $request->user();
+        if (config('site.mode') === 'website' && ! $user->is_platform_admin) {
+            // Before launch only GetL1 staff log in on the main domain. Same message as a wrong password.
+            Auth::guard('web')->logout();
+            SecurityLog::warning('login_refused_website_mode', ['email' => $email]);
+
+            throw ValidationException::withMessages(['email' => 'These credentials do not match our records.']);
+        }
         if ($user->locked_at !== null) {
             Auth::guard('web')->logout();
             SecurityLog::warning('login_locked_account', ['email' => $email]);
@@ -81,6 +88,9 @@ class LoginController extends Controller
      */
     private function landing(\App\Models\User $user): string
     {
+        if ($user->is_platform_admin && (config('site.mode') === 'website' || ! $user->organizations()->exists())) {
+            return route('admin.dashboard');
+        }
         $org = $user->currentOrganization;
         if ($org && $org->isSupplier() && $user->belongsToOrganization($org)) {
             $auction = \App\Services\Auction\ActiveAuctions::for($org)->first();

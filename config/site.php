@@ -19,5 +19,29 @@ return [
     // New early-access / demo requests are emailed here.
     'leads_to' => env('SITE_LEADS_TO', env('SITE_EMAIL', 'support@getl1.com')),
 
-    'policies_updated' => '1 October 2026',
+    'policies_updated' => '2026-10-01',
+
+    // Branding and website content. Defaults here; staff change them in Admin → Website.
+    'name' => 'GetL1',
+    'tagline' => 'Reverse auctions and purchase orders for Indian manufacturers and SMEs. Make your suppliers compete, and buy at L1.',
+    'logo' => null,
+    'favicon' => null,
+    'og_image' => null,
+    'hero_headline' => null,
+    'hero_subtext' => null,
+    'home_title' => null,
+    'home_description' => null,
+    'announcement_on' => false,
+    'announcement_text' => null,
+    'announcement_link' => null,
+    'gstin' => null,
+    'whatsapp' => null,
+    'social_linkedin' => null,
+    'social_instagram' => null,
+    'social_facebook' => null,
+    'social_x' => null,
+    'social_youtube' => null,
+    'footer_note' => 'Made in India.',
+    'ga4_id' => null,
+    'google_verification' => null,
 ];

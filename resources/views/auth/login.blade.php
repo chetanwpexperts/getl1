@@ -21,8 +21,10 @@
         <x-button>Log in</x-button>
     </form>
 
+    @if (config('site.mode') !== 'website')
     <p class="mt-6 text-center text-sm text-slate-600">
         New to GetL1?
         <a href="{{ route('register') }}" class="font-medium text-emerald-700 hover:underline">Create an account</a>
     </p>
+    @endif
 @endsection

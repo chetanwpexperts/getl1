@@ -87,9 +87,19 @@ class WebsiteTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Get early access')->assertDontSee('Log in')->assertDontSee(route('register'));
         $this->get('/pricing')->assertOk()->assertSee('Get early access');
         $this->get('/contact')->assertOk()->assertSee('Request early access');
-        foreach (['/login', '/register', '/dashboard', '/admin', '/buyer/rfqs'] as $url) {
+        foreach (['/register', '/dashboard', '/buyer/rfqs', '/onboarding', '/supplier/rfqs'] as $url) {
             $this->get($url)->assertNotFound();
         }
+        // Staff can still reach the admin console; customers can't log in before launch.
+        $this->get('/login')->assertOk()->assertDontSee('Create an account');
+        $this->get('/admin')->assertRedirect(route('login'));
+        [, $customer] = $this->buyer();
+        $this->post('/login', ['email' => $customer->email, 'password' => 'password'])->assertSessionHasErrors('email');
+        $this->assertGuest();
+        $admin = $this->admin();
+        $this->post('/login', ['email' => $admin->email, 'password' => 'password'])->assertRedirect(route('admin.dashboard'));
+        $this->assertAuthenticatedAs($admin);
+        $this->app['auth']->forgetGuards();
         $this->post('/contact', $this->lead())->assertRedirect(route('site.contact.thanks'));
         $this->assertSame(1, Lead::count());
         $this->get('/robots.txt')->assertSee('Disallow: /admin')->assertSee('Sitemap:');
@@ -118,5 +128,37 @@ class WebsiteTest extends TestCase
         $this->assertStringStartsNotWith('=', Lead::where('email', 'sales@steel.in')->value('company'));
         $this->artisan('getl1:leads')->assertExitCode(0);
         unlink($csv);
+    }
+
+    public function test_admin_can_edit_branding_contact_and_announcement(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $admin = $this->admin();
+        $png = \Illuminate\Http\UploadedFile::fake()->createWithContent('logo.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAIAAAADnC86AAAAK0lEQVR4nO3NMQ0AAAwDoPo33ZpYsgcMkD6JWCwWi8VisVgsFovFYrFYfGcs0K5PemaPnAAAAABJRU5ErkJggg=='));
+
+        $this->asAdmin($admin)->get(route('admin.website'))->assertOk()->assertSee('Registered business name')->assertSee('Announcement bar');
+        $this->asAdmin($admin)->post(route('admin.website.update'), ['ga4_id' => 'UA-123', 'email' => 'not-an-email'])->assertSessionHasErrors(['ga4_id', 'email']);
+        $this->asAdmin($admin)->post(route('admin.website.update'), ['logo' => \Illuminate\Http\UploadedFile::fake()->createWithContent('x.png', '<?php echo 1;')])->assertSessionHasErrors('logo');
+
+        $this->asAdmin($admin)->post(route('admin.website.update'), [
+            'logo' => $png, 'legal_name' => 'Sharma Ventures', 'email' => 'notifications@getl1.com', 'whatsapp' => '+91 98765 43210',
+            'announcement_on' => '1', 'announcement_text' => 'Early access is open for October', 'hero_headline' => 'Buy smarter with live auctions',
+            'social_linkedin' => 'https://www.linkedin.com/company/getl1', 'ga4_id' => 'G-ABC123XYZ', 'policies_updated' => '2026-10-02',
+        ])->assertRedirect();
+        $this->assertTrue(\App\Models\AuditLog::where('action', 'admin_website_changed')->exists());
+        $logo = \Illuminate\Support\Facades\DB::table('platform_settings')->where('key', 'website.logo')->value('value');
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists(json_decode($logo));
+
+        $this->get('/')->assertOk()->assertSee('Early access is open for October')->assertSee('Buy smarter with live auctions')
+            ->assertSee('Sharma Ventures')->assertSee('linkedin.com/company/getl1', false)->assertSee('G-ABC123XYZ', false)->assertSee('storage/site/logo-', false);
+        $this->get('/contact')->assertSee('wa.me/919876543210', false)->assertSee('notifications@getl1.com');
+        $this->get('/privacy')->assertSee('Google Analytics')->assertSee('2 October 2026');
+
+        // Remove the logo again: back to the text logo.
+        $this->asAdmin($admin)->post(route('admin.website.update'), ['remove_logo' => '1', 'legal_name' => 'Sharma Ventures', 'email' => 'notifications@getl1.com',
+            'whatsapp' => '919876543210', 'announcement_on' => '1', 'announcement_text' => 'Early access is open for October', 'hero_headline' => 'Buy smarter with live auctions',
+            'social_linkedin' => 'https://www.linkedin.com/company/getl1', 'ga4_id' => 'G-ABC123XYZ', 'policies_updated' => '2026-10-02'])->assertRedirect();
+        $this->get('/')->assertDontSee('storage/site/logo-', false);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertMissing(json_decode($logo));
     }
 }

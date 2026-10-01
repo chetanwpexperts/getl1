@@ -109,7 +109,7 @@ class SiteController extends Controller
     public function robots(): Response
     {
         $lines = config('site.mode') === 'website' || app()->environment('production')
-            ? ['User-agent: *', 'Disallow: /admin', 'Disallow: /buyer', 'Disallow: /supplier', 'Sitemap: '.route('site.sitemap')]
+            ? ['User-agent: *', 'Disallow: /admin', 'Disallow: /login', 'Disallow: /buyer', 'Disallow: /supplier', 'Sitemap: '.route('site.sitemap')]
             : ['User-agent: *', 'Disallow: /']; // staging is never indexed
 
         return response(implode("\n", $lines)."\n")->header('Content-Type', 'text/plain');

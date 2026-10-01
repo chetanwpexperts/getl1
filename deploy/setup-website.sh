@@ -133,6 +133,7 @@ if [[ -f "$DATA_DIR/waitlist.csv" ]]; then
   web getl1:import-waitlist "$WL" || warn "Waitlist import failed; the CSV is untouched in $DATA_DIR."
   rm -f "$WL"
 fi
+[[ -L "$WWW_ROOT/public/storage" ]] || web storage:link >/dev/null   # logo, favicon and share image uploads
 web optimize:clear >/dev/null
 web config:cache >/dev/null; web route:cache >/dev/null; web view:cache >/dev/null
 

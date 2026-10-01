@@ -209,3 +209,33 @@ Artisan::command('getl1:reset-two-step {email}', function (string $email) {
 
     return 0;
 })->purpose('Reset a staff member\'s two-step login (lost phone)');
+
+/*
+ * Creates a GetL1 staff login (no company), e.g. for the admin console on getl1.com before launch.
+ * The password is typed in, never passed on the command line. Two-step login is set up at first visit.
+ */
+Artisan::command('getl1:create-admin {email} {--name=GetL1 Admin}', function (string $email) {
+    $email = strtolower(trim($email));
+    if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $this->error('Enter a valid email.');
+
+        return 1;
+    }
+    if (User::where('email', $email)->exists()) {
+        $this->error("{$email} already exists. Use: php artisan getl1:admin {$email}");
+
+        return 1;
+    }
+    $password = (string) $this->secret('Password (at least 12 characters)');
+    if (mb_strlen($password) < 12 || $password !== (string) $this->secret('Repeat the password')) {
+        $this->error('Passwords must match and be at least 12 characters.');
+
+        return 1;
+    }
+    $user = User::create(['name' => (string) $this->option('name'), 'email' => $email, 'password' => $password]);
+    $user->forceFill(['is_platform_admin' => true, 'email_verified_at' => now()])->save();
+    app(AuditLogger::class)->log('platform_admin_granted', $user, after: ['via' => 'artisan', 'created' => true], user: $user, organizationId: null);
+    $this->info("Staff login created for {$email}. Log in at ".url('/login').' and set up two-step login.');
+
+    return 0;
+})->purpose('Create a GetL1 staff login for the admin console');

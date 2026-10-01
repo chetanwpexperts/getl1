@@ -1,6 +1,6 @@
 @extends('layouts.site')
 
-@section('description', 'GetL1 is reverse auction software for Indian manufacturers and SMEs. Post a requirement, collect sealed quotes, run a live auction and send the purchase order. Suppliers join free.')
+@section('description', config('site.home_description') ?: 'GetL1 is reverse auction software for Indian manufacturers and SMEs. Post a requirement, collect sealed quotes, run a live auction and send the purchase order. Suppliers join free.')
 
 @php
     $appOn = config('site.mode') !== 'website';
@@ -27,10 +27,14 @@
                     <span class="size-1.5 rounded-full bg-emerald-600"></span> Reverse auctions for Indian SMEs
                 </p>
                 <h1 class="mt-5 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-                    Make your suppliers compete.<br><span class="text-emerald-700">Buy at L1.</span>
+                    @if (config('site.hero_headline'))
+                        {{ config('site.hero_headline') }}
+                    @else
+                        Make your suppliers compete.<br><span class="text-emerald-700">Buy at L1.</span>
+                    @endif
                 </h1>
                 <p class="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
-                    Stop haggling with suppliers one by one on calls and WhatsApp. Invite them to quote and run a short live reverse auction. You get the lowest price, a clean audit trail and the purchase order in one place.
+                    {{ config('site.hero_subtext') ?: 'Stop haggling with suppliers one by one on calls and WhatsApp. Invite them to quote and run a short live reverse auction. You get the lowest price, a clean audit trail and the purchase order in one place.' }}
                 </p>
                 <div class="mt-8 flex flex-wrap gap-3">
                     <a href="{{ $cta }}" class="rounded-lg bg-emerald-700 px-5 py-3 font-semibold text-white shadow-sm hover:bg-emerald-800">{{ $ctaLabel }}</a>

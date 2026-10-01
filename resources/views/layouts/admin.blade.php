@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
-    <title>@yield('title', 'Admin') · GetL1 Admin</title>
+    <title>@yield('title', 'Admin') · {{ config('site.name') }} Admin</title>
+    <x-favicon />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased" data-server-time="{{ now()->getTimestampMs() }}">
@@ -23,12 +24,13 @@
         ['admin.security', 'Security log', 'admin.security'],
         ['admin.health', 'System health', 'admin.health'],
         ['admin.settings', 'Platform rules', 'admin.settings*'],
+        ['admin.website', 'Website', 'admin.website*'],
     ];
 @endphp
 <div class="lg:flex">
     <aside class="bg-slate-900 text-slate-300 lg:fixed lg:inset-y-0 lg:w-60">
         <div class="flex items-center justify-between px-5 py-4 lg:block">
-            <a href="{{ route('admin.dashboard') }}" class="text-lg font-bold tracking-tight text-white">Get<span class="text-emerald-400">L1</span>
+            <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-1 text-white"><x-logo :dark="true" size="text-lg" height="h-6" />
                 <span class="ml-1 rounded bg-slate-800 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wider text-slate-400">Admin</span></a>
         </div>
         <nav class="flex gap-1 overflow-x-auto px-3 pb-3 text-sm lg:block lg:space-y-0.5 lg:overflow-visible">
@@ -40,7 +42,11 @@
         <div class="hidden border-t border-slate-800 px-5 py-4 text-xs lg:absolute lg:inset-x-0 lg:bottom-0 lg:block">
             <p class="truncate text-slate-400">{{ auth()->user()->email }}</p>
             <div class="mt-2 flex items-center justify-between">
-                <a href="{{ route('dashboard') }}" class="hover:text-white">← Back to app</a>
+                @if (config('site.mode') === 'website')
+                    <a href="{{ route('home') }}" class="hover:text-white">← Website</a>
+                @else
+                    <a href="{{ route('dashboard') }}" class="hover:text-white">← Back to app</a>
+                @endif
                 <form method="POST" action="{{ route('logout') }}">@csrf<button class="hover:text-white">Log out</button></form>
             </div>
         </div>

@@ -30,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 
+        // Website name, contact details and branding saved in Admin → Website.
+        $this->app->make(\App\Services\WebsiteSettings::class)->apply();
+
         // Password reset email in GetL1's words.
         \Illuminate\Auth\Notifications\ResetPassword::toMailUsing(fn ($user, string $token) => (new \Illuminate\Notifications\Messages\MailMessage)
             ->subject('Reset your GetL1 password')

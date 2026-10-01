@@ -57,9 +57,14 @@ class SystemHealth
         return [$ms > 500 ? 'warn' : 'ok', "Responding in {$ms} ms"];
     }
 
+    private function websiteOnly(): bool
+    {
+        return config('site.mode') === 'website';
+    }
+
     private function queue(): array
     {
-        if (config('queue.default') === 'sync') {
+        if (config('queue.default') === 'sync' || $this->websiteOnly()) {
             return ['ok', 'Runs inline (no worker needed)'];
         }
         $q = DB::table(config('queue.connections.database.table', 'jobs'));
@@ -80,6 +85,9 @@ class SystemHealth
 
     private function scheduler(): array
     {
+        if ($this->websiteOnly()) {
+            return ['ok', 'Not used while the site is in website-only mode'];
+        }
         $last = Cache::get(self::HEARTBEAT_KEY);
         if (! $last) {
             return ['fail', 'No heartbeat yet. Is the cron entry for schedule:run in place?'];
@@ -91,6 +99,9 @@ class SystemHealth
 
     private function realtime(): array
     {
+        if ($this->websiteOnly()) {
+            return ['ok', 'Not used while the site is in website-only mode'];
+        }
         if (! in_array(config('broadcasting.default'), ['reverb', 'pusher'], true)) {
             return ['ok', 'Off: auction pages update every 2 seconds instead'];
         }

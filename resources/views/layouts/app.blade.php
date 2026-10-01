@@ -4,17 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') · GetL1</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <title>@yield('title', 'Dashboard') · {{ config('site.name') }}</title>
+    <x-favicon />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased" data-server-time="{{ now()->getTimestampMs() }}">
     <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
             <div class="flex items-center gap-6">
-                <a href="{{ route('dashboard') }}" class="text-xl font-bold tracking-tight">
-                    Get<span class="text-emerald-700">L1</span>
-                </a>
+                <a href="{{ route('dashboard') }}" aria-label="Dashboard"><x-logo size="text-xl" height="h-7" /></a>
                 <nav class="hidden gap-4 text-sm font-medium text-slate-600 sm:flex">
                     @include('layouts.nav-links')
                 </nav>
@@ -90,7 +88,7 @@
 
     <footer class="mx-auto max-w-6xl px-4 pb-10 pt-4 text-xs text-slate-500">
         <div class="flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-5">
-            <span>© {{ date('Y') }} GetL1 · Times shown in IST</span>
+            <span>© {{ date('Y') }} {{ config('site.name') }} · Times shown in IST</span>
             <span class="flex gap-4">
                 <a href="mailto:{{ config('site.email') }}" class="hover:text-slate-700">Help: {{ config('site.email') }}</a>
                 <a href="{{ route('site.terms') }}" class="hover:text-slate-700">Terms</a>

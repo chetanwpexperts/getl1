@@ -22,7 +22,11 @@
             </ul>
             <div class="mt-10 text-sm text-slate-600">
                 <p>Prefer email? <a href="mailto:{{ config('site.email') }}" class="font-medium text-emerald-700 underline">{{ config('site.email') }}</a></p>
-                @if (config('site.phone'))<p class="mt-1">Phone / WhatsApp: <a href="tel:{{ config('site.phone') }}" class="font-medium text-emerald-700 underline">{{ config('site.phone') }}</a></p>@endif
+                @if (config('site.phone'))<p class="mt-1">Phone: <a href="tel:{{ config('site.phone') }}" class="font-medium text-emerald-700 underline">{{ config('site.phone') }}</a></p>@endif
+                @if (config('site.whatsapp'))
+                    <a href="https://wa.me/{{ ltrim(config('site.whatsapp'), '+') }}?text={{ rawurlencode('Hi, I would like to know more about '.config('site.name')) }}" target="_blank" rel="noopener"
+                       class="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2 font-semibold text-white hover:brightness-95">Chat on WhatsApp</a>
+                @endif
             </div>
         </div>
 

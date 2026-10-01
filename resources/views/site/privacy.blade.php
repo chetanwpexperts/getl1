@@ -46,7 +46,11 @@
         <p>You can ask to access, correct or delete your personal data, withdraw consent for optional uses, or nominate someone to act for you, by writing to <a href="mailto:{{ config('site.email') }}">{{ config('site.email') }}</a>. Some records must be kept by law even after an account is closed.</p>
 
         <h2>Cookies</h2>
-        <p>We use only the cookies needed to keep you logged in and to protect forms. We do not use advertising cookies.</p>
+        @if (config('site.ga4_id'))
+            <p>We use the cookies needed to keep you logged in and to protect forms, and Google Analytics cookies on the public website to understand how visitors use it (IP addresses are anonymised). We do not use advertising cookies. You can block analytics cookies in your browser without affecting the service.</p>
+        @else
+            <p>We use only the cookies needed to keep you logged in and to protect forms. We do not use advertising cookies.</p>
+        @endif
 
         <h2>Grievance Officer</h2>
         <p>{{ config('site.grievance_officer') }}, {{ $n }}, {{ config('site.address') }}. Email: <a href="mailto:{{ config('site.email') }}">{{ config('site.email') }}</a>. We acknowledge complaints within 24 hours and aim to resolve them within 15 days.</p>

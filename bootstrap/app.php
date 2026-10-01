@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [SecurityHeaders::class, \App\Http\Middleware\EnsureUserActive::class]);
         $middleware->append(\App\Http\Middleware\WebsiteOnly::class);
+        $middleware->prepend(\App\Http\Middleware\ApplyWebsiteSettings::class);
 
         $middleware->alias([
             'org' => EnsureOrganization::class,
