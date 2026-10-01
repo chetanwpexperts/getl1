@@ -118,12 +118,14 @@ Route::middleware('auth')->group(function () {
             Route::get('/users/{user}', [AdminUsers::class, 'show'])->whereNumber('user')->name('users.show');
             Route::get('/settings', [AdminSettings::class, 'edit'])->name('settings');
             Route::get('/website', [\App\Http\Controllers\Admin\WebsiteController::class, 'edit'])->name('website');
+            Route::get('/billing', [\App\Http\Controllers\Admin\BillingSettingsController::class, 'edit'])->name('billing');
             Route::middleware('throttle:30,1')->group(function () {
                 Route::post('/users/{user}/sign-out', [AdminUsers::class, 'signOut'])->whereNumber('user')->name('users.signout');
                 Route::post('/users/{user}/lock', [AdminUsers::class, 'lock'])->whereNumber('user')->name('users.lock');
                 Route::post('/users/{user}/unlock', [AdminUsers::class, 'unlock'])->whereNumber('user')->name('users.unlock');
                 Route::post('/settings', [AdminSettings::class, 'update'])->name('settings.update');
                 Route::post('/website', [\App\Http\Controllers\Admin\WebsiteController::class, 'update'])->name('website.update');
+                Route::post('/billing', [\App\Http\Controllers\Admin\BillingSettingsController::class, 'update'])->name('billing.update');
             });
         });
     });

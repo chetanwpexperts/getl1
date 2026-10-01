@@ -25,6 +25,7 @@
         ['admin.security', 'Security log', 'admin.security'],
         ['admin.health', 'System health', 'admin.health'],
         ['admin.settings', 'Platform rules', 'admin.settings*'],
+        ['admin.billing', 'Billing & GST', 'admin.billing*'],
         ['admin.website', 'Website', 'admin.website*'],
     ];
 @endphp

@@ -2,19 +2,20 @@
 
 /*
  * GetL1's own billing details: who the invoices come from, GST, and one-off auction pricing.
- * GST stays off until the business is GST-registered; then set BILLING_GST_ENABLED=true and
- * the GSTIN. Prices on the plans are always before GST.
+ * GST, the GSTIN and the seller details are managed in Admin → Billing & GST (App\Services\BillingSettings);
+ * the values here are only the starting defaults. Prices on the plans are always before GST.
  */
 return [
     'gst_enabled' => (bool) env('BILLING_GST_ENABLED', false),
     'gst_rate' => (float) env('BILLING_GST_RATE', 18),
 
     'seller' => [
-        'name' => env('BILLING_SELLER_NAME', 'GetL1'),
+        // Name, address and email: Admin → Billing & GST; empty falls back to the website's legal name, address and email.
+        'name' => env('BILLING_SELLER_NAME'),
         'gstin' => env('BILLING_SELLER_GSTIN'),
-        'address' => env('BILLING_SELLER_ADDRESS', 'Panchkula, Haryana'),
+        'address' => env('BILLING_SELLER_ADDRESS'),
         'state_code' => env('BILLING_SELLER_STATE_CODE', '06'), // first two digits of a GSTIN (06 = Haryana)
-        'email' => env('BILLING_SELLER_EMAIL', 'billing@getl1.com'),
+        'email' => env('BILLING_SELLER_EMAIL'),
         'sac' => env('BILLING_SAC'),                             // service accounting code printed on tax invoices
     ],
 

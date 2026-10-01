@@ -31,9 +31,14 @@ class AppServiceProvider extends ServiceProvider
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 
         // Website name, contact details and branding saved in Admin → Website.
-        $this->app->make(\App\Services\WebsiteSettings::class)->apply();
-        // The queue worker runs for hours: re-read them before each job so emails use the latest values.
-        \Illuminate\Support\Facades\Queue::before(fn () => $this->app->make(\App\Services\WebsiteSettings::class)->apply());
+        // GST and billing details saved in Admin → Billing & GST (after Website: they fall back to its values).
+        $applySettings = function () {
+            $this->app->make(\App\Services\WebsiteSettings::class)->apply();
+            $this->app->make(\App\Services\BillingSettings::class)->apply();
+        };
+        $applySettings();
+        // The queue worker runs for hours: re-read them before each job so emails and invoices use the latest values.
+        \Illuminate\Support\Facades\Queue::before(fn () => $applySettings());
 
         // Password reset email in GetL1's words.
         \Illuminate\Auth\Notifications\ResetPassword::toMailUsing(fn ($user, string $token) => (new \Illuminate\Notifications\Messages\MailMessage)
