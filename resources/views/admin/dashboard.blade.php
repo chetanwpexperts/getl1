@@ -39,7 +39,7 @@
             </a>
         </div>
     </div>
-    <p class="mt-2 text-xs text-slate-500">
+    <p class="mt-2 text-sm text-slate-600">
         @if ($includeTest)
             Including test and demo companies. <a href="{{ $q(['test' => null]) }}" class="underline">Hide them</a>
         @elseif ($d->testCompanies() > 0)
@@ -71,7 +71,7 @@
                     <div class="flex size-10 items-center justify-center rounded-xl bg-slate-900 text-white">
                         <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ $icon }}"/></svg>
                     </div>
-                    @if ($deltaKey !== null)
+                    @if ($deltaKey !== null && ($kpis['now'][$deltaKey] > 0 || $kpis['prev'][$deltaKey] > 0))
                         @php $dv = $dl[$deltaKey]; @endphp
                         <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $dv === null ? 'bg-emerald-50 text-emerald-700' : ($dv > 0 ? 'bg-emerald-50 text-emerald-700' : ($dv < 0 ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500')) }}"
                               title="Compared with the {{ $prevLabel }}">
@@ -82,7 +82,7 @@
                 <p class="mt-4 text-sm font-medium text-slate-500">{{ $label }}</p>
                 <p class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ $value }}</p>
                 <p class="mt-1 text-xs text-slate-500">{{ $sub }}</p>
-                @if ($spark)
+                @if ($spark && array_sum($spark) > 0)
                     <div class="mt-3 h-10"><canvas data-chart="{{ $chart(['type' => 'spark', 'labels' => $charts['labels'], 'series' => [['name' => $label, 'data' => $spark]], 'money' => $money]) }}" role="img" aria-label="{{ $label }} trend"></canvas></div>
                 @endif
             </section>
@@ -114,7 +114,14 @@
                 <h2 class="font-semibold">Platform activity</h2>
                 <span class="text-xs text-slate-500">per {{ $charts['bucket'] }}</span>
             </div>
-            <div class="mt-3 h-64"><canvas data-chart="{{ $chart(['type' => 'line', 'labels' => $charts['labels'], 'series' => [['name' => 'RFQs posted', 'data' => $charts['rfqs']], ['name' => 'Auctions run', 'data' => $charts['auctions']]]]) }}" role="img" aria-label="RFQs posted and auctions run per {{ $charts['bucket'] }}"></canvas></div>
+            @if (array_sum($charts['rfqs']) + array_sum($charts['auctions']) > 0)
+                <div class="mt-3 h-64"><canvas data-chart="{{ $chart(['type' => 'line', 'labels' => $charts['labels'], 'series' => [['name' => 'RFQs posted', 'data' => $charts['rfqs']], ['name' => 'Auctions run', 'data' => $charts['auctions']]]]) }}" role="img" aria-label="RFQs posted and auctions run per {{ $charts['bucket'] }}"></canvas></div>
+            @else
+                <div class="mt-3 flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-center text-sm text-slate-500">
+                    <p>No RFQs or auctions in this period yet.</p>
+                    @unless ($includeTest)<a href="{{ $q(['test' => 1]) }}" class="mt-1 font-medium text-emerald-700 underline">Show test and demo activity</a>@endunless
+                </div>
+            @endif
         </section>
         <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 class="font-semibold">What buyers are buying</h2>
@@ -142,7 +149,11 @@
             <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 class="font-semibold">{{ $title }}</h2>
                 <p class="text-xs text-slate-500">{{ $sub }}</p>
-                <div class="mt-3 h-48"><canvas data-chart="{{ $chart($cfg + ['labels' => $charts['labels']]) }}" role="img" aria-label="{{ $title }} per {{ $charts['bucket'] }}"></canvas></div>
+                @if (collect($cfg['series'])->sum(fn ($x) => array_sum($x['data'])) > 0)
+                    <div class="mt-3 h-48"><canvas data-chart="{{ $chart($cfg + ['labels' => $charts['labels']]) }}" role="img" aria-label="{{ $title }} per {{ $charts['bucket'] }}"></canvas></div>
+                @else
+                    <div class="mt-3 flex h-48 items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-500">Nothing in this period yet.</div>
+                @endif
             </section>
         @endforeach
     </div>
