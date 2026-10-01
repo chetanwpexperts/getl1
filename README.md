@@ -80,4 +80,4 @@ php artisan test
 4. ✅ Live reverse auction: row-locked bids, idempotent retries, ranks, auto-extend, server clock, Reverb websockets with polling fallback, parallel stress test
 5. ✅ Award (L1 default, reason if not L1), approval with company limit and no self-approval, automatic PO (PDF with GSTIN, CGST/SGST or IGST, amount in words) emailed to the winner, supplier Orders with accept, RFQ activity timeline, auction bid log CSV
 6. ✅ Plans (Free / Starter / Growth / Business-on-request + pay-per-auction credits), 14-day Growth trial falling back to Free, monthly auction limits, Razorpay subscriptions and orders (signature-verified, idempotent webhooks), GST-ready invoices, savings report with CSV
-7. AI RFQ parsing, WhatsApp notifications
+7. ✅ Create RFQs with AI (paste text, or upload Excel/PDF/photo → the form is filled for review; plan-limited, cleaned and warned, inputs deleted after 30 days). WhatsApp automation deferred: share buttons for now

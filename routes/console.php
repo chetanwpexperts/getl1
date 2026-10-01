@@ -88,3 +88,16 @@ Artisan::command('getl1:mail-test {to}', function (string $to) {
 
     return 0;
 })->purpose('Send a test email to check the mail settings');
+
+/*
+ * Privacy: files uploaded for AI reading are only needed briefly. Delete them after 30 days.
+ */
+Illuminate\Support\Facades\Schedule::call(function () {
+    App\Models\AiJob::withoutGlobalScopes()->whereNotNull('input_file_path')->where('created_at', '<', now()->subDays(30))
+        ->chunkById(100, function ($jobs) {
+            foreach ($jobs as $job) {
+                Illuminate\Support\Facades\Storage::disk('local')->delete($job->input_file_path);
+                $job->forceFill(['input_file_path' => null])->save();
+            }
+        });
+})->daily()->name('ai-inputs-cleanup')->withoutOverlapping();

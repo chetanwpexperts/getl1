@@ -42,4 +42,15 @@ return [
         'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
     ],
 
+    // Claude (Anthropic API) for reading requirements into RFQs. Key only in .env.
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001'),
+        'timeout' => (int) env('ANTHROPIC_TIMEOUT', 90),
+        // For the cost estimate kept per job (USD per million tokens, and the rupee rate).
+        'usd_per_mtok_in' => (float) env('ANTHROPIC_USD_PER_MTOK_IN', 1),
+        'usd_per_mtok_out' => (float) env('ANTHROPIC_USD_PER_MTOK_OUT', 5),
+        'inr_per_usd' => (float) env('ANTHROPIC_INR_PER_USD', 88),
+    ],
+
 ];

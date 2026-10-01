@@ -19,6 +19,19 @@
     <h1 class="mt-2 text-2xl font-semibold">{{ $rfq->exists ? 'Edit RFQ' : 'New RFQ' }}</h1>
     <p class="mt-1 text-sm text-slate-600">Saved as a draft. You'll invite suppliers and publish on the next screen.</p>
 
+    @if ($ai)
+        @include('buyer.rfqs._ai-panel')
+    @endif
+
+    @if (session('ai_warnings'))
+        <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p class="font-semibold">Please check these before saving:</p>
+            <ul class="mt-1 list-disc pl-5">
+                @foreach (session('ai_warnings') as $w)<li>{{ $w }}</li>@endforeach
+            </ul>
+        </div>
+    @endif
+
     <form method="POST" action="{{ $rfq->exists ? route('buyer.rfqs.update', $rfq->id) : route('buyer.rfqs.store') }}" class="mt-6 space-y-6">
         @csrf
         @if ($rfq->exists) @method('PUT') @endif

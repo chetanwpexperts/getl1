@@ -228,6 +228,8 @@ class RfqController extends Controller
             'units' => RfqService::UNITS,
             'paymentTerms' => RfqService::PAYMENT_TERMS,
             'freightTerms' => RfqService::FREIGHT_TERMS,
+            'ai' => $rfq->exists ? null : app(\App\Services\Billing\PlanService::class)->aiAllowance($this->current->get())
+                + ['configured' => app(\App\Services\Ai\Claude::class)->isConfigured()],
         ];
     }
 
