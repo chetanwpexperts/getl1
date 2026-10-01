@@ -52,11 +52,13 @@ class SiteController extends Controller
             return redirect()->route('site.contact.thanks');
         }
 
+        // People type numbers as "98765 43210" or "+91-98765-43210".
+        $request->merge(['phone' => preg_replace('/[\s\-().]/', '', (string) $request->input('phone'))]);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'company' => ['required', 'string', 'max:160'],
             'email' => ['required', 'email:rfc', 'max:190'],
-            'phone' => ['required', 'string', 'regex:/^(\+?91[\s-]?)?[6-9]\d{9}$/'],
+            'phone' => ['required', 'string', 'regex:/^(\+?91|0)?[6-9]\d{9}$/'],
             'city' => ['nullable', 'string', 'max:80'],
             'interest' => ['required', 'in:buyer,supplier'],
             'monthly_spend' => ['nullable', 'in:under_5l,5l_25l,25l_1cr,over_1cr'],

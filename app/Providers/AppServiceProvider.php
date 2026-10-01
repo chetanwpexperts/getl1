@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             'user' => User::class,
             'organization' => Organization::class,
+            'lead' => \App\Models\Lead::class,
             'rfq' => Rfq::class,
             'rfq_invite' => RfqInvite::class,
             'quote' => Quote::class,
