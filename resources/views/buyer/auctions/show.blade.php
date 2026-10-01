@@ -66,8 +66,8 @@
                 <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Standings</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[560px] text-sm">
-                        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                            <tr><th class="px-4 py-3">Rank</th><th class="px-4 py-3">Supplier</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3 text-right">Bids</th><th class="px-4 py-3 text-right">Since</th></tr>
+                        <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                            <tr><th class="px-5 py-3.5">Rank</th><th class="px-5 py-3.5">Supplier</th><th class="px-5 py-3.5 text-right">Price</th><th class="px-5 py-3.5 text-right">Bids</th><th class="px-5 py-3.5 text-right">Since</th></tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100" data-standings></tbody>
                     </table>

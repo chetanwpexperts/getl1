@@ -15,8 +15,7 @@
          data-credits-url="{{ route('buyer.billing.credits') }}" data-credits-confirm-url="{{ route('buyer.billing.credits.confirm') }}"
          data-ai-packs-url="{{ route('buyer.billing.ai-packs') }}">
 
-        <h1 class="text-2xl font-semibold tracking-tight">Billing</h1>
-        <p class="mt-1 text-sm text-slate-600">Your plan, usage and invoices. Suppliers always use GetL1 free.</p>
+        <x-page-header title="Plan & billing" subtitle="Your plan, usage and invoices. Suppliers always use GetL1 free." class="!mb-2" />
 
         @if (! $canPay)
             <p class="mt-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">Online payment is being set up. To upgrade now, write to <a href="mailto:{{ config('billing.seller.email') }}" class="font-medium underline">{{ config('billing.seller.email') }}</a>.</p>
@@ -176,7 +175,7 @@
         <section class="mt-10 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Invoices</h2>
             <table class="w-full min-w-[560px] text-sm">
-                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                     <tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Description</th><th class="px-4 py-2 text-right">Amount</th><th class="px-4 py-2"></th></tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">

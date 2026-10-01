@@ -3,9 +3,9 @@
 @section('title', 'Import suppliers')
 
 @section('content')
-    <a href="{{ route('buyer.suppliers.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← Suppliers</a>
-    <h1 class="mt-2 text-2xl font-semibold">Import suppliers from Excel</h1>
-    <p class="mt-1 max-w-2xl text-sm text-slate-600">
+    <x-breadcrumb :items="[['Suppliers', route('buyer.suppliers.index')]]" current="Import" />
+    <h1 class="text-2xl font-semibold tracking-tight">Import suppliers from Excel</h1>
+    <p class="mt-1 max-w-2xl text-sm text-slate-500">
         Upload an .xlsx or .csv with columns <b>Company name</b>, <b>Mobile</b> and/or <b>Email</b>
         (optional: Contact name, Tag, Notes). Up to 500 rows. Suppliers already in your list are skipped.
     </p>

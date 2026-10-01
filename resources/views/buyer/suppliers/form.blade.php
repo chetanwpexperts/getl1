@@ -3,12 +3,11 @@
 @section('title', $entry->exists ? 'Edit supplier' : 'Add supplier')
 
 @section('content')
-    <a href="{{ route('buyer.suppliers.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← Suppliers</a>
-    <h1 class="mt-2 text-2xl font-semibold">{{ $entry->exists ? 'Edit '.$entry->company_name : 'Add a supplier' }}</h1>
-    <p class="mt-1 text-sm text-slate-600">We'll send RFQ invites to this mobile (WhatsApp) and email. Add at least one.</p>
+    <x-breadcrumb :items="[['Suppliers', route('buyer.suppliers.index')]]" :current="$entry->exists ? 'Edit' : 'Add'" />
+    <x-page-header :title="$entry->exists ? 'Edit '.$entry->company_name : 'Add a supplier'" subtitle="We'll send RFQ invites to this mobile (WhatsApp) and email. Add at least one." />
 
     <form method="POST" action="{{ $entry->exists ? route('buyer.suppliers.update', $entry->id) : route('buyer.suppliers.store') }}"
-          class="mt-6 max-w-2xl space-y-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+          class="max-w-2xl space-y-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
         @csrf
         @if ($entry->exists) @method('PUT') @endif
 

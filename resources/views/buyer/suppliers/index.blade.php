@@ -46,23 +46,23 @@
 
     <div class="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[640px] text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr><th class="px-4 py-3">Supplier</th><th class="px-4 py-3">Contact</th><th class="px-4 py-3">Tag</th><th class="px-4 py-3">On GetL1</th><th class="px-4 py-3"></th></tr>
+            <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr><th class="px-5 py-3.5">Supplier</th><th class="px-5 py-3.5">Contact</th><th class="px-5 py-3.5">Tag</th><th class="px-5 py-3.5">On GetL1</th><th class="px-5 py-3.5"></th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($suppliers as $s)
                     <tr class="{{ $s->status === 'blocked' ? 'bg-slate-50 text-slate-500' : '' }}">
-                        <td class="px-4 py-3">
+                        <td class="px-5 py-3.5">
                             <span class="font-medium">{{ $s->company_name }}</span>
                             @if ($s->status === 'blocked')<span class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-800">Blocked</span>@endif
                             @if ($s->contact_name)<span class="block text-xs text-slate-500">{{ $s->contact_name }}</span>@endif
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-5 py-3.5">
                             @if ($s->contact_phone)<span class="block">{{ $s->contact_phone }}</span>@endif
                             @if ($s->contact_email)<span class="block text-xs text-slate-500">{{ $s->contact_email }}</span>@endif
                         </td>
-                        <td class="px-4 py-3">{{ $s->tag ?? '—' }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-5 py-3.5">{{ $s->tag ?? '—' }}</td>
+                        <td class="px-5 py-3.5">
                             @if ($s->supplier)
                                 @if ($s->supplier->isVerified())
                                     <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">✓ Verified</span>
@@ -73,7 +73,7 @@
                                 <span class="text-xs text-slate-500">Not yet</span>
                             @endif
                         </td>
-                        <td class="whitespace-nowrap px-4 py-3 text-right">
+                        <td class="whitespace-nowrap px-5 py-3.5 text-right">
                             @if ($canManage)
                                 <a href="{{ route('buyer.suppliers.edit', $s->id) }}" class="text-emerald-700 hover:underline">Edit</a>
                                 <form method="POST" action="{{ route('buyer.suppliers.block', $s->id) }}" class="ml-3 inline">

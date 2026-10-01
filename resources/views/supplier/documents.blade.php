@@ -38,17 +38,17 @@
 
     <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr><th class="px-4 py-3">Document</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Uploaded</th><th class="px-4 py-3"></th></tr>
+            <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr><th class="px-5 py-3.5">Document</th><th class="px-5 py-3.5">Status</th><th class="px-5 py-3.5">Uploaded</th><th class="px-5 py-3.5"></th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($documents as $doc)
                     <tr>
-                        <td class="px-4 py-3">
+                        <td class="px-5 py-3.5">
                             <span class="font-medium">{{ $types[$doc->type] ?? $doc->type }}</span>
                             <span class="block text-xs text-slate-500">{{ $doc->original_name }}</span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-5 py-3.5">
                             @switch($doc->status)
                                 @case('verified') <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">Verified</span> @break
                                 @case('rejected') <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">Rejected</span>
@@ -57,8 +57,8 @@
                                 @default <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">Under review</span>
                             @endswitch
                         </td>
-                        <td class="px-4 py-3 text-slate-600">{{ $doc->created_at->ist()->format('d M Y') }}</td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <td class="px-5 py-3.5 text-slate-600">{{ $doc->created_at->ist()->format('d M Y') }}</td>
+                        <td class="px-5 py-3.5 text-right whitespace-nowrap">
                             <a href="{{ route('supplier.documents.download', $doc->id) }}" class="text-emerald-700 hover:underline">Download</a>
                             @if ($doc->status !== 'verified')
                                 <form method="POST" action="{{ route('supplier.documents.destroy', $doc->id) }}" class="ml-3 inline"

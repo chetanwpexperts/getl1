@@ -8,9 +8,9 @@
         $qty = fn ($q) => rtrim(rtrim(number_format((float) $q, 3, '.', ','), '0'), '.');
         $rate = fn ($v) => '₹'.number_format((float) $v, fmod((float) $v * 100, 1) != 0 ? 4 : 2);
     @endphp
-    <a href="{{ route('supplier.orders.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← Orders</a>
+    <x-breadcrumb :items="[['Purchase orders', route('supplier.orders.index')]]" :current="$award->po_number" />
 
-    <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
+    <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight">Purchase order {{ $award->po_number }}</h1>
             <p class="mt-1 text-sm text-slate-600">{{ $buyer->name }} · {{ $rfq->title }} ({{ $rfq->ref_no }}) · {{ $award->po_sent_at?->ist()->format('d M Y') }}</p>
@@ -34,7 +34,7 @@
 
     <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[640px] text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                 <tr><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2 text-right">Rate</th><th class="px-4 py-2 text-right">Amount</th><th class="px-4 py-2 text-right">GST</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">

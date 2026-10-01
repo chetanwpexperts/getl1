@@ -121,7 +121,7 @@
                         @error('items') <p class="mx-5 mt-3 text-sm text-red-600">{{ $message }}</p> @enderror
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[640px] text-sm">
-                                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                                <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                                     <tr>
                                         <th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Unit price (₹, ex-GST)</th><th class="px-4 py-2">GST</th>
                                         @unless ($freightIncluded)<th class="px-4 py-2">Freight, total for line (₹)</th>@endunless
@@ -184,7 +184,7 @@
                 @else
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[480px] text-sm">
-                            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                                 <tr><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Needed by</th>@if ($quote)<th class="px-4 py-2 text-right">{{ $auction ? 'Your sealed quote' : 'Your price' }}</th>@endif</tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">

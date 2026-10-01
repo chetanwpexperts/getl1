@@ -63,7 +63,7 @@
             <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">By category</h2>
                 <table class="w-full min-w-[560px] text-sm">
-                    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                         <tr><th class="px-4 py-2">Category</th><th class="px-4 py-2 text-right">Orders</th><th class="px-4 py-2 text-right">Awarded</th><th class="px-4 py-2 text-right">vs sealed</th><th class="px-4 py-2 text-right">vs last price</th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -84,7 +84,7 @@
         <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Orders</h2>
             <table class="w-full min-w-[820px] text-sm">
-                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                     <tr>
                         <th class="px-4 py-2">RFQ</th><th class="px-4 py-2">Supplier</th><th class="px-4 py-2 text-right">Awarded</th>
                         <th class="px-4 py-2 text-right">Best sealed</th><th class="px-4 py-2 text-right">vs sealed</th>

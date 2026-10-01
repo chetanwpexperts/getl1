@@ -8,9 +8,9 @@
         $best = $quotes->first();
     @endphp
 
-    <a href="{{ route('buyer.rfqs.show', $rfq->id) }}" class="text-sm text-slate-600 hover:text-slate-900">← {{ $rfq->ref_no }}</a>
-    <h1 class="mt-2 text-2xl font-semibold">Schedule a live auction</h1>
-    <p class="mt-1 text-sm text-slate-600">{{ $rfq->title }}. Suppliers who quoted start at their sealed price and bid it down live.</p>
+    <x-breadcrumb :items="[['RFQs & auctions', route('buyer.rfqs.index')], [$rfq->ref_no, route('buyer.rfqs.show', $rfq->id)]]" current="Schedule auction" />
+    <h1 class="text-2xl font-semibold tracking-tight">Schedule a live auction</h1>
+    <p class="mt-1 text-sm text-slate-500">{{ $rfq->title }}. Suppliers who quoted start at their sealed price and bid it down live.</p>
 
     @if ($allowance['left'] !== null)
         @php

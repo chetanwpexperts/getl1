@@ -15,9 +15,9 @@
         $input = 'mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20';
     @endphp
 
-    <a href="{{ $rfq->exists ? route('buyer.rfqs.show', $rfq->id) : route('buyer.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← {{ $rfq->exists ? $rfq->ref_no : 'RFQs' }}</a>
-    <h1 class="mt-2 text-2xl font-semibold">{{ $rfq->exists ? 'Edit RFQ' : 'New RFQ' }}</h1>
-    <p class="mt-1 text-sm text-slate-600">Saved as a draft. You'll invite suppliers and publish on the next screen.</p>
+    <x-breadcrumb :items="array_values(array_filter([['RFQs & auctions', route('buyer.rfqs.index')], $rfq->exists ? [$rfq->ref_no, route('buyer.rfqs.show', $rfq->id)] : null]))" :current="$rfq->exists ? 'Edit' : 'New RFQ'" />
+    <h1 class="text-2xl font-semibold tracking-tight">{{ $rfq->exists ? 'Edit RFQ' : 'New RFQ' }}</h1>
+    <p class="mt-1 text-sm text-slate-500">Saved as a draft. You'll invite suppliers and publish on the next screen.</p>
 
     @if ($ai)
         @include('buyer.rfqs._ai-panel')

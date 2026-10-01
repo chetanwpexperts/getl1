@@ -153,27 +153,27 @@
                 @endif
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[760px] text-sm">
-                        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                        <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                             <tr>
-                                <th class="px-4 py-3">Rank</th><th class="px-4 py-3">Supplier</th>
-                                <th class="px-4 py-3 text-right">Price (ex-GST)</th><th class="px-4 py-3 text-right">GST</th>
-                                <th class="px-4 py-3 text-right">Freight</th><th class="px-4 py-3 text-right">Landed total</th><th class="px-4 py-3">Valid till</th>
+                                <th class="px-5 py-3.5">Rank</th><th class="px-5 py-3.5">Supplier</th>
+                                <th class="px-5 py-3.5 text-right">Price (ex-GST)</th><th class="px-5 py-3.5 text-right">GST</th>
+                                <th class="px-5 py-3.5 text-right">Freight</th><th class="px-5 py-3.5 text-right">Landed total</th><th class="px-5 py-3.5">Valid till</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             @foreach ($comparison as $row)
                                 <tr class="{{ $row['rank'] === 1 ? 'bg-emerald-50' : '' }}">
-                                    <td class="px-4 py-3"><span class="rounded px-2 py-0.5 text-xs font-semibold {{ $row['rank'] === 1 ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-700' }}">L{{ $row['rank'] }}</span></td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-5 py-3.5"><span class="rounded px-2 py-0.5 text-xs font-semibold {{ $row['rank'] === 1 ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-700' }}">L{{ $row['rank'] }}</span></td>
+                                    <td class="px-5 py-3.5">
                                         <span class="font-medium">{{ $row['quote']->supplier->name }}</span>
                                         @if ($row['quote']->supplier->isVerified())<span class="ml-1 text-xs text-emerald-700">✓ Verified</span>@endif
                                         @if ($row['quote']->notes)<span class="block text-xs text-slate-500">{{ \Illuminate\Support\Str::limit($row['quote']->notes, 120) }}</span>@endif
                                     </td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ \App\Support\Money::inr($row['basic']) }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ \App\Support\Money::inr($row['gst']) }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ \App\Support\Money::inr($row['freight']) }}</td>
-                                    <td class="px-4 py-3 text-right font-semibold tabular-nums">{{ \App\Support\Money::inr($row['landed']) }}</td>
-                                    <td class="px-4 py-3">{{ $row['quote']->valid_till?->format('d M Y') }}</td>
+                                    <td class="px-5 py-3.5 text-right tabular-nums">{{ \App\Support\Money::inr($row['basic']) }}</td>
+                                    <td class="px-5 py-3.5 text-right tabular-nums">{{ \App\Support\Money::inr($row['gst']) }}</td>
+                                    <td class="px-5 py-3.5 text-right tabular-nums">{{ \App\Support\Money::inr($row['freight']) }}</td>
+                                    <td class="px-5 py-3.5 text-right font-semibold tabular-nums">{{ \App\Support\Money::inr($row['landed']) }}</td>
+                                    <td class="px-5 py-3.5">{{ $row['quote']->valid_till?->format('d M Y') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -216,7 +216,7 @@
                 <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Items</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[560px] text-sm">
-                        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                        <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                             <tr><th class="px-4 py-2">#</th><th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Needed by</th><th class="px-4 py-2 text-right">Last price</th></tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
