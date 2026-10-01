@@ -113,7 +113,7 @@ class BillingSettings
             'seller_address' => ['nullable', 'string', 'max:300'],
             'seller_email' => ['nullable', 'email:rfc', 'max:190'],
             'reason' => ['required', 'string', 'min:5', 'max:200'],
-            'confirm_gst' => ['nullable', 'accepted'],
+            'confirm_gst' => ['nullable', 'boolean'], // required only when GST is switched on or off (see the controller)
         ];
     }
 
