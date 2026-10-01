@@ -18,7 +18,6 @@ use App\Models\Subscription;
 use App\Models\SupplierDocument;
 use App\Services\AuditLogger;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -38,7 +37,11 @@ class ConsoleController extends Controller
         $mrr = $live->sum(fn ($s) => $s->billing_cycle === 'yearly'
             ? (float) $s->plan?->price_yearly / 12 : (float) $s->plan?->price_monthly);
 
+        $checks = app(\App\Services\SystemHealth::class)->checks();
+
         return view('admin.dashboard', [
+            'health' => \App\Services\SystemHealth::overall($checks),
+            'healthIssues' => collect($checks)->where('status', '!=', 'ok')->pluck('label')->all(),
             'stats' => [
                 'buyers' => Organization::where('type', OrganizationType::Buyer->value)->count(),
                 'suppliers' => Organization::where('type', OrganizationType::Supplier->value)->count(),
@@ -122,20 +125,22 @@ class ConsoleController extends Controller
     }
 
     /** Last entries of the security log (failed logins, lockouts, denied access, rejected uploads, 2FA). */
-    public function security(Request $request): View
+    public function security(Request $request, \App\Services\SecurityLogReader $reader): View
     {
-        $days = collect(File::glob(storage_path('logs/security-*.log')))->sort()->reverse()->values();
-        $file = $days->first(fn ($f) => basename($f) === $request->query('file')) ?? $days->first();
-        $lines = [];
-        if ($file) {
-            $content = (string) File::get($file);
-            foreach (array_reverse(array_slice(preg_split('/\R/', trim($content)), -400)) as $line) {
-                if (preg_match('/^\[(.+?)\] \w+\.(\w+): (\S+) (\{.*\})/', $line, $m)) {
-                    $lines[] = ['time' => $m[1], 'level' => strtolower($m[2]), 'event' => $m[3], 'context' => json_decode($m[4], true) ?: []];
-                }
-            }
-        }
+        $files = collect($reader->files());
+        $file = $files->contains($request->query('file')) ? $request->query('file') : $files->first();
 
-        return view('admin.security', ['lines' => $lines, 'files' => $days->map(fn ($f) => basename($f)), 'file' => $file ? basename($file) : null]);
+        return view('admin.security', ['lines' => $reader->entries($file), 'files' => $files, 'file' => $file]);
+    }
+
+    public function health(\App\Services\SystemHealth $health, \App\Services\PlatformSettings $settings): View
+    {
+        $checks = $health->checks();
+
+        return view('admin.health', [
+            'checks' => $checks,
+            'overall' => \App\Services\SystemHealth::overall($checks),
+            'alertTo' => $settings->get('alerts.email') ?: config('site.leads_to'),
+        ]);
     }
 }

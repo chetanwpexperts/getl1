@@ -16,7 +16,7 @@ class Auction extends Model
         'rfq_id', 'organization_id', 'created_by', 'cancel_reason', 'paid_with_credit', 'format', 'start_price', 'min_decrement_type', 'min_decrement_value',
         'max_decrement_pct', 'starts_at', 'ends_at', 'original_ends_at', 'extend_window_sec', 'extend_by_sec',
         'max_extensions', 'extensions_used', 'visibility', 'status', 'current_l1', 'current_l1_supplier_org_id',
-        'bid_count', 'opened_at', 'closed_at',
+        'bid_count', 'opened_at', 'closed_at', 'paused_at', 'pause_reason', 'paused_seconds',
     ];
 
     protected function casts(): array
@@ -35,6 +35,7 @@ class Auction extends Model
             'original_ends_at' => 'datetime',
             'opened_at' => 'datetime',
             'closed_at' => 'datetime',
+            'paused_at' => 'datetime',
         ];
     }
 
@@ -56,6 +57,19 @@ class Auction extends Model
     public function isLive(): bool
     {
         return $this->status === AuctionStatus::Live;
+    }
+
+    public function isPaused(): bool
+    {
+        return $this->paused_at !== null && $this->status === AuctionStatus::Live;
+    }
+
+    /** Time left on the clock in milliseconds (frozen while paused). */
+    public function remainingMs(): int
+    {
+        $from = $this->paused_at ?? now();
+
+        return max(0, (int) round(($this->ends_at->getTimestampMs() - $from->getTimestampMs())));
     }
 
     /** Minimum amount a supplier must go below its own last bid (or the start price). */

@@ -102,7 +102,8 @@ export function initAuction() {
     function countdown() {
         const now = Date.now() + offset;
         const target = state.status === 'scheduled' ? state.starts_at : state.ends_at;
-        const left = Math.max(0, target - now);
+        // Paused by GetL1: the clock is frozen at the time that was left.
+        const left = state.paused ? Math.max(0, state.paused_remaining_ms || 0) : Math.max(0, target - now);
         const h = Math.floor(left / 3600000);
         const m = Math.floor((left % 3600000) / 60000);
         const s = Math.floor((left % 60000) / 1000);
@@ -115,11 +116,12 @@ export function initAuction() {
         }
         const label = $('[data-countdown-label]');
         if (label) {
-            label.textContent = { scheduled: 'Starts in', live: 'Ends in', closed: 'Auction closed', cancelled: 'Cancelled' }[state.status] ?? '';
+            label.textContent = state.paused ? 'Paused · time left'
+                : ({ scheduled: 'Starts in', live: 'Ends in', closed: 'Auction closed', cancelled: 'Cancelled' }[state.status] ?? '');
         }
 
         // Crossing a boundary (start/end): ask the server for the authoritative state.
-        if (left === 0 && (state.status === 'scheduled' || state.status === 'live') && Date.now() - lastBoundaryFetch > 1000) {
+        if (!state.paused && left === 0 && (state.status === 'scheduled' || state.status === 'live') && Date.now() - lastBoundaryFetch > 1000) {
             lastBoundaryFetch = Date.now();
             refresh();
         }
@@ -255,11 +257,14 @@ export function initAuction() {
         if (badge) badge.dataset.rank = state.my_rank === 1 ? 'first' : 'other';
 
         const form = $('[data-bid-form]');
-        if (form) form.hidden = state.status !== 'live';
+        const canBid = state.status === 'live' && !state.paused;
+        if (form) form.hidden = !canBid;
         const waiting = $('[data-bid-waiting]');
         if (waiting) {
-            waiting.hidden = state.status === 'live';
-            waiting.textContent = state.status === 'scheduled' ? 'Bidding opens when the countdown reaches zero.'
+            waiting.hidden = canBid;
+            waiting.textContent = state.paused ? 'Bidding is paused. You can bid again as soon as the auction resumes.'
+                : state.status === 'scheduled' ? 'Bidding opens when the countdown reaches zero.'
+                : state.status === 'cancelled' ? 'This auction was cancelled.'
                 : 'Bidding is closed. The buyer will review the result and award.';
         }
 
@@ -284,9 +289,11 @@ export function initAuction() {
         if (dirty && ts - lastRender > 200) {
             dirty = false;
             lastRender = ts;
-            setText('[data-status]', { scheduled: 'Scheduled', live: 'Live', closed: 'Closed', cancelled: 'Cancelled' }[state.status] ?? state.status);
+            setText('[data-status]', state.paused ? 'Paused' : ({ scheduled: 'Scheduled', live: 'Live', closed: 'Closed', cancelled: 'Cancelled' }[state.status] ?? state.status));
             const statusEl = $('[data-status]');
-            if (statusEl) statusEl.dataset.status = state.status;
+            if (statusEl) statusEl.dataset.status = state.paused ? 'paused' : state.status;
+            const banner = $('[data-notice]');
+            if (banner) { banner.hidden = !state.notice; banner.textContent = state.notice || ''; }
             $$('[data-show-when]').forEach((el) => { el.hidden = el.dataset.showWhen !== state.status; });
             (cfg.role === 'buyer' ? renderBuyer : renderSupplier)();
             firstPaint = false;

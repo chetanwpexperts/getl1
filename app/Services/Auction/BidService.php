@@ -27,6 +27,9 @@ class BidService
 {
     public const MIN_SECONDS_BETWEEN_BIDS = 1;
 
+    /** Why the last attempt was refused (recorded in bid_rejections). */
+    private ?string $reason = null;
+
     public function __construct(private AuctionBroadcaster $broadcaster) {}
 
     /**
@@ -34,10 +37,32 @@ class BidService
      */
     public function place(Auction $auction, Organization $supplier, User $user, string $amountInput, string $idempotencyKey, ?string $ip, ?string $userAgent): array
     {
+        $this->reason = null;
+        try {
+            return $this->attempt($auction, $supplier, $user, $amountInput, $idempotencyKey, $ip, $userAgent);
+        } catch (ValidationException $e) {
+            // Record the refusal for GetL1's live monitor; never let that break the response.
+            rescue(fn () => \App\Models\BidRejection::create([
+                'auction_id' => $auction->id, 'supplier_org_id' => $supplier->id, 'user_id' => $user->id,
+                'amount_input' => mb_substr($amountInput, 0, 40), 'reason' => $this->reason ?? 'invalid',
+                'message' => mb_substr((string) collect($e->errors())->flatten()->first(), 0, 255), 'ip' => $ip,
+            ]), null, false);
+            throw $e;
+        }
+    }
+
+    private function fail(string $reason, string $message): never
+    {
+        $this->reason = $reason;
+        throw ValidationException::withMessages(['amount' => $message]);
+    }
+
+    private function attempt(Auction $auction, Organization $supplier, User $user, string $amountInput, string $idempotencyKey, ?string $ip, ?string $userAgent): array
+    {
         $amount = $this->parseAmount($amountInput);
 
         if (! preg_match('/^[A-Za-z0-9-]{8,64}$/', $idempotencyKey)) {
-            throw ValidationException::withMessages(['amount' => 'Please refresh the page and try again.']);
+            $this->fail('invalid', 'Please refresh the page and try again.');
         }
 
         $result = DB::transaction(function () use ($auction, $supplier, $user, $amount, $idempotencyKey, $ip, $userAgent) {
@@ -53,8 +78,14 @@ class BidService
 
             $this->syncStatus($a);
             if ($a->status !== AuctionStatus::Live) {
-                throw ValidationException::withMessages(['amount' => $a->status === AuctionStatus::Scheduled
-                    ? 'The auction hasn’t started yet.' : 'The auction has ended.']);
+                $this->fail('not_live', match ($a->status) {
+                    AuctionStatus::Scheduled => 'The auction hasn’t started yet.',
+                    AuctionStatus::Cancelled => 'This auction was cancelled.',
+                    default => 'The auction has ended.',
+                });
+            }
+            if ($a->paused_at !== null) {
+                $this->fail('paused', 'Bidding is paused for a technical check. Your bid was not placed; please try again when the auction resumes.');
             }
 
             $mine = Bid::where('auction_id', $a->id)->where('supplier_org_id', $supplier->id)
@@ -65,20 +96,20 @@ class BidService
             }
 
             if ($mine->kind === Bid::KIND_LIVE && $mine->created_at->diffInSeconds(now(), true) < self::MIN_SECONDS_BETWEEN_BIDS) {
-                throw ValidationException::withMessages(['amount' => 'Please wait a moment between bids.']);
+                $this->fail('too_fast', 'Please wait a moment between bids.');
             }
 
             $own = (float) $mine->amount;
             $maxAllowed = Standings::maxNextBid($a, $own);
             if ($amount > $maxAllowed) {
-                throw ValidationException::withMessages(['amount' => 'Your bid must be at most '.
-                    \App\Support\Money::inr($maxAllowed).' (at least '.\App\Support\Money::inr(Standings::minDecrement($a, $own)).' below your current price).']);
+                $this->fail('too_high', 'Your bid must be at most '.
+                    \App\Support\Money::inr($maxAllowed).' (at least '.\App\Support\Money::inr(Standings::minDecrement($a, $own)).' below your current price).');
             }
 
             $floor = Standings::floor($a);
             if ($amount < $floor) {
-                throw ValidationException::withMessages(['amount' => 'That’s more than '.rtrim(rtrim((string) $a->max_decrement_pct, '0'), '.').
-                    '% below the current lowest price. Check for a typo: the lowest accepted bid right now is '.\App\Support\Money::inr($floor).'.']);
+                $this->fail('below_floor', 'That’s more than '.rtrim(rtrim((string) $a->max_decrement_pct, '0'), '.').
+                    '% below the current lowest price. Check for a typo: the lowest accepted bid right now is '.\App\Support\Money::inr($floor).'.');
             }
 
             // Standings including this bid, computed before the insert so the rank is written with it
@@ -156,7 +187,7 @@ class BidService
     {
         $clean = str_replace([',', ' ', '₹'], '', trim($input));
         if (! preg_match('/^\d{1,11}(\.\d{1,2})?$/', $clean) || (float) $clean <= 0) {
-            throw ValidationException::withMessages(['amount' => 'Enter a valid amount in rupees, up to 2 decimals.']);
+            $this->fail('invalid', 'Enter a valid amount in rupees, up to 2 decimals.');
         }
 
         return round((float) $clean, 2);

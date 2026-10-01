@@ -12,13 +12,17 @@
 @php
     $items = [
         ['admin.dashboard', 'Overview', 'admin.dashboard'],
+        ['admin.auctions', 'Live auctions', 'admin.auctions*'],
         ['admin.companies.index', 'Companies', 'admin.companies.*'],
+        ['admin.users.index', 'Users', 'admin.users.*'],
         ['admin.kyc.index', 'KYC review', 'admin.kyc.*'],
         ['admin.leads', 'Leads', 'admin.leads*'],
         ['admin.payments', 'Payments', 'admin.payments*'],
         ['admin.ai', 'AI usage', 'admin.ai'],
         ['admin.audit', 'Audit log', 'admin.audit'],
         ['admin.security', 'Security log', 'admin.security'],
+        ['admin.health', 'System health', 'admin.health'],
+        ['admin.settings', 'Platform rules', 'admin.settings*'],
     ];
 @endphp
 <div class="lg:flex">

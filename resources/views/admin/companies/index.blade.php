@@ -18,7 +18,7 @@
     <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr><th class="px-4 py-2.5">Company</th><th class="px-4 py-2.5">Type</th><th class="px-4 py-2.5">Plan</th><th class="px-4 py-2.5">Users</th><th class="px-4 py-2.5">KYC</th><th class="px-4 py-2.5">Joined</th></tr>
+                <tr><th class="px-4 py-2.5">Company</th><th class="px-4 py-2.5">Type</th><th class="px-4 py-2.5">Plan / trust</th><th class="px-4 py-2.5">Users</th><th class="px-4 py-2.5">KYC</th><th class="px-4 py-2.5">Joined</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($orgs as $o)
@@ -33,7 +33,10 @@
                         <td class="px-4 py-2.5">
                             @if ($o->isBuyer())
                                 {{ $sub ? ($sub->status->value === 'trialing' ? 'Trial to '.$sub->trial_ends_at->ist()->format('d M') : $sub->plan?->name) : 'Free' }}
-                            @else <span class="text-slate-400">—</span> @endif
+                            @else
+                                @php $tr = $trustByOrg[$o->id] ?? null; @endphp
+                                <span class="text-slate-600">Trust: {{ $tr['score'] !== null ? $tr['score'].' · '.$tr['label'] : 'New' }}</span>
+                            @endif
                         </td>
                         <td class="px-4 py-2.5 tabular-nums">{{ $o->users_count }}</td>
                         <td class="px-4 py-2.5">{{ $o->verified_at ? 'Verified' : '—' }}</td>

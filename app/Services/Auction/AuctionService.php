@@ -39,7 +39,10 @@ class AuctionService
     /** Duration choices shown on the schedule form. */
     public static function durationOptions(): array
     {
-        return array_values(array_filter([2, 5, 10, 15, 20, 30, 45, 60, 90, 120], fn ($m) => $m >= self::minDuration()));
+        $max = (int) app(\App\Services\PlatformSettings::class)->get('auction.max_duration_min');
+
+        return array_values(array_filter([2, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 360, 480],
+            fn ($m) => $m >= self::minDuration() && $m <= $max));
     }
 
     public function __construct(private AuditLogger $audit, private AuctionBroadcaster $broadcaster, private BidService $bids) {}
@@ -48,13 +51,13 @@ class AuctionService
     {
         return [
             'starts_at' => ['required', 'date_format:Y-m-d\TH:i'],
-            'duration_min' => ['required', 'integer', 'min:'.self::minDuration(), 'max:240'],
+            'duration_min' => ['required', 'integer', 'min:'.self::minDuration(), 'max:'.(int) app(\App\Services\PlatformSettings::class)->get('auction.max_duration_min')],
             'min_decrement_type' => ['required', 'in:percent,amount'],
             'min_decrement_value' => ['required', 'numeric', 'gt:0', 'max:999999999'],
             'max_decrement_pct' => ['required', 'numeric', 'min:1', 'max:50'],
             'extend_window_sec' => ['required', 'integer', 'in:0,60,120,180,300'],
             'extend_by_sec' => ['required', 'integer', 'in:60,120,180,300'],
-            'max_extensions' => ['required', 'integer', 'min:0', 'max:30'],
+            'max_extensions' => ['required', 'integer', 'min:0', 'max:'.(int) app(\App\Services\PlatformSettings::class)->get('auction.max_extensions_limit')],
             'visibility' => ['required', 'in:rank_only,rank_and_l1'],
         ];
     }

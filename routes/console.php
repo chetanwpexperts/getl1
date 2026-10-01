@@ -153,3 +153,39 @@ Artisan::command('getl1:leads {--days=30}', function () {
 
     return 0;
 })->purpose('List recent website leads');
+
+/*
+ * Health: the scheduler leaves a heartbeat every minute (the Health page checks it), and every
+ * 5 minutes getl1:health emails an alert when a check fails, once an hour per problem, plus an
+ * "all clear" when it recovers. Sent directly, not queued, in case the queue is what's broken.
+ */
+Illuminate\Support\Facades\Schedule::call(fn () => Illuminate\Support\Facades\Cache::put(App\Services\SystemHealth::HEARTBEAT_KEY, now()->getTimestamp(), 3600))
+    ->everyMinute()->name('health-heartbeat');
+
+Artisan::command('getl1:health', function (App\Services\SystemHealth $health, App\Services\PlatformSettings $settings) {
+    $checks = $health->checks();
+    $failing = collect($checks)->where('status', 'fail')->keyBy('key');
+    $was = Illuminate\Support\Facades\Cache::get('health:failing', []);
+    $to = $settings->get('alerts.email') ?: config('site.leads_to');
+
+    $new = $failing->filter(fn ($c) => Illuminate\Support\Facades\Cache::add('health:alerted:'.$c['key'], true, 3600));
+    $recovered = collect($was)->diff($failing->keys());
+    Illuminate\Support\Facades\Cache::put('health:failing', $failing->keys()->all(), 86400);
+
+    if ($to && ($new->isNotEmpty() || $recovered->isNotEmpty())) {
+        try {
+            Illuminate\Support\Facades\Mail::to($to)->send(new App\Mail\HealthAlertMail($checks, $new->pluck('label')->all(),
+                collect($checks)->whereIn('key', $recovered)->pluck('label')->all()));
+        } catch (Throwable $e) {
+            Illuminate\Support\Facades\Log::error('health_alert_mail_failed', ['error' => $e->getMessage()]);
+        }
+    }
+    $recovered->each(fn ($k) => Illuminate\Support\Facades\Cache::forget('health:alerted:'.$k));
+
+    foreach ($checks as $c) {
+        $this->line(str_pad(strtoupper($c['status']), 5).' '.$c['label'].': '.$c['detail']);
+    }
+
+    return $failing->isEmpty() ? 0 : 1;
+})->purpose('Check system health and email an alert if something fails');
+Illuminate\Support\Facades\Schedule::command('getl1:health')->everyFiveMinutes()->withoutOverlapping(4);

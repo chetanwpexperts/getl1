@@ -58,10 +58,17 @@ class LoginController extends Controller
             ]);
         }
 
+        $user = $request->user();
+        if ($user->locked_at !== null) {
+            Auth::guard('web')->logout();
+            SecurityLog::warning('login_locked_account', ['email' => $email]);
+
+            throw ValidationException::withMessages(['email' => 'This account has been locked. Please contact '.config('site.email').'.']);
+        }
+
         RateLimiter::clear($ipKey);
         $request->session()->regenerate();
 
-        $user = $request->user();
         $user->forceFill(['last_login_at' => now()])->save();
         $audit->log('login', $user, user: $user, organizationId: $user->current_organization_id);
 

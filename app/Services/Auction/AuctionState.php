@@ -89,6 +89,10 @@ class AuctionState
             'extend_window_sec' => $auction->extend_window_sec,
             'extend_by_sec' => $auction->extend_by_sec,
             'visibility' => $auction->visibility,
+            'paused' => $auction->isPaused(),
+            'paused_remaining_ms' => $auction->isPaused() ? $auction->remainingMs() : null,
+            'notice' => $auction->isPaused()
+                ? 'Bidding is paused by GetL1 for a technical check. The clock is stopped and resumes with the same time left.' : null,
         ];
     }
 }

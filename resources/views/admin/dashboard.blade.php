@@ -5,7 +5,13 @@
 @section('content')
     @php $inr = fn ($v) => \App\Support\Money::inr($v, 0); @endphp
     <h1 class="text-2xl font-semibold">Overview</h1>
-    <p class="mt-1 text-sm text-slate-600">{{ now()->ist()->format('l, d M Y · h:i A') }} IST. Month figures are from the 1st.</p>
+    <div class="mt-1 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-600">{{ now()->ist()->format('l, d M Y · h:i A') }} IST. Month figures are from the 1st.</p>
+        <a href="{{ route('admin.health') }}" class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ring-1 {{ ['ok' => 'bg-emerald-50 text-emerald-800 ring-emerald-200', 'warn' => 'bg-amber-50 text-amber-900 ring-amber-300', 'fail' => 'bg-red-50 text-red-700 ring-red-200'][$health] }}">
+            <span class="size-2 rounded-full {{ ['ok' => 'bg-emerald-500', 'warn' => 'bg-amber-500', 'fail' => 'bg-red-600'][$health] }}"></span>
+            {{ $health === 'ok' ? 'All systems healthy' : implode(', ', $healthIssues) }}
+        </a>
+    </div>
 
     <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         @include('admin._stat', ['label' => 'MRR', 'value' => $inr($stats['mrr']), 'note' => $stats['paid'].' paid '.\Illuminate\Support\Str::plural('company', $stats['paid'])])

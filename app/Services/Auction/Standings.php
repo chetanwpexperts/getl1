@@ -73,7 +73,8 @@ class Standings
         if ($auction->status === AuctionStatus::Scheduled && ! $auction->starts_at->isFuture()) {
             return $auction->ends_at->isFuture() ? AuctionStatus::Live : AuctionStatus::Closed;
         }
-        if ($auction->status === AuctionStatus::Live && ! $auction->ends_at->isFuture()) {
+        // Paused by GetL1: the clock is stopped, so it can't run out.
+        if ($auction->status === AuctionStatus::Live && ! $auction->ends_at->isFuture() && $auction->paused_at === null) {
             return AuctionStatus::Closed;
         }
 

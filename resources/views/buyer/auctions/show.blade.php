@@ -3,6 +3,7 @@
 @section('title', 'Live auction · '.$rfq->ref_no)
 
 @section('content')
+    <p data-notice role="status" class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" @if (empty($state['notice'])) hidden @endif>{{ $state['notice'] ?? '' }}</p>
     @php
         $cfg = [
             'role' => 'buyer',

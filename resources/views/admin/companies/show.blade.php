@@ -99,6 +99,28 @@
         </div>
     </div>
 
+    @if ($trust)
+        @php $pct = fn ($v) => $v === null ? '—' : rtrim(rtrim(number_format($v, 1), '0'), '.').'%'; @endphp
+        <section class="mt-4 rounded-xl border border-slate-200 bg-white p-5 text-sm">
+            <div class="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 class="font-semibold">Trust score</h2>
+                <p><span class="text-2xl font-semibold tabular-nums">{{ $trust['score'] ?? '—' }}</span>
+                    <span class="ml-1 rounded-full px-2 py-0.5 text-xs font-semibold {{ ['Excellent' => 'bg-emerald-100 text-emerald-800', 'Good' => 'bg-emerald-50 text-emerald-700', 'Fair' => 'bg-amber-100 text-amber-900', 'Low' => 'bg-red-100 text-red-700'][$trust['label']] ?? 'bg-slate-100 text-slate-600' }}">{{ $trust['label'] }}</span></p>
+            </div>
+            <p class="mt-1 text-xs text-slate-500">From what actually happened on GetL1: answering invitations (35), accepting purchase orders (30), verified (20), bidding in auctions (15). Shown once there are {{ \App\Services\SupplierTrust::MIN_INVITES }}+ invitations.</p>
+            <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                @foreach ([
+                    ['Answered invitations', $pct($trust['response_rate']), $trust['quoted'].' quoted of '.$trust['invited'].($trust['declined'] ? ', '.$trust['declined'].' declined' : '')],
+                    ['Accepted POs', $pct($trust['po_acceptance']), $trust['po_accepted'].' of '.$trust['po_sent'].($trust['avg_accept_hours'] !== null ? ', avg '.$trust['avg_accept_hours'].' h' : '')],
+                    ['Bid in auctions', $pct($trust['auction_activity']), $trust['active_in_auctions'].' of '.$trust['auctions'].' auctions'],
+                    ['Orders won', $trust['won'], $trust['verified'] ? 'KYC verified' : 'Not verified'],
+                ] as [$k, $v, $note])
+                    <div class="rounded-lg bg-slate-50 p-3"><dt class="text-xs text-slate-500">{{ $k }}</dt><dd class="text-lg font-semibold tabular-nums">{{ $v }}</dd><dd class="text-xs text-slate-500">{{ $note }}</dd></div>
+                @endforeach
+            </dl>
+        </section>
+    @endif
+
     @if ($documents->isNotEmpty())
         <section class="mt-4 rounded-xl border border-slate-200 bg-white p-5 text-sm">
             <h2 class="font-semibold">KYC documents</h2>

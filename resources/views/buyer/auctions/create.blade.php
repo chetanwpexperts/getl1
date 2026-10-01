@@ -49,7 +49,7 @@
                             <label for="duration_min" class="block text-sm font-medium text-slate-700">Duration</label>
                             <select id="duration_min" name="duration_min" class="{{ $input }}">
                                 @foreach (\App\Services\Auction\AuctionService::durationOptions() as $m)
-                                    <option value="{{ $m }}" @selected((int) old('duration_min', 30) === $m)>{{ $m }} minutes</option>
+                                    <option value="{{ $m }}" @selected((int) old('duration_min', $defaults['auction.default_duration_min']) === $m)>{{ $m }} minutes</option>
                                 @endforeach
                             </select>
                         </div>
@@ -57,7 +57,7 @@
                             <label for="extend_window_sec" class="block text-sm font-medium text-slate-700">Auto-extend if a bid comes in the last</label>
                             <select id="extend_window_sec" name="extend_window_sec" class="{{ $input }}">
                                 @foreach ([0 => 'Off', 60 => '1 minute', 120 => '2 minutes', 180 => '3 minutes', 300 => '5 minutes'] as $v => $l)
-                                    <option value="{{ $v }}" @selected((int) old('extend_window_sec', 120) === $v)>{{ $l }}</option>
+                                    <option value="{{ $v }}" @selected((int) old('extend_window_sec', $defaults['auction.default_extend_window_sec']) === $v)>{{ $l }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -66,13 +66,13 @@
                                 <label for="extend_by_sec" class="block text-sm font-medium text-slate-700">Extend by</label>
                                 <select id="extend_by_sec" name="extend_by_sec" class="{{ $input }}">
                                     @foreach ([60 => '1 min', 120 => '2 min', 180 => '3 min', 300 => '5 min'] as $v => $l)
-                                        <option value="{{ $v }}" @selected((int) old('extend_by_sec', 120) === $v)>{{ $l }}</option>
+                                        <option value="{{ $v }}" @selected((int) old('extend_by_sec', $defaults['auction.default_extend_by_sec']) === $v)>{{ $l }}</option>
                                     @endforeach
                                 </select>
                             </div>
                             <div>
                                 <label for="max_extensions" class="block text-sm font-medium text-slate-700">Max times</label>
-                                <input id="max_extensions" name="max_extensions" type="number" min="0" max="30" value="{{ old('max_extensions', 10) }}" class="{{ $input }}">
+                                <input id="max_extensions" name="max_extensions" type="number" min="0" max="{{ $defaults['auction.max_extensions_limit'] }}" value="{{ old('max_extensions', $defaults['auction.default_max_extensions']) }}" class="{{ $input }}">
                             </div>
                         </div>
                     </div>
@@ -85,7 +85,7 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700">Minimum drop per bid</label>
                             <div class="mt-1 flex gap-2">
-                                <input name="min_decrement_value" inputmode="decimal" required value="{{ old('min_decrement_value', '0.5') }}" class="{{ $input }} mt-0">
+                                <input name="min_decrement_value" inputmode="decimal" required value="{{ old('min_decrement_value', $defaults['auction.default_min_decrement_pct']) }}" class="{{ $input }} mt-0">
                                 <select name="min_decrement_type" class="{{ $input }} mt-0 w-32">
                                     <option value="percent" @selected(old('min_decrement_type', 'percent') === 'percent')>%</option>
                                     <option value="amount" @selected(old('min_decrement_type') === 'amount')>₹</option>
@@ -96,7 +96,7 @@
                         </div>
                         <div>
                             <label for="max_decrement_pct" class="block text-sm font-medium text-slate-700">Typo guard (max % below current L1)</label>
-                            <input id="max_decrement_pct" name="max_decrement_pct" inputmode="decimal" required value="{{ old('max_decrement_pct', 10) }}" class="{{ $input }}">
+                            <input id="max_decrement_pct" name="max_decrement_pct" inputmode="decimal" required value="{{ old('max_decrement_pct', $defaults['auction.default_max_decrement_pct']) }}" class="{{ $input }}">
                             <p class="mt-1 text-xs text-slate-500">Blocks accidental bids like ₹1,200 instead of ₹12,000.</p>
                         </div>
                         <div class="sm:col-span-2">

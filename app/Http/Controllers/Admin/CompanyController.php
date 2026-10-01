@@ -51,6 +51,7 @@ class CompanyController extends Controller
             'type' => $type,
             'q' => $q,
             'plansByOrg' => $orgs->getCollection()->filter->isBuyer()->mapWithKeys(fn ($o) => [$o->id => $this->plans->liveSubscription($o)]),
+            'trustByOrg' => $orgs->getCollection()->filter->isSupplier()->mapWithKeys(fn ($o) => [$o->id => app(\App\Services\SupplierTrust::class)->for($o)]),
         ]);
     }
 
@@ -75,6 +76,7 @@ class CompanyController extends Controller
                 'Quotes' => DB::table('quotes')->where('supplier_org_id', $o->id)->count(),
                 'Orders won' => Award::withoutGlobalScopes()->where('supplier_org_id', $o->id)->whereNotNull('po_number')->count(),
             ],
+            'trust' => $o->isSupplier() ? app(\App\Services\SupplierTrust::class)->for($o) : null,
             'documents' => $o->isSupplier() ? \App\Models\SupplierDocument::where('organization_id', $o->id)->latest()->get() : collect(),
             'payments' => Payment::with('plan')->where('organization_id', $o->id)->latest('id')->limit(20)->get(),
             'activity' => AuditLog::with('user:id,name,email')->where('organization_id', $o->id)->latest('id')->limit(30)->get(),

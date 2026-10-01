@@ -31,6 +31,7 @@ class AuctionController extends Controller
             'quotes' => $quotes,
             'defaultStart' => now()->addMinutes(20)->ceilMinute(5)->ist()->format('Y-m-d\TH:i'),
             'minParticipants' => AuctionService::MIN_PARTICIPANTS,
+            'defaults' => app(\App\Services\PlatformSettings::class)->all(),
             'allowance' => app(\App\Services\Billing\PlanService::class)->auctionAllowance(app(\App\Support\Tenancy\CurrentOrganization::class)->get()),
         ]);
     }

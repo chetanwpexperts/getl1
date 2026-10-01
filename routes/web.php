@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\Admin\AuctionMonitorController as AdminAuctions;
 use App\Http\Controllers\Admin\CompanyController as AdminCompanies;
 use App\Http\Controllers\Admin\ConsoleController as AdminConsole;
 use App\Http\Controllers\Admin\KycReviewController;
 use App\Http\Controllers\Admin\LeadController as AdminLeads;
+use App\Http\Controllers\Admin\SettingsController as AdminSettings;
+use App\Http\Controllers\Admin\UserController as AdminUsers;
 use App\Http\Controllers\Admin\TwoFactorController as AdminTwoFactor;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -72,6 +75,16 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware('admin.2fa')->group(function () {
             Route::get('/', [AdminConsole::class, 'dashboard'])->name('dashboard');
+            Route::get('/auctions', [AdminAuctions::class, 'index'])->name('auctions');
+            Route::get('/auctions/live', [AdminAuctions::class, 'indexLive'])->middleware('throttle:120,1')->name('auctions.live');
+            Route::get('/auctions/{auction}', [AdminAuctions::class, 'show'])->whereNumber('auction')->name('auctions.show');
+            Route::get('/auctions/{auction}/live', [AdminAuctions::class, 'showLive'])->whereNumber('auction')->middleware('throttle:120,1')->name('auctions.show.live');
+            Route::middleware('throttle:30,1')->group(function () {
+                Route::post('/auctions/{auction}/pause', [AdminAuctions::class, 'pause'])->whereNumber('auction')->name('auctions.pause');
+                Route::post('/auctions/{auction}/resume', [AdminAuctions::class, 'resume'])->whereNumber('auction')->name('auctions.resume');
+                Route::post('/auctions/{auction}/time', [AdminAuctions::class, 'addTime'])->whereNumber('auction')->name('auctions.time');
+                Route::post('/auctions/{auction}/cancel', [AdminAuctions::class, 'cancel'])->whereNumber('auction')->name('auctions.cancel');
+            });
             Route::get('/companies', [AdminCompanies::class, 'index'])->name('companies.index');
             Route::get('/companies/{organization}', [AdminCompanies::class, 'show'])->whereNumber('organization')->name('companies.show');
             Route::middleware('throttle:30,1')->group(function () {
@@ -91,6 +104,17 @@ Route::middleware('auth')->group(function () {
             Route::get('/leads', [AdminLeads::class, 'index'])->name('leads');
             Route::get('/audit', [AdminConsole::class, 'audit'])->name('audit');
             Route::get('/security', [AdminConsole::class, 'security'])->name('security');
+            Route::get('/health', [AdminConsole::class, 'health'])->name('health');
+            Route::get('/users', [AdminUsers::class, 'index'])->name('users.index');
+            Route::get('/users/{user}', [AdminUsers::class, 'show'])->whereNumber('user')->name('users.show');
+            Route::get('/settings', [AdminSettings::class, 'edit'])->name('settings');
+            Route::middleware('throttle:30,1')->group(function () {
+                Route::post('/users/{user}/sign-out', [AdminUsers::class, 'signOut'])->whereNumber('user')->name('users.signout');
+                Route::post('/users/{user}/lock', [AdminUsers::class, 'lock'])->whereNumber('user')->name('users.lock');
+                Route::post('/users/{user}/unlock', [AdminUsers::class, 'unlock'])->whereNumber('user')->name('users.unlock');
+                Route::post('/users/{user}/reset-two-step', [AdminUsers::class, 'resetTwoFactor'])->whereNumber('user')->name('users.2fa-reset');
+                Route::post('/settings', [AdminSettings::class, 'update'])->name('settings.update');
+            });
         });
     });
 

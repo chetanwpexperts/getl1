@@ -8,6 +8,7 @@ export function initLivePage() {
     if (!el) return;
 
     const url = el.dataset.url;
+    const pollMs = Math.max(2000, Number(el.dataset.interval) || POLL_MS); // busy pages (admin monitor) poll faster
     let version = el.dataset.v;
     let refreshAt = Number(el.dataset.refreshAt) || null;
     let offset = Number(el.dataset.serverTime) - Date.now(); // server clock minus ours
@@ -70,7 +71,7 @@ export function initLivePage() {
 
     function schedule() {
         clearTimeout(timer);
-        let wait = POLL_MS;
+        let wait = pollMs;
         if (refreshAt) {
             const untilDue = refreshAt - (Date.now() + offset) + 1200; // just after the moment, by server time
             wait = Math.max(500, Math.min(wait, untilDue));
