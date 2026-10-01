@@ -53,7 +53,21 @@
                     @if ($limit !== null)
                         <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full {{ $pct >= 100 ? 'bg-red-500' : ($pct >= 80 ? 'bg-amber-500' : 'bg-emerald-600') }}" style="width: {{ $pct }}%"></div></div>
                     @endif
-                    <p class="mt-2 text-xs text-slate-500">Resets on the 1st of every month. Unlimited RFQs, sealed quotes and suppliers on every plan.</p>
+                    @php
+                        $aiPct = $ai['enabled'] && $ai['limit'] ? min(100, (int) round($ai['used'] / max(1, $ai['limit']) * 100)) : 0;
+                    @endphp
+                    <div class="mt-5 flex justify-between text-sm">
+                        <span>AI reads this month</span>
+                        <span class="tabular-nums font-medium">
+                            @if (! $ai['enabled']) Not included{{ $ai['credits'] ? ' · '.$ai['credits'].' prepaid' : '' }}
+                            @else {{ $ai['used'] }} {{ $ai['limit'] === null ? '· unlimited' : 'of '.$ai['limit'] }}{{ $ai['credits'] ? ' · +'.$ai['credits'].' prepaid' : '' }}
+                            @endif
+                        </span>
+                    </div>
+                    @if ($ai['enabled'] && $ai['limit'] !== null)
+                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full {{ $aiPct >= 100 ? 'bg-red-500' : ($aiPct >= 80 ? 'bg-amber-500' : 'bg-emerald-600') }}" style="width: {{ $aiPct }}%"></div></div>
+                    @endif
+                    <p class="mt-3 text-xs text-slate-500">Limits reset on the 1st of every month. Unlimited RFQs, sealed quotes and suppliers on every plan.</p>
                 </div>
                 @if ($canManage && $status === 'active' && ! $live->cancel_at_period_end)
                     <form method="POST" action="{{ route('buyer.billing.cancel') }}" class="mt-4" data-confirm="Stop renewing? You keep the plan until the end of the paid period, then move to Free.">
@@ -84,11 +98,6 @@
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">AI reads</p>
                     <p class="mt-1 text-xl font-semibold">{{ $ai['credits'] }} <span class="text-sm font-normal text-slate-600">extra {{ \Illuminate\Support\Str::plural('read', $ai['credits']) }} available</span></p>
                     <p class="mt-1 text-sm text-slate-600">
-                        @if ($ai['enabled'] && $ai['limit'] !== null)
-                            Plan: {{ $ai['left'] }} of {{ $ai['limit'] }} left this month.
-                        @elseif ($ai['enabled'])
-                            Plan: unlimited.
-                        @endif
                         Create RFQs from a WhatsApp message, Excel, PDF or photo. Extra reads are used after your plan's reads, on any plan. Never expire; a failed read is refunded.
                     </p>
                     @if ($canManage && $canPay)
