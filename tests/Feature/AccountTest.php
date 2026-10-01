@@ -23,13 +23,13 @@ class AccountTest extends TestCase
     {
         [, $buyer] = $this->buyer();
         $this->actingAs($buyer)->get(route('dashboard'))->assertOk()
-            ->assertSee('RFQs &amp; auctions', false)->assertSee('Company profile')->assertSee('Plan &amp; billing', false)->assertSee('My profile')->assertSee('New RFQ');
+            ->assertSee('RFQs &amp; auctions', false)->assertSee('Get started')->assertSee('Create your first RFQ')->assertSee('Needs your attention')->assertSee('Company profile')->assertSee('Plan &amp; billing', false)->assertSee('My profile')->assertSee('New RFQ');
         $this->actingAs($buyer)->get(route('account.edit'))->assertOk()->assertSee('Personal details')->assertSee($buyer->email);
         $this->get('/account')->assertOk();
 
         [, $supplier] = $this->supplier();
         $this->actingAs($supplier)->get(route('dashboard'))->assertOk()
-            ->assertSee('Purchase orders')->assertSee('Documents &amp; KYC', false)->assertDontSee('New RFQ');
+            ->assertSee('Purchase orders')->assertSee('Documents &amp; KYC', false)->assertSee('Get verified')->assertSee('No new invitations')->assertDontSee('New RFQ');
     }
 
     public function test_update_details(): void

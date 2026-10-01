@@ -51,7 +51,7 @@ class AppServiceProvider extends ServiceProvider
             ->salutation('GetL1'));
 
         // Same header and menu on every authenticated page.
-        View::composer(['layouts.app', 'layouts.nav-links'], AppLayoutComposer::class);
+        View::composer('layouts.app', AppLayoutComposer::class);
 
         // Dates are stored in UTC; show them in IST: $model->created_at->ist()->format('d M Y, h:i A')
         Carbon::macro('ist', function () {

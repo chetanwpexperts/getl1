@@ -90,7 +90,7 @@ class SavingsReportTest extends TestCase
         $csv = $this->actingAs($this->admin)->get(route('buyer.reports.savings.csv', ['period' => 'all']))->assertOk()->streamedContent();
         $this->assertStringContainsString('92000.00', $csv);
         $this->assertStringContainsString('Live auction', $csv);
-        $this->actingAs($this->admin)->get('/dashboard')->assertOk()->assertSee('Saved this financial year');
+        $this->actingAs($this->admin)->get('/dashboard')->assertOk()->assertSee('Saved this year')->assertSee('this financial year');
 
         // Free plan: headline numbers, details behind an upgrade.
         $this->travel(15)->days();
