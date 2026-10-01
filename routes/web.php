@@ -83,6 +83,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('/billing/subscribe', [BillingController::class, 'subscribe'])->name('billing.subscribe');
                 Route::post('/billing/subscribe/confirm', [BillingController::class, 'confirmSubscription'])->name('billing.subscribe.confirm');
                 Route::post('/billing/credits', [BillingController::class, 'buyCredits'])->name('billing.credits');
+                Route::post('/billing/ai-packs', [BillingController::class, 'buyAiPacks'])->name('billing.ai-packs');
                 Route::post('/billing/credits/confirm', [BillingController::class, 'confirmCredits'])->name('billing.credits.confirm');
                 Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
             });
@@ -112,6 +113,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('/rfqs/ai', [\App\Http\Controllers\Buyer\AiRfqController::class, 'store'])->middleware('throttle:10,1')->name('rfqs.ai.store');
                 Route::get('/rfqs/ai/{job}', [\App\Http\Controllers\Buyer\AiRfqController::class, 'show'])->whereNumber('job')->name('rfqs.ai.show');
                 Route::get('/rfqs/ai/{job}/status', [\App\Http\Controllers\Buyer\AiRfqController::class, 'status'])->whereNumber('job')->middleware('throttle:120,1')->name('rfqs.ai.status');
+                Route::get('/rfqs/ai/{job}/original', [\App\Http\Controllers\Buyer\AiRfqController::class, 'original'])->whereNumber('job')->middleware('throttle:60,1')->name('rfqs.ai.original');
                 Route::get('/rfqs/ai/{job}/use', [\App\Http\Controllers\Buyer\AiRfqController::class, 'use'])->whereNumber('job')->name('rfqs.ai.use');
                 Route::post('/rfqs', [BuyerRfqController::class, 'store'])->middleware('throttle:30,1')->name('rfqs.store');
                 Route::get('/rfqs/{rfq}/edit', [BuyerRfqController::class, 'edit'])->whereNumber('rfq')->name('rfqs.edit');

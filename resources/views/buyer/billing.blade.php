@@ -12,7 +12,8 @@
     @endphp
 
     <div data-billing data-subscribe-url="{{ route('buyer.billing.subscribe') }}" data-subscribe-confirm-url="{{ route('buyer.billing.subscribe.confirm') }}"
-         data-credits-url="{{ route('buyer.billing.credits') }}" data-credits-confirm-url="{{ route('buyer.billing.credits.confirm') }}">
+         data-credits-url="{{ route('buyer.billing.credits') }}" data-credits-confirm-url="{{ route('buyer.billing.credits.confirm') }}"
+         data-ai-packs-url="{{ route('buyer.billing.ai-packs') }}">
 
         <h1 class="text-2xl font-semibold">Billing</h1>
         <p class="mt-1 text-sm text-slate-600">Your plan, usage and invoices. Suppliers always use GetL1 free.</p>
@@ -62,21 +63,46 @@
                 @endif
             </section>
 
-            <section class="rounded-xl border border-slate-200 bg-white p-5">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Extra auctions</p>
-                <p class="mt-1 text-xl font-semibold">{{ $allowance['credits'] }} <span class="text-sm font-normal text-slate-600">{{ \Illuminate\Support\Str::plural('credit', $allowance['credits']) }} available</span></p>
-                <p class="mt-1 text-sm text-slate-600">Used automatically when the month's limit is reached. Never expire.</p>
-                @if ($canManage && $canPay)
-                    <form class="mt-4 flex items-center gap-2" data-buy-credits>
-                        <input type="number" name="quantity" min="1" max="{{ config('billing.auction_credit_max_qty') }}" value="1"
-                               class="w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm" aria-label="Number of auctions">
-                        <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">
-                            Buy · {{ \App\Support\Money::inr($creditPrice['total'], 0) }} each
-                        </button>
-                    </form>
-                    @if ($gst)<p class="mt-1 text-xs text-slate-500">Incl. {{ (int) $creditPrice['gst_rate'] }}% GST</p>@endif
-                @endif
-            </section>
+            <div class="space-y-4">
+                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Extra auctions</p>
+                    <p class="mt-1 text-xl font-semibold">{{ $allowance['credits'] }} <span class="text-sm font-normal text-slate-600">{{ \Illuminate\Support\Str::plural('credit', $allowance['credits']) }} available</span></p>
+                    <p class="mt-1 text-sm text-slate-600">Used automatically when the month's limit is reached. Never expire.</p>
+                    @if ($canManage && $canPay)
+                        <form class="mt-4 flex items-center gap-2" data-buy-credits>
+                            <input type="number" name="quantity" min="1" max="{{ config('billing.auction_credit_max_qty') }}" value="1"
+                                   class="w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm" aria-label="Number of auctions">
+                            <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">
+                                Buy · {{ \App\Support\Money::inr($creditPrice['total'], 0) }} each
+                            </button>
+                        </form>
+                        @if ($gst)<p class="mt-1 text-xs text-slate-500">Incl. {{ (int) $creditPrice['gst_rate'] }}% GST</p>@endif
+                    @endif
+                </section>
+
+                <section class="rounded-xl border border-slate-200 bg-white p-5" id="ai-reads">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">AI reads</p>
+                    <p class="mt-1 text-xl font-semibold">{{ $ai['credits'] }} <span class="text-sm font-normal text-slate-600">extra {{ \Illuminate\Support\Str::plural('read', $ai['credits']) }} available</span></p>
+                    <p class="mt-1 text-sm text-slate-600">
+                        @if ($ai['enabled'] && $ai['limit'] !== null)
+                            Plan: {{ $ai['left'] }} of {{ $ai['limit'] }} left this month.
+                        @elseif ($ai['enabled'])
+                            Plan: unlimited.
+                        @endif
+                        Create RFQs from a WhatsApp message, Excel, PDF or photo. Extra reads are used after your plan's reads, on any plan. Never expire; a failed read is refunded.
+                    </p>
+                    @if ($canManage && $canPay)
+                        <form class="mt-4 flex items-center gap-2" data-buy-ai>
+                            <input type="number" name="quantity" min="1" max="{{ config('billing.ai_pack_max_qty') }}" value="1"
+                                   class="w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm" aria-label="Number of AI packs">
+                            <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">
+                                Buy · {{ \App\Support\Money::inr($aiPackPrice['total'], 0) }} per {{ config('billing.ai_pack_reads') }} reads
+                            </button>
+                        </form>
+                        @if ($gst)<p class="mt-1 text-xs text-slate-500">Incl. {{ (int) $aiPackPrice['gst_rate'] }}% GST</p>@endif
+                    @endif
+                </section>
+            </div>
         </div>
 
         {{-- Plans --}}

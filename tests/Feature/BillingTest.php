@@ -172,6 +172,22 @@ class BillingTest extends TestCase
         $this->actingAs($rival)->get(route('buyer.billing.invoice', $p->id))->assertNotFound();
     }
 
+    public function test_buy_ai_packs_adds_reads_once(): void
+    {
+        $this->actingAs($this->admin)->postJson(route('buyer.billing.ai-packs'), ['quantity' => 2])->assertOk()
+            ->assertJsonPath('amount', 39800)->assertJsonPath('description', 'AI reading pack: 100 AI reads');
+        $this->actingAs($this->admin)->postJson(route('buyer.billing.ai-packs'), ['quantity' => 11])->assertUnprocessable();
+
+        $ok = ['razorpay_payment_id' => 'pay_ai', 'razorpay_order_id' => 'order_test1', 'razorpay_signature' => $this->sig('order_test1|pay_ai')];
+        $this->actingAs($this->admin)->postJson(route('buyer.billing.credits.confirm'), $ok)->assertOk();
+        $this->actingAs($this->admin)->postJson(route('buyer.billing.credits.confirm'), $ok)->assertOk();
+        $this->assertSame(100, $this->buyer->fresh()->ai_credits, 'Added exactly once');
+        $this->assertSame(0, $this->buyer->fresh()->auction_credits);
+        $this->assertSame(Payment::KIND_AI_CREDITS, Payment::firstOrFail()->kind);
+
+        $this->actingAs($this->admin)->get(route('buyer.billing.index'))->assertOk()->assertSee('AI reads')->assertSee('100');
+    }
+
     public function test_webhook_is_signed_and_processed_once(): void
     {
         $this->actingAs($this->admin)->postJson(route('buyer.billing.credits'), ['quantity' => 3])->assertOk();

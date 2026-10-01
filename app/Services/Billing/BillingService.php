@@ -108,12 +108,29 @@ class BillingService
 
     public function startCreditPurchase(Organization $org, User $by, int $qty): array
     {
-        $this->assertCanBuy();
         $qty = max(1, min((int) config('billing.auction_credit_max_qty'), $qty));
-        $price = $this->price((float) config('billing.auction_credit_price') * $qty);
+
+        return $this->startOrder($org, $by, Payment::KIND_CREDITS, $qty, (float) config('billing.auction_credit_price') * $qty);
+    }
+
+    // ---------------------------------------------------------------- AI reading packs
+
+    /** Buys $packs AI packs. The payment's quantity is the number of reads, fixed at purchase time. */
+    public function startAiPackPurchase(Organization $org, User $by, int $packs): array
+    {
+        $packs = max(1, min((int) config('billing.ai_pack_max_qty'), $packs));
+
+        return $this->startOrder($org, $by, Payment::KIND_AI_CREDITS, $packs * (int) config('billing.ai_pack_reads'),
+            (float) config('billing.ai_pack_price') * $packs);
+    }
+
+    private function startOrder(Organization $org, User $by, string $kind, int $qty, float $amount): array
+    {
+        $this->assertCanBuy();
+        $price = $this->price($amount);
 
         $payment = Payment::create([
-            'organization_id' => $org->id, 'created_by' => $by->id, 'kind' => Payment::KIND_CREDITS, 'quantity' => $qty,
+            'organization_id' => $org->id, 'created_by' => $by->id, 'kind' => $kind, 'quantity' => $qty,
             'amount' => $price['amount'], 'gst_rate' => $price['gst_rate'], 'gst_amount' => $price['gst'], 'total' => $price['total'],
             'status' => 'created',
         ]);
@@ -125,7 +142,7 @@ class BillingService
         return $this->checkout($org, $by, [
             'order_id' => $order['id'],
             'amount' => (int) round($price['total'] * 100),
-            'description' => $qty.' live auction '.($qty === 1 ? 'credit' : 'credits'),
+            'description' => $payment->description(),
             'amount_label' => Money::inr($price['total']),
         ]);
     }
@@ -292,6 +309,8 @@ class BillingService
 
             if ($p->kind === Payment::KIND_CREDITS) {
                 $org->increment('auction_credits', $p->quantity);
+            } elseif ($p->kind === Payment::KIND_AI_CREDITS) {
+                $org->increment('ai_credits', $p->quantity);
             }
             $this->audit->log('payment_received', $p, after: ['kind' => $p->kind, 'total' => (float) $p->total, 'invoice' => $p->invoice_number],
                 user: null, organizationId: $p->organization_id);

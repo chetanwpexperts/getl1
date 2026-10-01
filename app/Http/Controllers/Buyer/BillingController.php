@@ -33,6 +33,8 @@ class BillingController extends Controller
             'canPay' => $razorpay->isConfigured(),
             'testMode' => $razorpay->isTestMode(),
             'creditPrice' => $this->billing->price((float) config('billing.auction_credit_price')),
+            'ai' => $this->plans->aiAllowance($org),
+            'aiPackPrice' => $this->billing->price((float) config('billing.ai_pack_price')),
             'gst' => (bool) config('billing.gst_enabled'),
             'canManage' => request()->user()->roleIn($org)?->value === 'buyer_admin',
         ]);
@@ -69,6 +71,13 @@ class BillingController extends Controller
         return response()->json($this->billing->startCreditPurchase($this->current->get(), $request->user(), (int) $data['quantity']));
     }
 
+    public function buyAiPacks(Request $request): JsonResponse
+    {
+        $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:'.config('billing.ai_pack_max_qty')]]);
+
+        return response()->json($this->billing->startAiPackPurchase($this->current->get(), $request->user(), (int) $data['quantity']));
+    }
+
     public function confirmCredits(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -77,7 +86,9 @@ class BillingController extends Controller
             'razorpay_signature' => ['required', 'string', 'max:128'],
         ]);
         $payment = $this->billing->confirmOrder($this->current->get(), $data['razorpay_payment_id'], $data['razorpay_order_id'], $data['razorpay_signature']);
-        session()->flash('status', "{$payment->quantity} auction ".($payment->quantity === 1 ? 'credit' : 'credits').' added. Thank you!');
+        session()->flash('status', $payment->kind === Payment::KIND_AI_CREDITS
+            ? "{$payment->quantity} AI reads added. Thank you!"
+            : "{$payment->quantity} auction ".($payment->quantity === 1 ? 'credit' : 'credits').' added. Thank you!');
 
         return response()->json(['ok' => true, 'redirect' => route('buyer.billing.index')]);
     }

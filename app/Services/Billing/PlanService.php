@@ -94,16 +94,25 @@ class PlanService
         ];
     }
 
-    /** AI reading of requirements: on plans with "ai_rfq", up to the monthly limit (failed reads don't count). */
+    /**
+     * AI reading of requirements. Included reads come from the plan ("ai_rfq", monthly limit);
+     * beyond that, or on plans without AI, prepaid AI pack reads are used. Failed reads don't count.
+     *
+     * @return array{enabled: bool, limit: ?int, used: int, left: ?int, credits: int, can: bool, use_credit: bool, plan: ?Plan}
+     */
     public function aiAllowance(Organization $org): array
     {
         $plan = $this->current($org);
         $enabled = $plan === null || in_array('ai_rfq', $plan->features ?? [], true);
         $limit = $plan?->max_ai_calls_month;
         $used = \App\Models\AiJob::withoutGlobalScopes()->where('organization_id', $org->id)
-            ->where('created_at', '>=', $this->monthStart())->where('status', '!=', 'failed')->count();
+            ->where('created_at', '>=', $this->monthStart())->where('status', '!=', 'failed')
+            ->where('paid_with_credit', false)->count();
+        $left = $enabled ? ($limit === null ? null : max(0, $limit - $used)) : 0;
+        $credits = (int) $org->ai_credits;
+        $included = $enabled && ($left === null || $left > 0);
 
-        return ['enabled' => $enabled, 'limit' => $limit, 'used' => $used,
-            'left' => $limit === null ? null : max(0, $limit - $used), 'plan' => $plan];
+        return ['enabled' => $enabled, 'limit' => $limit, 'used' => $used, 'left' => $left, 'credits' => $credits,
+            'can' => $included || $credits > 0, 'use_credit' => ! $included && $credits > 0, 'plan' => $plan];
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Jobs\ParseRfqWithAi;
 use App\Models\AiJob;
+use App\Models\Organization;
 use App\Services\Ai\Claude;
 use App\Services\AuditLogger;
 use App\Services\Billing\PlanService;
@@ -13,10 +14,12 @@ use App\Support\Tenancy\CurrentOrganization;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * "Create with AI": the buyer pastes a requirement or uploads a file; AI fills the normal RFQ
@@ -41,11 +44,10 @@ class AiRfqController extends Controller
         if (! $claude->isConfigured()) {
             throw ValidationException::withMessages(['ai_text' => 'AI reading is being set up. Please fill the form below for now.']);
         }
-        if (! $allowance['enabled']) {
-            throw ValidationException::withMessages(['ai_text' => 'Creating RFQs with AI is part of the Growth plan and above.']);
-        }
-        if ($allowance['left'] === 0) {
-            throw ValidationException::withMessages(['ai_text' => "You've used all {$allowance['limit']} AI reads this month. Fill the form below, or upgrade for more."]);
+        if (! $allowance['can']) {
+            throw ValidationException::withMessages(['ai_text' => $allowance['enabled']
+                ? "You've used all {$allowance['limit']} AI reads this month. Buy an AI pack on the Billing page, or fill the form below."
+                : 'Your plan does not include AI reads. Buy an AI pack on the Billing page, or fill the form below.']);
         }
 
         $path = null;
@@ -54,15 +56,24 @@ class AiRfqController extends Controller
             $path = $request->file('ai_file')->storeAs("ai-inputs/{$org->id}", Str::random(40).'.'.$ext, 'local');
         }
 
-        $job = AiJob::create([
-            'organization_id' => $org->id,
-            'user_id' => $request->user()->id,
-            'type' => 'rfq_parse',
-            'input_text' => filled($data['ai_text'] ?? null) ? trim($data['ai_text']) : null,
-            'input_file_path' => $path,
-            'status' => 'queued',
-        ]);
-        $audit->log('ai_rfq_requested', $job, after: ['file' => (bool) $path, 'chars' => mb_strlen((string) $job->input_text)]);
+        // A prepaid read is taken atomically (never below zero) together with creating the job.
+        $job = DB::transaction(function () use ($org, $request, $data, $path, $allowance) {
+            if ($allowance['use_credit']
+                && Organization::whereKey($org->id)->where('ai_credits', '>', 0)->decrement('ai_credits') === 0) {
+                throw ValidationException::withMessages(['ai_text' => 'No AI reads left. Buy an AI pack on the Billing page, or fill the form below.']);
+            }
+
+            return AiJob::create([
+                'organization_id' => $org->id,
+                'user_id' => $request->user()->id,
+                'type' => 'rfq_parse',
+                'input_text' => filled($data['ai_text'] ?? null) ? trim($data['ai_text']) : null,
+                'input_file_path' => $path,
+                'status' => 'queued',
+                'paid_with_credit' => $allowance['use_credit'],
+            ]);
+        });
+        $audit->log('ai_rfq_requested', $job, after: ['file' => (bool) $path, 'chars' => mb_strlen((string) $job->input_text), 'prepaid' => $job->paid_with_credit]);
         ParseRfqWithAi::dispatch($job->id);
 
         return redirect()->route('buyer.rfqs.ai.show', $job->id);
@@ -101,7 +112,27 @@ class AiRfqController extends Controller
 
         return redirect()->route('buyer.rfqs.create')
             ->with('ai_warnings', $job->output['warnings'] ?? [])
+            ->with('ai_uncertain', $job->output['uncertain'] ?? [])
+            ->with('ai_job_id', $job->id)
             ->with('status', 'AI filled the form from your requirement. Please check every item, set the quote deadline and save.');
+    }
+
+    /** The buyer's own uploaded file, shown beside the filled form for checking. Private, same company only. */
+    public function original(int $job): StreamedResponse
+    {
+        $job = $this->find($job);
+        abort_unless($job->input_file_path && Storage::disk('local')->exists($job->input_file_path), 404);
+        $ext = pathinfo($job->input_file_path, PATHINFO_EXTENSION);
+        $type = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'png' => 'image/png',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'][$ext] ?? abort(404);
+
+        $headers = ['Content-Type' => $type, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store'];
+        if ($ext !== 'pdf') {
+            // Browsers' PDF viewers don't run under a sandbox policy; uploads were content-checked by FileGuard anyway.
+            $headers['Content-Security-Policy'] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox";
+        }
+
+        return Storage::disk('local')->response($job->input_file_path, 'your-requirement.'.$ext, $headers, $ext === 'xlsx' ? 'attachment' : 'inline');
     }
 
     private function find(int $id): AiJob

@@ -19,7 +19,7 @@ class Organization extends Model
     protected $fillable = [
         'type', 'name', 'slug', 'gstin', 'pan', 'udyam_no', 'email', 'phone',
         'address', 'city', 'state', 'pincode', 'locale', 'verified_at', 'status',
-        'award_approval_limit', 'po_terms', 'auction_credits',
+        'award_approval_limit', 'po_terms', 'auction_credits', 'ai_credits',
     ];
 
     protected function casts(): array

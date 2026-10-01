@@ -63,3 +63,10 @@
 @media (prefers-reduced-motion: reduce) {
     .anim-enter, .anim-flash, .anim-pop { animation: none; }
 }
+
+/* RFQ form: a field AI found hard to read, until the buyer edits it. Unlayered, so it wins over the input's utilities. */
+.ai-doubt {
+    border-color: var(--color-amber-400);
+    background-color: var(--color-amber-50);
+    box-shadow: 0 0 0 2px var(--color-amber-200);
+}

@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** One charge (subscription payment or auction credits). Rows are never deleted. */
+/** One charge (subscription payment, auction credits or AI reads). Rows are never deleted. */
 class Payment extends Model
 {
     public const KIND_SUBSCRIPTION = 'subscription';
     public const KIND_CREDITS = 'auction_credits';
+    public const KIND_AI_CREDITS = 'ai_credits';
 
     protected $fillable = [
         'organization_id', 'subscription_id', 'plan_id', 'created_by', 'kind', 'billing_cycle', 'quantity',
@@ -49,8 +50,10 @@ class Payment extends Model
 
     public function description(): string
     {
-        return $this->kind === self::KIND_CREDITS
-            ? $this->quantity.' live auction '.($this->quantity === 1 ? 'credit' : 'credits')
-            : 'GetL1 '.($this->plan?->name ?? '').' plan, '.($this->billing_cycle === 'yearly' ? 'yearly' : 'monthly').' subscription';
+        return match ($this->kind) {
+            self::KIND_CREDITS => $this->quantity.' live auction '.($this->quantity === 1 ? 'credit' : 'credits'),
+            self::KIND_AI_CREDITS => 'AI reading pack: '.$this->quantity.' AI reads',
+            default => 'GetL1 '.($this->plan?->name ?? '').' plan, '.($this->billing_cycle === 'yearly' ? 'yearly' : 'monthly').' subscription',
+        };
     }
 }

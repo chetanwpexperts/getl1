@@ -1,4 +1,4 @@
-// Billing page: monthly/yearly switch and Razorpay checkout for plans and auction credits.
+// Billing page: monthly/yearly switch and Razorpay checkout for plans, auction credits and AI packs.
 // The server creates the subscription/order; the browser only opens checkout and sends back
 // Razorpay's signed response, which the server verifies before anything is credited.
 const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
@@ -92,5 +92,12 @@ export function initBilling() {
         e.preventDefault();
         const form = e.currentTarget;
         pay(form.querySelector('button'), root.dataset.creditsUrl, { quantity: Number(form.quantity.value) || 1 }, root.dataset.creditsConfirmUrl);
+    });
+
+    // AI packs are one-time orders too, confirmed by the same signed-order endpoint.
+    root.querySelector('[data-buy-ai]')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        pay(form.querySelector('button'), root.dataset.aiPacksUrl, { quantity: Number(form.quantity.value) || 1 }, root.dataset.creditsConfirmUrl);
     });
 }

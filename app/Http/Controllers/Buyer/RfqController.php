@@ -230,7 +230,20 @@ class RfqController extends Controller
             'freightTerms' => RfqService::FREIGHT_TERMS,
             'ai' => $rfq->exists ? null : app(\App\Services\Billing\PlanService::class)->aiAllowance($this->current->get())
                 + ['configured' => app(\App\Services\Ai\Claude::class)->isConfigured()],
+            // The requirement AI read from, shown beside the form (kept through validation errors via a hidden field).
+            'aiSource' => $rfq->exists ? null : $this->aiSource(),
+            // Fields the AI marked as hard to read, by item row. Only right after filling, before any edits.
+            'aiUncertain' => $rfq->exists ? [] : (array) session('ai_uncertain', []),
         ];
+    }
+
+    private function aiSource(): ?\App\Models\AiJob
+    {
+        $id = session('ai_job_id') ?? old('ai_job_id');
+
+        return is_numeric($id)
+            ? \App\Models\AiJob::where('type', 'rfq_parse')->where('status', 'done')->find((int) $id) // tenant-scoped
+            : null;
     }
 
     /**

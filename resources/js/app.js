@@ -65,6 +65,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
     });
 
+    // RFQ form: a yellow "Check this" field clears once the buyer edits or confirms it.
+    const clearDoubt = (e) => {
+        const el = e.target;
+        if (!el.classList?.contains('ai-doubt')) return;
+        el.classList.remove('ai-doubt');
+        el.parentElement?.querySelector('[data-ai-doubt-note]')?.remove();
+    };
+    document.addEventListener('input', clearDoubt);
+    document.addEventListener('change', clearDoubt);
+
     // Award form: the "why not L1?" box appears only when a non-L1 supplier is picked.
     document.addEventListener('change', (e) => {
         const form = e.target.closest('[data-award-form]');

@@ -23,6 +23,29 @@
         @include('buyer.rfqs._ai-panel')
     @endif
 
+    @if ($aiSource ?? null)
+        @php $srcExt = $aiSource->input_file_path ? pathinfo($aiSource->input_file_path, PATHINFO_EXTENSION) : null; @endphp
+        <details class="mt-5 rounded-xl border border-slate-200 bg-white" @if (session('ai_job_id')) open @endif data-ai-original>
+            <summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">Compare with your original</summary>
+            <div class="border-t border-slate-100 p-4">
+                @if (in_array($srcExt, ['jpg', 'png'], true))
+                    <a href="{{ route('buyer.rfqs.ai.original', $aiSource->id) }}" target="_blank" rel="noopener" title="Open full size">
+                        <img src="{{ route('buyer.rfqs.ai.original', $aiSource->id) }}" alt="Your uploaded list"
+                             class="max-h-[28rem] w-auto rounded-lg border border-slate-200 bg-slate-50 object-contain" loading="lazy">
+                    </a>
+                    <p class="mt-2 text-xs text-slate-500">Click the photo to open it full size in a new tab.</p>
+                @elseif ($srcExt === 'pdf')
+                    <a href="{{ route('buyer.rfqs.ai.original', $aiSource->id) }}" target="_blank" rel="noopener" class="text-sm font-medium text-emerald-700 underline">Open your PDF in a new tab</a>
+                @elseif ($srcExt === 'xlsx')
+                    <a href="{{ route('buyer.rfqs.ai.original', $aiSource->id) }}" class="text-sm font-medium text-emerald-700 underline">Download your Excel file</a>
+                @endif
+                @if ($aiSource->input_text)
+                    <pre class="{{ $srcExt ? 'mt-3' : '' }} max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-3 font-sans text-sm text-slate-700">{{ $aiSource->input_text }}</pre>
+                @endif
+            </div>
+        </details>
+    @endif
+
     @if (session('ai_warnings'))
         <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             <p class="font-semibold">Please check these before saving:</p>
@@ -35,6 +58,7 @@
     <form method="POST" action="{{ $rfq->exists ? route('buyer.rfqs.update', $rfq->id) : route('buyer.rfqs.store') }}" class="mt-6 space-y-6">
         @csrf
         @if ($rfq->exists) @method('PUT') @endif
+        @if ($aiSource ?? null)<input type="hidden" name="ai_job_id" value="{{ $aiSource->id }}">@endif
 
         <section class="rounded-xl border border-slate-200 bg-white p-5">
             <h2 class="text-sm font-semibold">Requirement</h2>
@@ -73,7 +97,7 @@
 
             <div class="mt-4 space-y-3" data-items>
                 @foreach ($rows as $i => $row)
-                    @include('buyer.rfqs._item-row', ['i' => $i, 'row' => $row])
+                    @include('buyer.rfqs._item-row', ['i' => $i, 'row' => $row, 'doubt' => $aiUncertain[$i] ?? []])
                 @endforeach
             </div>
             <template data-item-template>

@@ -24,6 +24,11 @@ return [
     'auction_credit_price' => (float) env('BILLING_AUCTION_CREDIT_PRICE', 799),
     'auction_credit_max_qty' => 20,
 
+    // AI pack: prepaid AI reads for plans without AI, or when the month's reads are used up.
+    'ai_pack_price' => (float) env('BILLING_AI_PACK_PRICE', 199),
+    'ai_pack_reads' => (int) env('BILLING_AI_PACK_READS', 50),
+    'ai_pack_max_qty' => 10,
+
     // Number of billing cycles a Razorpay subscription runs before it needs renewing.
     'cycles' => ['monthly' => 120, 'yearly' => 10],
 ];

@@ -176,7 +176,7 @@ class AiRfqTest extends TestCase
         // After the trial: Free plan has no AI.
         $this->travel(15)->days();
         $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes'])->assertSessionHasErrors('ai_text');
-        $this->actingAs($this->admin)->get(route('buyer.rfqs.create'))->assertOk()->assertSee('Available on the Growth plan');
+        $this->actingAs($this->admin)->get(route('buyer.rfqs.create'))->assertOk()->assertSee('AI reads are not included in your plan')->assertSee('Buy AI pack');
 
         // No key: the panel explains, nothing is sent.
         config(['services.anthropic.key' => null]);
@@ -193,5 +193,77 @@ class AiRfqTest extends TestCase
         $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes']);
         $this->assertSame('done', AiJob::withoutGlobalScopes()->firstOrFail()->status);
         Http::assertSent(fn (HttpRequest $r) => ($r['tool_choice']['type'] ?? null) === 'auto');
+    }
+
+    public function test_prepaid_reads_are_used_after_the_plan_and_refunded_on_failure(): void
+    {
+        $this->travel(15)->days(); // Free plan: no included AI reads
+        $this->buyer->forceFill(['ai_credits' => 2])->save();
+        $this->actingAs($this->admin)->get(route('buyer.rfqs.create'))->assertOk()->assertSee('Uses 1 of your 2 prepaid AI reads');
+
+        $this->aiReplies($this->good());
+        $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes'])->assertRedirect();
+        $this->assertSame(1, $this->buyer->fresh()->ai_credits);
+        $this->assertTrue(AiJob::withoutGlobalScopes()->latest('id')->first()->paid_with_credit);
+
+        $this->aiReplies([], 529);
+        $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes'])->assertRedirect();
+        $this->assertSame(1, $this->buyer->fresh()->ai_credits, 'Failed read refunded');
+
+        // Running the failure handler again never refunds twice.
+        \App\Jobs\ParseRfqWithAi::fail(AiJob::withoutGlobalScopes()->latest('id')->first()->id, 'again');
+        $this->assertSame(1, $this->buyer->fresh()->ai_credits);
+
+        $this->aiReplies($this->good());
+        $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes']);
+        $this->assertSame(0, $this->buyer->fresh()->ai_credits);
+        $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_text' => 'boxes'])->assertSessionHasErrors('ai_text');
+        $this->assertSame(0, $this->buyer->fresh()->ai_credits, 'Never below zero');
+    }
+
+    public function test_unclear_photo_asks_for_a_retake_and_is_not_counted(): void
+    {
+        $this->aiReplies(['title' => 'List', 'items' => [], 'warnings' => [], 'readability' => 'unreadable']);
+        $png = UploadedFile::fake()->createWithContent('list.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAIAAAADnC86AAAAK0lEQVR4nO3NMQ0AAAwDoPo33ZpYsgcMkD6JWCwWi8VisVgsFovFYrFYfGcs0K5PemaPnAAAAABJRU5ErkJggg=='));
+        $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_file' => $png]);
+
+        $job = AiJob::withoutGlobalScopes()->firstOrFail();
+        $this->assertSame('failed', $job->status);
+        $this->assertStringContainsString('retake the photo', $job->error);
+        $this->assertSame(1200, $job->tokens_in, 'Cost still recorded for our own tracking');
+        $this->assertSame(0, app(\App\Services\Billing\PlanService::class)->aiAllowance($this->buyer)['used']);
+        $this->actingAs($this->admin)->get(route('buyer.rfqs.ai.show', $job->id))->assertOk()->assertSee('retake the photo')->assertSee('never counted');
+    }
+
+    public function test_doubtful_fields_are_marked_and_the_original_is_shown(): void
+    {
+        $in = $this->good();
+        $in['readability'] = 'partly_unclear';
+        $in['items'][0]['uncertain_fields'] = ['qty', 'bogus'];
+        $this->aiReplies($in);
+        $png = UploadedFile::fake()->createWithContent('list.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAIAAAADnC86AAAAK0lEQVR4nO3NMQ0AAAwDoPo33ZpYsgcMkD6JWCwWi8VisVgsFovFYrFYfGcs0K5PemaPnAAAAABJRU5ErkJggg=='));
+        $this->actingAs($this->admin)->post(route('buyer.rfqs.ai.store'), ['ai_file' => $png]);
+        $job = AiJob::withoutGlobalScopes()->firstOrFail();
+        $this->assertSame([0 => ['qty']], $job->output['uncertain']);
+
+        $this->actingAs($this->admin)->get(route('buyer.rfqs.ai.use', $job->id));
+        $page = $this->actingAs($this->admin)->get(route('buyer.rfqs.create'))->assertOk()
+            ->assertSee('Check this')->assertSee('Compare with your original')->assertSee(route('buyer.rfqs.ai.original', $job->id))
+            ->assertSee('Some parts were hard to read');
+        $this->assertSame(1, substr_count($page->getContent(), ' ai-doubt"'));
+
+        $this->actingAs($this->admin)->get(route('buyer.rfqs.ai.original', $job->id))->assertOk()
+            ->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
+        [, $rival] = $this->buyer('Rival Industries');
+        $this->actingAs($rival)->get(route('buyer.rfqs.ai.original', $job->id))->assertNotFound();
+    }
+
+    public function test_tips_and_sample_files_are_offered(): void
+    {
+        $this->actingAs($this->admin)->get(route('buyer.rfqs.create'))->assertOk()
+            ->assertSee('How to get the best result')->assertSee('Photo of a handwritten list')->assertSee('samples/GetL1-sample-indent.xlsx');
+        foreach (['GetL1-sample-handwritten-list.jpg', 'GetL1-sample-indent.xlsx', 'GetL1-sample-requirement.pdf'] as $f) {
+            $this->assertFileExists(public_path('samples/'.$f));
+        }
     }
 }

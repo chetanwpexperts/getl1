@@ -13,13 +13,14 @@ class AiJob extends Model
 
     protected $fillable = [
         'organization_id', 'user_id', 'type', 'input_ref_type', 'input_ref_id', 'input_file_path', 'input_text',
-        'output', 'status', 'error', 'model', 'tokens_in', 'tokens_out', 'cost_inr', 'reviewed_by', 'reviewed_at',
+        'output', 'status', 'paid_with_credit', 'error', 'model', 'tokens_in', 'tokens_out', 'cost_inr', 'reviewed_by', 'reviewed_at',
     ];
 
     protected function casts(): array
     {
         return [
             'output' => 'array',
+            'paid_with_credit' => 'boolean',
             'cost_inr' => 'decimal:2',
             'reviewed_at' => 'datetime',
         ];
