@@ -226,33 +226,60 @@ class WebsiteSettings
 
     /**
      * A logo saved on a plain white background gets that background made transparent, so it sits
-     * cleanly on any header colour. Only when all four corners are white; edges stay smooth.
+     * cleanly on any header colour. Only the white area joined to the edges is cleared; the logo itself
+     * (including any white inside it) stays solid, and its soft edges are blended so they don't look jagged.
+     * Nothing happens unless all four corners are white.
      */
     private static function clearWhiteBackground(\GdImage $img): void
     {
         [$w, $h] = [imagesx($img), imagesy($img)];
+        $rgba = fn ($x, $y) => imagecolorsforindex($img, imagecolorat($img, $x, $y));
+        $white = fn ($c) => $c['alpha'] < 20 && min($c['red'], $c['green'], $c['blue']) >= 236;
         foreach ([[0, 0], [$w - 1, 0], [0, $h - 1], [$w - 1, $h - 1]] as [$x, $y]) {
-            $c = imagecolorsforindex($img, imagecolorat($img, $x, $y));
-            if ($c['alpha'] > 10 || min($c['red'], $c['green'], $c['blue']) < 240) {
-                return; // not a white background: leave the logo as it is
+            if (! $white($rgba($x, $y))) {
+                return;
             }
         }
+
+        // Flood fill from the edges through white pixels: that's the background.
+        $bg = [];
+        $queue = new \SplQueue;
+        for ($x = 0; $x < $w; $x++) { $queue->enqueue([$x, 0]); $queue->enqueue([$x, $h - 1]); }
+        for ($y = 0; $y < $h; $y++) { $queue->enqueue([0, $y]); $queue->enqueue([$w - 1, $y]); }
+        while (! $queue->isEmpty()) {
+            [$x, $y] = $queue->dequeue();
+            $k = $y * $w + $x;
+            if (isset($bg[$k]) || ! $white($rgba($x, $y))) {
+                continue;
+            }
+            $bg[$k] = true;
+            foreach ([[1, 0], [-1, 0], [0, 1], [0, -1]] as [$dx, $dy]) {
+                [$nx, $ny] = [$x + $dx, $y + $dy];
+                if ($nx >= 0 && $ny >= 0 && $nx < $w && $ny < $h && ! isset($bg[$ny * $w + $nx])) {
+                    $queue->enqueue([$nx, $ny]);
+                }
+            }
+        }
+
         imagealphablending($img, false);
         imagesavealpha($img, true);
+        $clear = imagecolorallocatealpha($img, 255, 255, 255, 127);
         for ($y = 0; $y < $h; $y++) {
             for ($x = 0; $x < $w; $x++) {
-                $c = imagecolorsforindex($img, imagecolorat($img, $x, $y));
-                if ($c['alpha'] === 127) {
+                $k = $y * $w + $x;
+                if (isset($bg[$k])) {
+                    imagesetpixel($img, $x, $y, $clear);
                     continue;
                 }
-                // How far the pixel is from white decides how opaque it stays; the colour is un-mixed from white.
+                // Soft edge pixels next to the background: un-mix them from white so the edge stays smooth.
+                $edge = ($x > 0 && isset($bg[$k - 1])) || ($x < $w - 1 && isset($bg[$k + 1])) || ($y > 0 && isset($bg[$k - $w])) || ($y < $h - 1 && isset($bg[$k + $w]));
+                $c = $rgba($x, $y);
+                if (! $edge || min($c['red'], $c['green'], $c['blue']) < 150) {
+                    continue;
+                }
                 $a = max(255 - $c['red'], 255 - $c['green'], 255 - $c['blue']) / 255;
-                $a = max(0, min(1, ($a - 0.04) / 0.96)) * (1 - $c['alpha'] / 127);
-                if ($a <= 0) {
-                    imagesetpixel($img, $x, $y, imagecolorallocatealpha($img, 255, 255, 255, 127));
-                    continue;
-                }
-                $un = fn ($v) => (int) max(0, min(255, round(255 - (255 - $v) / max($a, 0.001))));
+                $a = max(0.05, min(1, $a / 0.6));
+                $un = fn ($v) => (int) max(0, min(255, round(255 - (255 - $v) / $a)));
                 imagesetpixel($img, $x, $y, imagecolorallocatealpha($img, $un($c['red']), $un($c['green']), $un($c['blue']), (int) round(127 * (1 - $a))));
             }
         }
