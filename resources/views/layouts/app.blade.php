@@ -66,8 +66,8 @@
 <div class="flex min-h-full flex-col">
     <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         {{-- Row 1: logo and company, actions and account --}}
-        <div class="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
-            <a href="{{ route('dashboard') }}" class="shrink-0" aria-label="Dashboard"><x-logo size="text-xl" height="h-8" /></a>
+        <div class="mx-auto flex h-[4.25rem] max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+            <a href="{{ route('dashboard') }}" class="shrink-0" aria-label="Dashboard"><x-logo size="text-xl" height="h-10" /></a>
 
             @isset($currentOrg)
                 @php $orgs = $user->organizations; @endphp
@@ -77,7 +77,7 @@
                         <span class="flex size-7 shrink-0 items-center justify-center rounded-md {{ $isBuyer ? 'bg-emerald-700' : 'bg-sky-700' }} text-xs font-bold text-white">{{ mb_strtoupper(mb_substr($currentOrg->name, 0, 1)) }}</span>
                         <span class="min-w-0 leading-tight">
                             <span class="block truncate text-sm font-semibold">{{ $currentOrg->name }}</span>
-                            <span class="block truncate text-[11px] text-slate-500">{{ $currentOrg->type->label() }}{{ $currentRole ? ' · '.$currentRole->label() : '' }}</span>
+                            <span class="block truncate text-[11px] text-slate-500">{{ $currentOrg->type->label() }}{{ $currentRole && $currentRole->label() !== $currentOrg->type->label() ? ' · '.$currentRole->label() : '' }}</span>
                         </span>
                         @if ($orgs->count() > 1)<x-icon name="updown" class="size-4 text-slate-400" />@endif
                     </summary>
@@ -158,12 +158,12 @@
 
         {{-- Row 2: main menu --}}
         <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Main menu">
-            <ul class="-mb-px flex items-center gap-1 overflow-x-auto text-sm font-medium [scrollbar-width:none] lg:overflow-visible">
+            <ul class="-mb-px flex items-center gap-6 overflow-x-auto text-sm font-medium [scrollbar-width:none] lg:overflow-visible">
                 @foreach ($tabs as [$route, $label, $icon, $pattern, $badge])
                     @php $on = $is($pattern); @endphp
                     <li class="shrink-0">
                         <a href="{{ route($route) }}" @if ($on) aria-current="page" @endif
-                           class="flex items-center gap-2 border-b-2 px-3 py-3 transition {{ $on ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
+                           class="flex items-center gap-2 border-b-2 px-0.5 pb-3 pt-2 transition {{ $on ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
                             <x-icon :name="$icon" class="size-[18px] {{ $on ? 'text-emerald-700' : 'text-slate-400' }}" />
                             {{ $label }}
                             @if ($badge)<span class="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{{ $badge }}</span>@endif
@@ -173,7 +173,7 @@
                 @if ($companyItems)
                     <li class="shrink-0">
                         <details class="relative" data-dropdown>
-                            <summary class="flex cursor-pointer list-none items-center gap-2 border-b-2 px-3 py-3 transition [&::-webkit-details-marker]:hidden {{ $companyOn ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
+                            <summary class="flex cursor-pointer list-none items-center gap-2 border-b-2 px-0.5 pb-3 pt-2 transition [&::-webkit-details-marker]:hidden {{ $companyOn ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
                                 <x-icon name="company" class="size-[18px] {{ $companyOn ? 'text-emerald-700' : 'text-slate-400' }}" /> Company <x-icon name="down" class="size-3.5" />
                             </summary>
                             <div class="fixed z-40 mt-1 w-60 rounded-xl border border-slate-200 bg-white p-1 shadow-xl lg:absolute lg:left-0 lg:top-full">
@@ -190,7 +190,7 @@
         </nav>
     </header>
 
-    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         @if (session('status'))
             <div class="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
                 <span class="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white" aria-hidden="true">✓</span>

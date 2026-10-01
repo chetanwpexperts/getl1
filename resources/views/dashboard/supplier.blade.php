@@ -19,13 +19,13 @@
 
     <x-auction-cards :auctions="$activeAuctions" :org="$currentOrg" />
 
-    <div class="mt-6 grid gap-4 sm:grid-cols-3">
+    <div class="mt-2 grid gap-5 sm:grid-cols-3">
         <x-stat-card label="New invitations" :value="$pendingInvites->count()" icon="bell" tone="sky" hint="Waiting for your reply" :href="route('supplier.rfqs.index')" />
         <x-stat-card label="RFQs you're in" :value="$acceptedCount" icon="rfqs" tone="emerald" hint="Accepted and open" :href="route('supplier.rfqs.index')" />
         <x-stat-card label="Purchase orders" :value="$ordersWon" icon="orders" tone="violet" hint="Orders you've won" :href="route('supplier.orders.index')" />
     </div>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+    <div class="mt-8 grid gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">

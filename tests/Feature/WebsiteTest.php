@@ -200,4 +200,19 @@ class WebsiteTest extends TestCase
         $this->app['auth']->forgetGuards();
         $this->get('/')->assertDontSee('chetanbuilds.com', false);
     }
+
+    public function test_logo_on_white_background_becomes_transparent(): void
+    {
+        if (! function_exists('imagecreatetruecolor')) {
+            $this->markTestSkipped('GD not installed');
+        }
+        $im = imagecreatetruecolor(400, 120);
+        imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));
+        imagefilledrectangle($im, 100, 30, 300, 90, imagecolorallocate($im, 4, 120, 87));
+        ob_start();
+        imagepng($im);
+        $out = imagecreatefromstring(\App\Services\WebsiteSettings::shrink((string) ob_get_clean(), 'png', [800, 200], trim: true));
+        $this->assertSame(127, imagecolorat($out, 0, 0) >> 24);                                      // background gone
+        $this->assertSame(0, imagecolorat($out, (int) (imagesx($out) / 2), (int) (imagesy($out) / 2)) >> 24); // logo solid
+    }
 }

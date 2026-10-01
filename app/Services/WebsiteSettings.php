@@ -154,6 +154,9 @@ class WebsiteSettings
                 }
                 if (($files[$key] ?? null) instanceof UploadedFile) {
                     $ext = $guard->check($files[$key], [FileGuard::PNG, FileGuard::JPG], 2048, 'website_'.$key, $key);
+                    if ($key === 'logo' && function_exists('imagepng')) {
+                        $ext = 'png'; // keeps the transparent background
+                    }
                     $new = 'site/'.$key.'-'.Str::random(12).'.'.$ext;
                     Storage::disk('public')->put($new, self::shrink((string) file_get_contents($files[$key]->getRealPath()), $ext, self::MAX_SIZE[$key] ?? [1200, 1200], trim: $key === 'logo'));
                 }
@@ -211,11 +214,48 @@ class WebsiteSettings
             imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 0, 0, 0, 127));
         }
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        if ($trim && $ext === 'png') {
+            self::clearWhiteBackground($dst);
+        }
         ob_start();
         $ok = $ext === 'png' ? imagepng($dst, null, 9) : imagejpeg($dst, null, 85);
         $out = (string) ob_get_clean();
 
         return $ok && $out !== '' ? $out : $bytes;
+    }
+
+    /**
+     * A logo saved on a plain white background gets that background made transparent, so it sits
+     * cleanly on any header colour. Only when all four corners are white; edges stay smooth.
+     */
+    private static function clearWhiteBackground(\GdImage $img): void
+    {
+        [$w, $h] = [imagesx($img), imagesy($img)];
+        foreach ([[0, 0], [$w - 1, 0], [0, $h - 1], [$w - 1, $h - 1]] as [$x, $y]) {
+            $c = imagecolorsforindex($img, imagecolorat($img, $x, $y));
+            if ($c['alpha'] > 10 || min($c['red'], $c['green'], $c['blue']) < 240) {
+                return; // not a white background: leave the logo as it is
+            }
+        }
+        imagealphablending($img, false);
+        imagesavealpha($img, true);
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $c = imagecolorsforindex($img, imagecolorat($img, $x, $y));
+                if ($c['alpha'] === 127) {
+                    continue;
+                }
+                // How far the pixel is from white decides how opaque it stays; the colour is un-mixed from white.
+                $a = max(255 - $c['red'], 255 - $c['green'], 255 - $c['blue']) / 255;
+                $a = max(0, min(1, ($a - 0.04) / 0.96)) * (1 - $c['alpha'] / 127);
+                if ($a <= 0) {
+                    imagesetpixel($img, $x, $y, imagecolorallocatealpha($img, 255, 255, 255, 127));
+                    continue;
+                }
+                $un = fn ($v) => (int) max(0, min(255, round(255 - (255 - $v) / max($a, 0.001))));
+                imagesetpixel($img, $x, $y, imagecolorallocatealpha($img, $un($c['red']), $un($c['green']), $un($c['blue']), (int) round(127 * (1 - $a))));
+            }
+        }
     }
 
     /** Public URL of an uploaded image setting, or null. */

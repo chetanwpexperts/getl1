@@ -25,7 +25,7 @@
 
     <x-auction-cards :auctions="$activeAuctions" :org="$currentOrg" />
 
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="mt-2 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <x-stat-card label="Open RFQs" :value="$openRfqs" icon="rfqs" tone="sky" hint="Collecting quotes or in auction" :href="route('buyer.rfqs.index')" />
         <x-stat-card label="Live auctions" :value="$liveAuctions" icon="live" tone="emerald" :hint="$auctionsThisMonth.' scheduled this month'" :href="route('buyer.rfqs.index')" />
         <x-stat-card label="Saved this year" :value="\App\Support\Money::inr($saved, 0)" icon="savings" tone="violet"
@@ -33,7 +33,7 @@
         <x-stat-card label="Active suppliers" :value="$suppliersCount" icon="suppliers" tone="amber" hint="In your supplier list" :href="route('buyer.suppliers.index')" />
     </div>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+    <div class="mt-8 grid gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             <x-setup-checklist :steps="$setup" />
 
