@@ -21,7 +21,7 @@ web package:discover --ansi >/dev/null
 web migrate --force
 web db:seed --class=PlanSeeder --force >/dev/null
 (npm ci --no-audit --no-fund 2>/dev/null || npm install --no-audit --no-fund) >/dev/null && npm run build >/dev/null
-[[ -L "$APP_ROOT/public/storage" ]] || web storage:link >/dev/null   # logo, favicon and share image uploads
+[[ -L "$APP_ROOT/public/storage" ]] || ln -s ../storage/app/public "$APP_ROOT/public/storage"   # logo, favicon and share image uploads
 web optimize:clear >/dev/null
 web config:cache >/dev/null; web route:cache >/dev/null; web view:cache >/dev/null
 web up; trap - EXIT

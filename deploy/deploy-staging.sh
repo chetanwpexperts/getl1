@@ -48,7 +48,7 @@ else
 fi
 
 echo "==> Caches"
-[[ -L "$APP_ROOT/public/storage" ]] || web storage:link >/dev/null   # website logo/favicon uploads
+[[ -L "$APP_ROOT/public/storage" ]] || ln -s ../storage/app/public "$APP_ROOT/public/storage"   # website logo/favicon uploads
 web optimize:clear >/dev/null
 web config:cache >/dev/null
 web route:cache >/dev/null

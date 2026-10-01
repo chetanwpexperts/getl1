@@ -150,7 +150,8 @@ class WebsiteSettings
                 }
                 if (($files[$key] ?? null) instanceof UploadedFile) {
                     $ext = $guard->check($files[$key], [FileGuard::PNG, FileGuard::JPG], 2048, 'website_'.$key, $key);
-                    $new = $files[$key]->storeAs('site', $key.'-'.Str::random(12).'.'.$ext, 'public');
+                    $new = 'site/'.$key.'-'.Str::random(12).'.'.$ext;
+                    Storage::disk('public')->put($new, self::shrink((string) file_get_contents($files[$key]->getRealPath()), $ext, self::MAX_SIZE[$key] ?? [1200, 1200]));
                 }
                 if ($new !== $old && $old) {
                     Storage::disk('public')->delete($old);
@@ -174,6 +175,35 @@ class WebsiteSettings
         Cache::forget(self::CACHE_KEY);
 
         return [$before, $after];
+    }
+
+    /** Largest width × height kept for each image; bigger uploads are scaled down so pages stay fast. */
+    private const MAX_SIZE = ['logo' => [800, 200], 'favicon' => [256, 256], 'og_image' => [1200, 630]];
+
+    /**
+     * Scales an image down to fit the box and re-encodes it (which also drops anything hidden in the file).
+     * Without the GD extension, or if the image can't be read, the original is kept.
+     */
+    public static function shrink(string $bytes, string $ext, array $box): string
+    {
+        if (! function_exists('imagecreatefromstring') || ! ($src = @imagecreatefromstring($bytes))) {
+            return $bytes;
+        }
+        [$w, $h] = [imagesx($src), imagesy($src)];
+        $scale = min(1, $box[0] / $w, $box[1] / $h);
+        [$nw, $nh] = [max(1, (int) round($w * $scale)), max(1, (int) round($h * $scale))];
+        $dst = imagecreatetruecolor($nw, $nh);
+        if ($ext === 'png') {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 0, 0, 0, 127));
+        }
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        ob_start();
+        $ok = $ext === 'png' ? imagepng($dst, null, 9) : imagejpeg($dst, null, 85);
+        $out = (string) ob_get_clean();
+
+        return $ok && $out !== '' ? $out : $bytes;
     }
 
     /** Public URL of an uploaded image setting, or null. */
