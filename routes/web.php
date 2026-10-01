@@ -70,6 +70,11 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
+    // My profile: the signed-in person's own name, phone and password.
+    Route::get('/account', [\App\Http\Controllers\AccountController::class, 'edit'])->name('account.edit');
+    Route::put('/account', [\App\Http\Controllers\AccountController::class, 'update'])->middleware('throttle:20,1')->name('account.update');
+    Route::put('/account/password', [\App\Http\Controllers\AccountController::class, 'password'])->middleware('throttle:6,1')->name('account.password');
+
     Route::get('/onboarding', [OrganizationController::class, 'onboarding'])->name('onboarding');
     Route::post('/onboarding', [OrganizationController::class, 'store'])->name('onboarding.store');
     Route::post('/organizations/{organization}/switch', [OrganizationController::class, 'switch'])
