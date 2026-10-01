@@ -11,6 +11,7 @@ use App\Http\Controllers\Buyer\AuctionController as BuyerAuctionController;
 use App\Http\Controllers\Buyer\AwardController as BuyerAwardController;
 use App\Http\Controllers\Buyer\BillingController;
 use App\Http\Controllers\RazorpayWebhookController;
+use App\Http\Controllers\SiteController;
 use App\Http\Controllers\Supplier\OrderController as SupplierOrderController;
 use App\Http\Controllers\Buyer\RfqController as BuyerRfqController;
 use App\Http\Controllers\Buyer\SupplierController;
@@ -23,7 +24,21 @@ use App\Http\Controllers\Supplier\DocumentController;
 use App\Http\Controllers\Supplier\RfqController as SupplierRfqController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+// Public website. In SITE_MODE=website these are the only pages that answer (see WebsiteOnly).
+Route::get('/', [SiteController::class, 'home'])->name('home');
+Route::name('site.')->group(function () {
+    Route::get('/pricing', [SiteController::class, 'pricing'])->name('pricing');
+    Route::get('/for-suppliers', [SiteController::class, 'page'])->defaults('page', 'suppliers')->name('suppliers');
+    Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
+    Route::post('/contact', [SiteController::class, 'storeLead'])->middleware('throttle:10,1')->name('contact.store');
+    Route::get('/contact/thanks', [SiteController::class, 'thanks'])->name('contact.thanks');
+    Route::get('/terms', [SiteController::class, 'page'])->defaults('page', 'terms')->name('terms');
+    Route::get('/privacy', [SiteController::class, 'page'])->defaults('page', 'privacy')->name('privacy');
+    Route::get('/refunds', [SiteController::class, 'page'])->defaults('page', 'refunds')->name('refunds');
+    Route::get('/shipping', [SiteController::class, 'page'])->defaults('page', 'shipping')->name('shipping');
+    Route::get('/sitemap.xml', [SiteController::class, 'sitemap'])->name('sitemap');
+    Route::get('/robots.txt', [SiteController::class, 'robots'])->name('robots');
+});
 
 // Invitation link from email / WhatsApp. Public, but bound to one supplier on first use.
 Route::get('/i/{token}', [InviteLinkController::class, 'show'])->middleware('throttle:30,1')->name('invites.show');

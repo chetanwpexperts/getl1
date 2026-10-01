@@ -131,15 +131,7 @@
                 @php
                     $isCurrent = $current && $current->id === $plan->id;
                     $popular = $plan->code === 'growth';
-                    $features = [
-                        $plan->max_auctions_month === null ? 'Unlimited live auctions' : $plan->max_auctions_month.' live '.\Illuminate\Support\Str::plural('auction', $plan->max_auctions_month).' / month',
-                        'Up to '.$plan->max_users.' team members',
-                        'Unlimited RFQs, quotes & suppliers',
-                        'Purchase orders & approvals',
-                    ];
-                    if (in_array('savings_report', $plan->features ?? [], true)) $features[] = 'Savings report';
-                    if (in_array('whatsapp', $plan->features ?? [], true)) $features[] = 'WhatsApp alerts & AI RFQ';
-                    if (in_array('priority_support', $plan->features ?? [], true)) $features[] = 'Priority support & custom terms';
+                    $features = $plan->featureList();
                 @endphp
                 <section class="relative flex flex-col rounded-xl border bg-white p-5 {{ $popular ? 'border-emerald-600 ring-1 ring-emerald-600' : 'border-slate-200' }}">
                     @if ($popular)<span class="absolute -top-2.5 left-5 rounded-full bg-emerald-700 px-2 py-0.5 text-[11px] font-semibold text-white">Most popular</span>@endif

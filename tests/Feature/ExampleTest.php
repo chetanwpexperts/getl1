@@ -8,6 +8,6 @@ class ExampleTest extends TestCase
 {
     public function test_landing_page_loads(): void
     {
-        $this->get('/')->assertOk()->assertSee('Let your suppliers bid the price down.', false);
+        $this->get('/')->assertOk()->assertSee('Make your suppliers compete.');
     }
 }

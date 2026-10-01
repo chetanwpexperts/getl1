@@ -21,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     // Private channel auth for live auctions: signed-in users only, rate-limited.
     ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web', 'auth', 'throttle:120,1']])
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [SecurityHeaders::class]);
+        $middleware->web(append: [SecurityHeaders::class, \App\Http\Middleware\WebsiteOnly::class]);
 
         $middleware->alias([
             'org' => EnsureOrganization::class,

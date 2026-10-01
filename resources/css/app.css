@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/instrument-sans';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -6,7 +7,7 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Instrument Sans Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
@@ -70,3 +71,12 @@
     background-color: var(--color-amber-50);
     box-shadow: 0 0 0 2px var(--color-amber-200);
 }
+
+/* Policy pages: readable long-form text without a typography plugin. */
+.policy { color: var(--color-slate-700); line-height: 1.75; }
+.policy > * + * { margin-top: 1rem; }
+.policy h2 { margin-top: 2.25rem; font-size: 1.25rem; font-weight: 700; color: var(--color-slate-900); letter-spacing: -0.01em; }
+.policy ul { list-style: disc; padding-left: 1.25rem; }
+.policy li + li { margin-top: 0.4rem; }
+.policy a { color: var(--color-emerald-700); text-decoration: underline; }
+.policy strong { color: var(--color-slate-900); font-weight: 600; }
