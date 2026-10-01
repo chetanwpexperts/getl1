@@ -469,14 +469,14 @@ class AuctionTest extends TestCase
         $a = $this->live();
 
         $this->actingAs($this->s['A'][1])->get('/dashboard')->assertOk()
-            ->assertSee('Auction live · Join')->assertSee('Join auction now')
+            ->assertSee('<span>Auction live<span class="hidden sm:inline"> · Join</span></span>', false)->assertSee('Join auction now')
             ->assertSee(route('supplier.auctions.show', $a->id));
-        $this->actingAs($this->s['A'][1])->get(route('supplier.documents.index'))->assertOk()->assertSee('Auction live · Join');
+        $this->actingAs($this->s['A'][1])->get(route('supplier.documents.index'))->assertOk()->assertSee('<span>Auction live<span class="hidden sm:inline"> · Join</span></span>', false);
 
         $this->actingAs($this->buyerUser)->get('/dashboard')->assertOk()->assertSee('Watch live')
             ->assertSee(route('buyer.auctions.show', $a->id));
         $this->actingAs($this->buyerUser)->get(route('buyer.auctions.show', $a->id))->assertOk()
-            ->assertSee('Copy auction room link')->assertDontSee('Auction live · Join');
+            ->assertSee('Copy auction room link')->assertDontSee('<span>Auction live<span', false);
 
         // Suppliers outside the auction see nothing.
         [, $outsider] = $this->supplier('Outsider Traders');
