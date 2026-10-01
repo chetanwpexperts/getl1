@@ -32,17 +32,38 @@ class RfqController extends Controller
 {
     public function __construct(private CurrentOrganization $current, private RfqService $rfqs) {}
 
+    /** Tabs on the RFQ list: key => [label, statuses]. */
+    private const TABS = [
+        'active' => ['Collecting quotes', ['published', 'quoting']],
+        'auction' => ['Auction', ['auction', 'evaluating']],
+        'awarded' => ['Awarded', ['awarded']],
+        'draft' => ['Drafts', ['draft', 'pending_approval']],
+        'cancelled' => ['Cancelled', ['cancelled']],
+    ];
+
     public function index(Request $request): View
     {
-        $status = in_array($request->query('status'), ['draft', 'published', 'cancelled'], true) ? $request->query('status') : null;
+        $tab = array_key_exists((string) $request->query('status'), self::TABS) ? (string) $request->query('status') : null;
+        $search = trim((string) $request->query('q'));
+        $search = mb_substr($search, 0, 80);
+
+        $byStatus = Rfq::query()->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status'); // scoped to this company
+        $counts = ['all' => (int) $byStatus->sum()];
+        foreach (self::TABS as $key => [, $statuses]) {
+            $counts[$key] = (int) collect($statuses)->sum(fn ($s) => $byStatus[$s] ?? 0);
+        }
 
         return view('buyer.rfqs.index', [
             'rfqs' => Rfq::withCount(['invites', 'items'])
-                ->when($status, fn ($q) => $q->where('status', $status))
+                ->when($tab, fn ($q) => $q->whereIn('status', self::TABS[$tab][1]))
+                ->when($search !== '', fn ($q) => $q->where(fn ($w) => $w->where('title', 'like', '%'.addcslashes($search, '%_\\').'%')->orWhere('ref_no', 'like', '%'.addcslashes($search, '%_\\').'%')))
                 ->latest()
                 ->paginate(20)
                 ->withQueryString(),
-            'status' => $status,
+            'status' => $tab,
+            'tabs' => self::TABS,
+            'counts' => $counts,
+            'search' => $search,
             'live' => LiveVersion::buyerIndex($this->current->id()),
         ]);
     }

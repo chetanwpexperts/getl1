@@ -1,11 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'RFQs')
+@section('title', 'RFQs & auctions')
 
 @section('content')
     <x-live-page :url="route('supplier.rfqs.live')" :live="$live" />
-    <h1 class="text-2xl font-semibold">RFQs</h1>
-    <p class="mt-1 text-sm text-slate-600">Requests you've been invited to quote on. Your prices stay sealed until each deadline.</p>
+    <x-page-header title="RFQs & auctions" subtitle="Requests you've been invited to quote on. Your prices stay sealed until each deadline." />
 
     {{-- Upcoming and running auctions, impossible to miss --}}
     @php
@@ -17,7 +16,7 @@
             $isLive = \App\Services\Auction\Standings::effectiveStatus($a)->value === 'live';
             $aRfq = $invites->firstWhere('rfq_id', $a->rfq_id)?->rfq;
         @endphp
-        <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 {{ $isLive ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-emerald-200 bg-emerald-50 text-emerald-900' }}">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-5 {{ $isLive ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-emerald-200 bg-emerald-50 text-emerald-900' }}">
             <div>
                 <p class="font-semibold">
                     @if ($isLive) Live auction running now @else Live auction {{ $a->starts_at->ist()->format('d M, h:i A') }} IST @endif
@@ -36,10 +35,10 @@
         </div>
     @endforeach
 
-    <div class="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[640px] text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr><th class="px-4 py-3">RFQ</th><th class="px-4 py-3">Buyer</th><th class="px-4 py-3">Deadline</th><th class="px-4 py-3">Status</th></tr>
+            <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr><th class="px-6 py-3 font-medium">RFQ</th><th class="px-3 py-3 font-medium">Buyer</th><th class="px-3 py-3 font-medium">Quotes close</th><th class="px-6 py-3 font-medium">Status</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($invites as $inv)
@@ -61,19 +60,23 @@
                         };
                     @endphp
                     <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3">
-                            <a href="{{ route('supplier.rfqs.show', $inv->id) }}" class="font-medium hover:underline">{{ $rfq->title }}</a>
+                        <td class="px-6 py-3.5">
+                            <a href="{{ route('supplier.rfqs.show', $inv->id) }}" class="font-medium text-slate-900 hover:text-emerald-800">{{ $rfq->title }}</a>
                             <span class="block text-xs text-slate-500">{{ $rfq->ref_no }}</span>
                             @if ($myAuction)
                                 <a href="{{ route('supplier.auctions.show', $myAuction->id) }}" class="mt-1 inline-block text-xs font-semibold text-emerald-700 hover:underline">{{ $auctionLabel }}</a>
                             @endif
                         </td>
-                        <td class="px-4 py-3">{{ $rfq->organization->name }}<span class="block text-xs text-slate-500">{{ $rfq->organization->city }}</span></td>
-                        <td class="px-4 py-3">{{ $rfq->quote_deadline?->ist()->format('d M Y, h:i A') }}</td>
-                        <td class="px-4 py-3"><x-status-badge :status="$state" /></td>
+                        <td class="px-3 py-3.5">{{ $rfq->organization->name }}<span class="block text-xs text-slate-500">{{ $rfq->organization->city }}</span></td>
+                        <td class="whitespace-nowrap px-3 py-3.5 text-slate-700">{{ $rfq->quote_deadline?->ist()->format('d M, h:i A') }}</td>
+                        <td class="px-6 py-3.5"><x-status-badge :status="$state" /></td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-10 text-center text-slate-600">No invitations yet. Buyers will invite you by email or WhatsApp.</td></tr>
+                    <tr><td colspan="4" class="px-6 py-14 text-center">
+                        <span class="mx-auto flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-500"><x-icon name="bell" class="size-6" /></span>
+                        <p class="mt-3 font-medium text-slate-900">No invitations yet</p>
+                        <p class="mt-1 text-sm text-slate-500">Buyers invite you by email or WhatsApp. Requests show up here.</p>
+                    </td></tr>
                 @endforelse
             </tbody>
         </table>
