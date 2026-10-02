@@ -1,0 +1,264 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<script src="icons.js"></script>
+<style>
+@font-face { font-family: IS; src: url(file:///home/claude/getl1/node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2) format('woff2'); font-weight: 100 900; }
+@font-face { font-family: IS; src: url(file:///home/claude/getl1/node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-ext-wght-normal.woff2) format('woff2'); font-weight: 100 900; unicode-range: U+0100-024F, U+20A0-20CF; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; font-family: IS, 'DejaVu Sans', sans-serif; background: #0b1220; }
+.scene { position: absolute; inset: 0; opacity: 0; color: #fff; }
+.dark { background: radial-gradient(1200px 900px at 90% -10%, rgba(16,185,129,.20), transparent), #0b1220; }
+.red { background: radial-gradient(1200px 900px at 10% -10%, rgba(248,113,113,.22), transparent), #0b1220; }
+.green { background: radial-gradient(1200px 1000px at 85% -10%, rgba(110,231,183,.35), transparent), linear-gradient(160deg, #064e3b, #047857 55%, #059669); }
+.pad { position: absolute; left: 90px; right: 110px; }
+.center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 100px; }
+.k { opacity: 0; }
+.kick { font-size: 34px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6ee7b7; }
+.h0 { font-size: 132px; font-weight: 800; line-height: .98; letter-spacing: -.04em; }
+.h1 { font-size: 92px; font-weight: 700; line-height: 1.02; letter-spacing: -.03em; }
+.h2 { font-size: 64px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; }
+.sub { font-size: 42px; line-height: 1.35; color: #cbd5e1; font-weight: 500; }
+.red-t { color: #f87171; } .grn-t { color: #34d399; }
+.ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+
+/* math */
+.eq { font-size: 64px; font-weight: 700; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.eq .row { opacity: 0; }
+.loss { font-size: 150px; font-weight: 800; letter-spacing: -.04em; color: #f87171; font-variant-numeric: tabular-nums; }
+
+/* mistake frame */
+.mtag { top: 210px; display: flex; align-items: center; justify-content: space-between; }
+.chip { font-size: 30px; font-weight: 700; letter-spacing: .1em; padding: 14px 26px; border-radius: 999px; background: rgba(248,113,113,.14); color: #fca5a5; border: 2px solid rgba(248,113,113,.4); }
+.dots { display: flex; gap: 12px; } .dots i { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.18); } .dots i.on { background: #f87171; } .dots i.done { background: #34d399; }
+.mtitle { top: 330px; font-size: 86px; font-weight: 700; line-height: 1.04; letter-spacing: -.03em; }
+.vis { top: 640px; }
+.fix { top: 1290px; background: #ecfdf5; color: #064e3b; border-radius: 36px; padding: 40px 44px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.5); opacity: 0; }
+.fix .lab { font-size: 28px; font-weight: 800; letter-spacing: .14em; color: #047857; display: flex; align-items: center; gap: 12px; }
+.fix .txt { font-size: 46px; font-weight: 700; line-height: 1.22; margin-top: 12px; }
+
+/* M1 bars */
+.bars { display: flex; align-items: flex-end; gap: 34px; height: 520px; padding: 0 10px; border-bottom: 3px solid rgba(255,255,255,.2); }
+.bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.bar .col { width: 100%; border-radius: 18px 18px 0 0; background: linear-gradient(#f87171, #b91c1c); height: 0; }
+.bar.good .col { background: linear-gradient(#34d399, #047857); }
+.bar .v { font-size: 40px; font-weight: 700; margin-bottom: 14px; font-variant-numeric: tabular-nums; opacity: 0; }
+.blab { display: flex; gap: 34px; padding: 18px 10px 0; } .blab div { flex: 1; text-align: center; font-size: 30px; color: #94a3b8; font-weight: 600; }
+.note { font-size: 26px; color: #64748b; margin-top: 16px; }
+
+/* M2 chat */
+.phone { background: #e5ddd5; border-radius: 44px; padding: 36px; border: 10px solid #1e293b; }
+.bub { max-width: 86%; padding: 22px 28px; border-radius: 26px; font-size: 38px; color: #0f172a; margin-top: 18px; opacity: 0; line-height: 1.3; }
+.bub.me { background: #dcf8c6; margin-left: auto; border-bottom-right-radius: 8px; }
+.bub.them { background: #fff; border-bottom-left-radius: 8px; }
+.warn { margin-top: 34px; font-size: 40px; font-weight: 700; color: #fca5a5; display: flex; gap: 16px; align-items: center; opacity: 0; }
+
+/* M3 landed */
+.tbl { background: #fff; color: #0f172a; border-radius: 32px; padding: 20px 36px; }
+.tr { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.1fr; align-items: center; padding: 26px 0; border-bottom: 2px solid #f1f5f9; font-size: 38px; font-variant-numeric: tabular-nums; }
+.tr:last-child { border: 0; } .tr.h { font-size: 26px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .06em; }
+.tr b { font-weight: 800; } .tr .lc { opacity: 0; }
+.tag { display: inline-block; font-size: 24px; font-weight: 800; padding: 6px 14px; border-radius: 999px; margin-left: 10px; vertical-align: middle; }
+.tag.bad { background: #fee2e2; color: #b91c1c; } .tag.ok { background: #d1fae5; color: #065f46; }
+
+/* M4 time */
+.days { display: flex; flex-direction: column; gap: 22px; }
+.day { display: flex; gap: 24px; align-items: center; font-size: 44px; opacity: 0; }
+.day b { flex: none; width: 170px; font-size: 32px; padding: 10px 0; text-align: center; border-radius: 16px; background: rgba(255,255,255,.08); color: #fca5a5; }
+.vs { margin-top: 50px; display: flex; align-items: center; gap: 30px; opacity: 0; }
+.clock { font-size: 150px; font-weight: 800; color: #34d399; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+
+/* M5 audit */
+.q { background: #fff; color: #0f172a; border-radius: 30px; padding: 34px 40px; font-size: 46px; font-weight: 700; line-height: 1.25; opacity: 0; }
+.q small { display: block; font-size: 28px; color: #64748b; font-weight: 600; margin-bottom: 8px; }
+.a { margin-top: 30px; margin-left: 120px; background: #1e293b; border-radius: 30px; padding: 30px 38px; font-size: 42px; color: #cbd5e1; line-height: 1.3; opacity: 0; }
+
+/* fixes list */
+.badge { display: inline-flex; background: #fff; border-radius: 30px; padding: 26px 42px; box-shadow: 0 30px 70px -20px rgba(0,0,0,.45); }
+.badge img { height: 110px; display: block; }
+.ticks { margin-top: 60px; width: 100%; display: flex; flex-direction: column; gap: 22px; }
+.tk { display: flex; align-items: center; gap: 26px; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.22); border-radius: 26px; padding: 26px 32px; font-size: 42px; font-weight: 600; text-align: left; opacity: 0; }
+.tk .n { flex: none; width: 64px; height: 64px; border-radius: 50%; background: #fff; color: #047857; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 32px; }
+
+/* cta */
+.act { display: flex; gap: 26px; margin-top: 60px; }
+.act div { display: flex; flex-direction: column; align-items: center; gap: 12px; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.18); border-radius: 28px; padding: 30px 34px; font-size: 32px; font-weight: 600; width: 270px; opacity: 0; }
+.act svg { width: 70px; height: 70px; color: #6ee7b7; }
+.url { font-size: 110px; font-weight: 800; letter-spacing: -.03em; margin-top: 70px; }
+.bar0 { position: absolute; left: 0; top: 0; height: 10px; background: #34d399; }
+</style></head><body>
+
+<!-- 0 Hook -->
+<div class="scene red" id="S0"><div class="center">
+  <div class="kick k" id="s0a" style="color:#fca5a5">Purchase managers & factory owners</div>
+  <div class="h0 k" id="s0b" style="margin-top:40px">5 buying mistakes that cost you <span class="red-t">lakhs</span></div>
+  <div class="sub k" id="s0c" style="margin-top:50px">…and how to fix each one this week</div>
+</div></div>
+
+<!-- 1 Math -->
+<div class="scene dark" id="S1"><div class="center">
+  <div class="sub k" id="s1a">Why it matters:</div>
+  <div class="eq" style="margin-top:30px">
+    <div class="row" id="e1">₹10 lakh purchase a month</div>
+    <div class="row" id="e2">× just 5% overpaid</div>
+    <div class="row" id="e3">× 12 months</div>
+  </div>
+  <div class="loss k" id="e4" style="margin-top:20px">= ₹6,00,000</div>
+  <div class="sub k" id="e5">lost every year. Quietly.</div>
+</div></div>
+
+<!-- Mistakes -->
+<div class="scene red" id="M1">
+  <div class="pad mtag"><span class="chip">MISTAKE 1 / 5</span><div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="pad mtitle k" id="m1t">Asking only 2–3 suppliers</div>
+  <div class="pad vis k" id="m1v">
+    <div class="bars">
+      <div class="bar"><div class="v">₹21.40</div><div class="col"></div></div>
+      <div class="bar"><div class="v">₹20.90</div><div class="col"></div></div>
+      <div class="bar good"><div class="v">₹20.20</div><div class="col"></div></div>
+      <div class="bar good"><div class="v">₹19.70</div><div class="col"></div></div>
+    </div>
+    <div class="blab"><div>2 quotes</div><div>3 quotes</div><div>5 quotes</div><div>7 quotes</div></div>
+    <div class="note">Lowest price per box as more suppliers compete (illustrative)</div>
+  </div>
+  <div class="pad fix" id="m1f"><div class="lab">✓ FIX</div><div class="txt">Invite 5–7 suppliers for every purchase. More competition, lower price.</div></div>
+</div>
+
+<div class="scene red" id="M2">
+  <div class="pad mtag"><span class="chip">MISTAKE 2 / 5</span><div class="dots"><i class="done"></i><i class="on"></i><i></i><i></i><i></i></div></div>
+  <div class="pad mtitle k" id="m2t">Telling suppliers each other's price</div>
+  <div class="pad vis k" id="m2v">
+    <div class="phone">
+      <div class="bub me" id="m2b1">Sharma ji ₹20 de rahe hain. Aap kitna karoge?</div>
+      <div class="bub them" id="m2b2">Theek hai, ₹20 hi kar dete hain 👍</div>
+    </div>
+    <div class="warn" id="m2w"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-i="exclamation-triangle"></svg>They match the price. They don't beat it.</div>
+  </div>
+  <div class="pad fix" id="m2f"><div class="lab">✓ FIX</div><div class="txt">Keep quotes sealed. Nobody sees anyone else's price, so everyone sends their best.</div></div>
+</div>
+
+<div class="scene red" id="M3">
+  <div class="pad mtag"><span class="chip">MISTAKE 3 / 5</span><div class="dots"><i class="done"></i><i class="done"></i><i class="on"></i><i></i><i></i></div></div>
+  <div class="pad mtitle k" id="m3t">Comparing only the rate</div>
+  <div class="pad vis k" id="m3v">
+    <div class="tbl">
+      <div class="tr h"><span>Supplier</span><span>Rate</span><span>Freight</span><span>Landed</span></div>
+      <div class="tr"><span><b>A</b><span class="tag bad" id="m3a" style="opacity:0">Looks cheapest</span></span><span>₹100</span><span>+ ₹8</span><b class="lc" id="m3l1">₹108</b></div>
+      <div class="tr"><span><b>B</b><span class="tag ok" id="m3b" style="opacity:0">Actually cheapest</span></span><span>₹103</span><span>Included</span><b class="lc" id="m3l2" style="color:#047857">₹103</b></div>
+    </div>
+    <div class="sub k" id="m3s" style="margin-top:30px">Same goods. ₹5 per unit difference, hidden in freight.</div>
+  </div>
+  <div class="pad fix" id="m3f"><div class="lab">✓ FIX</div><div class="txt">Compare landed cost: rate + GST + freight. Not the rate alone.</div></div>
+</div>
+
+<div class="scene red" id="M4">
+  <div class="pad mtag"><span class="chip">MISTAKE 4 / 5</span><div class="dots"><i class="done"></i><i class="done"></i><i class="done"></i><i class="on"></i><i></i></div></div>
+  <div class="pad mtitle k" id="m4t">Negotiating one by one, for days</div>
+  <div class="pad vis k" id="m4v">
+    <div class="days">
+      <div class="day" id="d1"><b>Day 1</b>Calls and WhatsApp to 5 suppliers</div>
+      <div class="day" id="d2"><b>Day 2</b>Follow-ups. "Thoda kam karo"</div>
+      <div class="day" id="d3"><b>Day 3</b>"Final rate"… is it really?</div>
+    </div>
+    <div class="vs" id="m4vs"><span class="sub" style="font-size:52px">vs</span><span class="clock" id="clock">10:00</span><span class="sub" style="font-size:40px">live auction</span></div>
+  </div>
+  <div class="pad fix" id="m4f"><div class="lab">✓ FIX</div><div class="txt">Run a short live auction. Suppliers bid the price down while you watch.</div></div>
+</div>
+
+<div class="scene red" id="M5">
+  <div class="pad mtag"><span class="chip">MISTAKE 5 / 5</span><div class="dots"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="on"></i></div></div>
+  <div class="pad mtitle k" id="m5t">No record of why you chose a supplier</div>
+  <div class="pad vis" style="top:720px">
+    <div class="q" id="m5q"><small>Owner / auditor</small>"Why did we buy from them at this price?"</div>
+    <div class="a" id="m5a">"Umm… it's somewhere in my WhatsApp."</div>
+  </div>
+  <div class="pad fix" id="m5f"><div class="lab">✓ FIX</div><div class="txt">Keep every quote, bid and approval on record, ready to show anyone.</div></div>
+</div>
+
+<!-- GetL1 fixes all 5 -->
+<div class="scene green" id="S7"><div class="center" style="padding:0 90px">
+  <div class="badge k" id="s7l"><img src="logo-tight.png"></div>
+  <div class="h2 k" id="s7a" style="margin-top:50px">fixes all 5, in one place</div>
+  <div class="ticks">
+    <div class="tk" id="t1"><span class="n">1</span>Invite all your suppliers, free for them</div>
+    <div class="tk" id="t2"><span class="n">2</span>Sealed quotes until the deadline</div>
+    <div class="tk" id="t3"><span class="n">3</span>Quotes ranked by landed cost</div>
+    <div class="tk" id="t4"><span class="n">4</span>10-minute live reverse auction</div>
+    <div class="tk" id="t5"><span class="n">5</span>Every bid on record + automatic PO</div>
+  </div>
+</div></div>
+
+<!-- CTA -->
+<div class="scene dark" id="S8"><div class="center">
+  <div class="h1 k" id="s8a">Which mistake do <span class="grn-t">you</span> make?</div>
+  <div class="sub k" id="s8b" style="margin-top:30px">Comment the number 👇</div>
+  <div class="act">
+    <div id="c1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" data-i="bookmark"></svg>Save for your next purchase</div>
+    <div id="c2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" data-i="share"></svg>Send to your purchase team</div>
+  </div>
+  <div class="url k" id="s8u">getl1.com</div>
+  <div class="sub k" id="s8c">14-day free trial · Suppliers join free</div>
+</div></div>
+
+<div class="bar0" id="bar"></div>
+
+<script>
+document.querySelectorAll('[data-i]').forEach((s) => { s.innerHTML = (ICONS[s.dataset.i] || []).map((d) => `<path stroke-linecap="round" stroke-linejoin="round" d="${d}"/>`).join(''); });
+const T = 60;
+const cl = (x) => Math.max(0, Math.min(1, x));
+const ease = (x) => 1 - Math.pow(1 - cl(x), 3);
+const inn = (t, a, d = .45) => ease((t - a) / d);
+const vis = (t, a, b, d = .35) => inn(t, a, d) * (1 - inn(t, b - d, d));
+const $ = (id) => document.getElementById(id);
+const pop = (el, t, a, dist = 34) => { const k = inn(t, a); el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * dist}px)`; };
+const zoom = (el, t, a) => { const k = inn(t, a, .55); el.style.opacity = k; el.style.transform = `scale(${.86 + .14 * k})`; };
+const slideL = (el, t, a) => { const k = inn(t, a, .5); el.style.opacity = k; el.style.transform = `translateX(${(1 - k) * -60}px)`; };
+
+const M = { M1: [9.6, 17.6], M2: [17.6, 25.6], M3: [25.6, 33.6], M4: [33.6, 41.6], M5: [41.6, 49.6] };
+
+function render(t) {
+  // Hook 0–4.6
+  $('S0').style.opacity = vis(t, 0, 4.6, .25);
+  pop($('s0a'), t, .15); zoom($('s0b'), t, .5); pop($('s0c'), t, 1.6);
+  // Math 4.6–9.6
+  $('S1').style.opacity = vis(t, 4.6, 9.6);
+  pop($('s1a'), t, 4.8); pop($('e1'), t, 5.2); pop($('e2'), t, 5.8); pop($('e3'), t, 6.4); zoom($('e4'), t, 7.0); pop($('e5'), t, 7.8);
+  const lossK = inn(t, 7.0, 1.0); $('e4').textContent = '= ₹' + Math.round(600000 * lossK).toLocaleString('en-IN');
+
+  for (const [id, [a, b]] of Object.entries(M)) {
+    $(id).style.opacity = vis(t, a, b);
+    const n = id[1];
+    pop($('m' + n + 't'), t, a + .2);
+    const v = $('m' + n + 'v'); if (v) pop(v, t, a + .6);
+    const f = $('m' + n + 'f'); const k = inn(t, a + 4.6, .5); f.style.opacity = k; f.style.transform = `translateY(${(1 - k) * 80}px)`;
+  }
+  // M1 bars
+  const hs = [0.95, 0.80, 0.58, 0.40];
+  document.querySelectorAll('#M1 .bar').forEach((b, i) => {
+    const k = inn(t, 10.5 + i * .55, .5);
+    b.querySelector('.col').style.height = (hs[i] * 420 * k) + 'px';
+    b.querySelector('.v').style.opacity = inn(t, 10.8 + i * .55, .3);
+  });
+  // M2 chat
+  pop($('m2b1'), t, 18.4, 20); pop($('m2b2'), t, 19.5, 20); pop($('m2w'), t, 20.6);
+  // M3 landed
+  $('m3a').style.opacity = vis(t, 26.6, 28.9, .3);
+  $('m3l1').style.opacity = inn(t, 28.2, .4); $('m3l2').style.opacity = inn(t, 28.6, .4);
+  $('m3b').style.opacity = inn(t, 29.1, .4); pop($('m3s'), t, 29.4);
+  // M4 days + clock
+  slideL($('d1'), t, 34.4); slideL($('d2'), t, 35.0); slideL($('d3'), t, 35.6); pop($('m4vs'), t, 36.5);
+  const left = Math.max(0, 600 - Math.max(0, t - 36.6) * 110);
+  $('clock').textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(Math.floor(left % 60)).padStart(2, '0');
+  // M5
+  pop($('m5q'), t, 42.6); pop($('m5a'), t, 44.0);
+  // GetL1 49.6–55.4
+  $('S7').style.opacity = vis(t, 49.6, 55.4);
+  zoom($('s7l'), t, 49.8); pop($('s7a'), t, 50.4);
+  ['t1','t2','t3','t4','t5'].forEach((id, i) => slideL($(id), t, 51.0 + i * .5));
+  // CTA 55.4–60
+  $('S8').style.opacity = inn(t, 55.4, .3);
+  pop($('s8a'), t, 55.6); pop($('s8b'), t, 56.1); pop($('c1'), t, 56.6); pop($('c2'), t, 56.9); zoom($('s8u'), t, 57.6); pop($('s8c'), t, 58.1);
+  $('bar').style.width = (t / T * 100) + '%';
+}
+window.render = render; render(0);
+</script>
+</body></html>
