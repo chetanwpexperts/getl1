@@ -1,0 +1,256 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: IS; src: url(file:///home/claude/getl1/node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2) format('woff2'); font-weight: 100 900; }
+@font-face { font-family: IS; src: url(file:///home/claude/getl1/node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-ext-wght-normal.woff2) format('woff2'); font-weight: 100 900; unicode-range: U+0100-024F, U+20A0-20CF; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; font-family: IS, 'DejaVu Sans', sans-serif; }
+.scene { position: absolute; inset: 0; opacity: 0; }
+.dark { background: radial-gradient(1200px 900px at 90% -10%, rgba(16,185,129,.22), transparent), #0b1220; color: #fff; }
+.green { background: radial-gradient(1200px 1000px at 85% -10%, rgba(110,231,183,.35), transparent), linear-gradient(160deg, #064e3b, #047857 55%, #059669); color: #fff; }
+.light { background: radial-gradient(1100px 700px at 100% 0%, rgba(16,185,129,.12), transparent), #f8fafc; color: #0f172a; }
+.center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 90px; }
+.h1 { font-size: 104px; font-weight: 700; line-height: 1.02; letter-spacing: -.03em; }
+.h2 { font-size: 76px; font-weight: 700; line-height: 1.08; letter-spacing: -.025em; }
+.sub { font-size: 46px; line-height: 1.35; color: #cbd5e1; font-weight: 500; }
+.acc { color: #34d399; }
+.badge { display: inline-flex; background: #fff; border-radius: 34px; padding: 30px 48px; box-shadow: 0 30px 70px -20px rgba(0,0,0,.45); }
+.badge img { height: 130px; display: block; }
+
+/* chat */
+.phone { width: 760px; margin-top: 70px; background: #e5ddd5; border-radius: 48px; padding: 40px 36px 50px; box-shadow: 0 40px 80px -30px rgba(0,0,0,.6); border: 10px solid #1e293b; }
+.phone .top { display: flex; align-items: center; gap: 22px; padding-bottom: 26px; border-bottom: 2px solid rgba(0,0,0,.08); margin-bottom: 26px; }
+.phone .av { width: 72px; height: 72px; border-radius: 50%; background: #94a3b8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 32px; }
+.phone .nm { color: #0f172a; font-size: 34px; font-weight: 600; text-align: left; } .phone .nm small { display: block; font-size: 24px; color: #64748b; font-weight: 500; }
+.bub { max-width: 82%; padding: 20px 28px; border-radius: 26px; font-size: 36px; margin-top: 18px; color: #0f172a; text-align: left; opacity: 0; transform: translateY(20px); }
+.bub.me { background: #dcf8c6; margin-left: auto; border-bottom-right-radius: 8px; }
+.bub.them { background: #fff; margin-right: auto; border-bottom-left-radius: 8px; }
+.bub time { display: block; font-size: 22px; color: #64748b; text-align: right; margin-top: 4px; }
+
+/* counters */
+.count { font-size: 150px; font-weight: 700; letter-spacing: -.04em; line-height: 1.05; opacity: 0; }
+.count span { color: #f87171; }
+
+/* steps */
+.steps { position: absolute; top: 230px; left: 90px; right: 90px; display: flex; gap: 22px; }
+.step { flex: 1; text-align: center; padding: 22px 10px; border-radius: 22px; font-size: 30px; font-weight: 600; color: #64748b; background: #fff; border: 3px solid #e2e8f0; }
+.step b { display: block; font-size: 44px; color: #94a3b8; }
+.step.on { border-color: #047857; color: #064e3b; background: #ecfdf5; } .step.on b { color: #047857; }
+.stitle { position: absolute; top: 470px; left: 90px; right: 90px; font-size: 80px; font-weight: 700; letter-spacing: -.025em; line-height: 1.05; }
+.panel { position: absolute; top: 700px; left: 90px; right: 90px; opacity: 0; }
+.card { background: #fff; border: 3px solid #e2e8f0; border-radius: 36px; padding: 44px; box-shadow: 0 40px 80px -40px rgba(15,23,42,.35); }
+.lab { font-size: 26px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #64748b; }
+.rfqt { font-size: 50px; font-weight: 700; margin-top: 10px; }
+.line { display: flex; justify-content: space-between; font-size: 36px; padding: 22px 0; border-bottom: 2px solid #f1f5f9; color: #334155; }
+.chips { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 30px; }
+.chip { font-size: 30px; padding: 14px 26px; border-radius: 999px; background: #ecfdf5; color: #065f46; font-weight: 600; border: 2px solid #a7f3d0; opacity: 0; }
+.srow { display: flex; align-items: center; justify-content: space-between; padding: 30px 6px; border-bottom: 2px solid #f1f5f9; font-size: 40px; opacity: 0; }
+.srow:last-child { border: 0; }
+.lock { font-size: 30px; font-weight: 700; color: #047857; background: #ecfdf5; padding: 10px 22px; border-radius: 999px; }
+
+/* auction */
+.ahead { display: flex; justify-content: space-between; align-items: center; }
+.live { font-size: 30px; font-weight: 700; color: #b91c1c; background: #fef2f2; padding: 14px 26px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.kpis { display: flex; gap: 20px; margin-top: 30px; }
+.kpi { flex: 1; background: #f8fafc; border-radius: 24px; padding: 24px; text-align: center; }
+.kpi p { font-size: 26px; color: #64748b; } .kpi b { display: block; font-size: 52px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.kpi.l1 { background: #ecfdf5; } .kpi.l1 b { color: #047857; }
+.board { position: relative; height: 480px; margin-top: 26px; }
+.bid { position: absolute; left: 0; right: 0; height: 104px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border: 3px solid #f1f5f9; border-radius: 24px; font-size: 40px; background: #fff; transition: none; }
+.bid.top { border-color: #a7f3d0; background: #ecfdf5; }
+.rk { display: inline-block; width: 92px; text-align: center; background: #0f172a; color: #fff; border-radius: 14px; font-weight: 700; font-size: 32px; padding: 8px 0; margin-right: 24px; }
+.bid.top .rk { background: #047857; }
+.bid b { font-variant-numeric: tabular-nums; }
+.flash { position: absolute; right: 30px; top: -18px; font-size: 26px; font-weight: 700; color: #fff; background: #047857; padding: 6px 16px; border-radius: 999px; opacity: 0; }
+.note { margin-top: 30px; font-size: 32px; color: #475569; text-align: center; opacity: 0; }
+
+/* result */
+.big { font-size: 230px; font-weight: 700; letter-spacing: -.05em; line-height: 1; }
+.pill { display: inline-block; margin-top: 40px; font-size: 44px; font-weight: 700; background: rgba(52,211,153,.15); color: #6ee7b7; border: 3px solid rgba(52,211,153,.4); padding: 20px 40px; border-radius: 999px; }
+.ex { font-size: 28px; color: #94a3b8; margin-top: 26px; }
+.tick { font-size: 46px; font-weight: 600; margin-top: 60px; color: #e2e8f0; }
+
+/* chrome */
+.wm { position: absolute; top: 80px; left: 90px; height: 64px; opacity: 0; }
+.bar { position: absolute; left: 0; bottom: 0; height: 12px; background: #34d399; }
+.cta { font-size: 120px; font-weight: 700; letter-spacing: -.03em; margin-top: 60px; }
+.list { margin-top: 50px; display: flex; flex-direction: column; gap: 22px; font-size: 46px; font-weight: 600; }
+.list div { opacity: 0; }
+</style></head><body>
+
+<!-- A: WhatsApp haggling -->
+<div class="scene dark" id="A">
+  <div class="center" style="justify-content:flex-start; padding-top: 230px">
+    <div class="h1" id="A_t">Still collecting supplier rates on <span class="acc">WhatsApp?</span></div>
+    <div class="phone">
+      <div class="top"><div class="av">SB</div><div class="nm">Sharma Boxes<small>online</small></div></div>
+      <div class="bub me" id="b1">Bhai, 50,000 boxes ka rate bhejo 🙏<time>10:02</time></div>
+      <div class="bub them" id="b2">₹21.40 per box<time>11:47</time></div>
+      <div class="bub me" id="b3">Thoda kam karo, last rate kya hai?<time>11:48</time></div>
+      <div class="bub them" id="b4">₹21.20, final. Kal confirm karna<time>4:15 pm</time></div>
+    </div>
+  </div>
+</div>
+
+<!-- B: the cost -->
+<div class="scene dark" id="B">
+  <div class="center">
+    <div class="count" id="c1"><span>5</span> calls</div>
+    <div class="count" id="c2"><span>12</span> messages</div>
+    <div class="count" id="c3"><span>3</span> days</div>
+    <div class="sub" id="B_s" style="margin-top:70px; opacity:0">…and you're still not sure it was the best price.</div>
+  </div>
+</div>
+
+<!-- C: there's a better way -->
+<div class="scene green" id="C">
+  <div class="center">
+    <div class="sub" id="C_a" style="color:#d1fae5; font-size:56px; opacity:0">There's a better way.</div>
+    <div class="badge" id="C_logo" style="margin-top:60px; opacity:0"><img src="logo-tight.png"></div>
+    <div class="h2" id="C_b" style="margin-top:70px; opacity:0">Make your suppliers compete.<br><span style="color:#a7f3d0">Buy at L1.</span></div>
+  </div>
+</div>
+
+<!-- D: how it works -->
+<div class="scene light" id="D">
+  <img class="wm" id="D_wm" src="logo-tight.png" style="opacity:1">
+  <div class="steps"><div class="step" id="s1"><b>1</b>Post</div><div class="step" id="s2"><b>2</b>Sealed quotes</div><div class="step" id="s3"><b>3</b>Live auction</div></div>
+  <div class="stitle" id="st"></div>
+
+  <div class="panel" id="P1"><div class="card">
+    <div class="lab">New RFQ</div>
+    <div class="rfqt">Corrugated boxes, 5-ply</div>
+    <div class="line"><span>Quantity</span><b>50,000 pcs</b></div>
+    <div class="line"><span>Delivery</span><b>Ludhiana, by 20 Oct</b></div>
+    <div class="line" style="border:0"><span>Quotes close</span><b>Fri, 5 PM</b></div>
+    <div class="lab" style="margin-top:30px">Invite your suppliers</div>
+    <div class="chips"><span class="chip">Sharma Boxes</span><span class="chip">Punjab Packers</span><span class="chip">Royal Cartons</span><span class="chip">Mehta Pack</span><span class="chip">+2 more</span></div>
+  </div></div>
+
+  <div class="panel" id="P2"><div class="card">
+    <div class="srow"><span>Supplier A</span><span class="lock">🔒 Sealed quote</span></div>
+    <div class="srow"><span>Supplier B</span><span class="lock">🔒 Sealed quote</span></div>
+    <div class="srow"><span>Supplier C</span><span class="lock">🔒 Sealed quote</span></div>
+    <div class="srow"><span>Supplier D</span><span class="lock">🔒 Sealed quote</span></div>
+    <div class="note" id="P2n" style="opacity:0">No one sees anyone else's price.</div>
+  </div></div>
+
+  <div class="panel" id="P3"><div class="card">
+    <div class="ahead"><div><div class="lab">Live auction</div><div style="font-size:40px;font-weight:700;margin-top:6px">Corrugated boxes</div></div><div class="live" id="timer">● 10:00</div></div>
+    <div class="kpis"><div class="kpi"><p>Opening</p><b>₹21.40</b></div><div class="kpi l1"><p>Current L1</p><b id="l1">₹21.40</b></div><div class="kpi"><p>Saving</p><b id="sav">0.0%</b></div></div>
+    <div class="board" id="board"></div>
+    <div class="note" id="P3n">Suppliers see only their own rank. You see everything.</div>
+  </div></div>
+</div>
+
+<!-- E: result -->
+<div class="scene dark" id="E">
+  <div class="center">
+    <div class="sub" id="E_a" style="opacity:0">₹21.40 → <span style="color:#6ee7b7;font-weight:700">₹19.65</span> per box</div>
+    <div class="big" id="E_b" style="margin-top:30px; opacity:0"><span class="acc">8.2%</span></div>
+    <div class="h2" id="E_c" style="opacity:0">saved in 10 minutes</div>
+    <div class="pill" id="E_d" style="opacity:0">₹87,500 on one order</div>
+    <div class="ex" id="E_e" style="opacity:0">Example auction</div>
+    <div class="tick" id="E_f" style="opacity:0">✓ Purchase order sent automatically</div>
+  </div>
+</div>
+
+<!-- F: CTA -->
+<div class="scene green" id="F">
+  <div class="center">
+    <div class="badge" id="F_logo" style="opacity:0"><img src="logo-tight.png"></div>
+    <div class="list">
+      <div id="F1">✓ 14-day free trial, no card</div>
+      <div id="F2">✓ Suppliers always join free</div>
+      <div id="F3">✓ Made for Indian SMEs</div>
+    </div>
+    <div class="cta" id="F_url" style="opacity:0">getl1.com</div>
+    <div class="sub" id="F_s" style="color:#d1fae5; margin-top:20px; opacity:0">Book a free 20-minute demo</div>
+  </div>
+</div>
+
+<div class="bar" id="bar"></div>
+
+<script>
+const T = 40;
+const cl = (x) => Math.max(0, Math.min(1, x));
+const ease = (x) => 1 - Math.pow(1 - cl(x), 3);
+const inn = (t, a, d = .45) => ease((t - a) / d);
+const vis = (t, a, b, d = .4) => inn(t, a, d) * (1 - inn(t, b - d, d));
+const $ = (id) => document.getElementById(id);
+const pop = (el, t, a, dist = 30) => { const k = inn(t, a); el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * dist}px)`; };
+const zoom = (el, t, a) => { const k = inn(t, a, .55); el.style.opacity = k; el.style.transform = `scale(${.85 + .15 * k})`; };
+
+// Auction: bids over time [time, supplier, price]
+const start = { A: 21.40, B: 21.75, C: 21.55, D: 22.10 };
+const bids = [[20.4,'C',20.90],[21.2,'A',20.60],[22.0,'D',20.35],[22.7,'C',20.10],[23.4,'B',20.05],[24.1,'A',19.95],[24.8,'C',19.80],[25.6,'D',19.75],[26.3,'C',19.65]];
+const rows = {};
+const board = () => $('board');
+function buildBoard() {
+  for (const s of ['A','B','C','D']) {
+    const d = document.createElement('div'); d.className = 'bid';
+    d.innerHTML = `<span><span class="rk">L1</span>Supplier ${s}</span><b>₹0</b><span class="flash">new bid</span>`;
+    board().appendChild(d); rows[s] = d;
+  }
+}
+function auction(t) {
+  const price = { ...start }; const lastAt = {};
+  for (const [at, s, p] of bids) if (t >= at) { price[s] = p; lastAt[s] = at; }
+  const order = Object.keys(price).sort((a, b) => price[a] - price[b]);
+  order.forEach((s, i) => {
+    const r = rows[s]; r.style.top = (i * 120) + 'px';
+    r.classList.toggle('top', i === 0);
+    r.querySelector('.rk').textContent = 'L' + (i + 1);
+    r.querySelector('b').textContent = '₹' + price[s].toFixed(2);
+    r.querySelector('.flash').style.opacity = lastAt[s] !== undefined ? vis(t, lastAt[s], lastAt[s] + .9, .15) : 0;
+  });
+  const l1 = Math.min(...Object.values(price));
+  $('l1').textContent = '₹' + l1.toFixed(2);
+  $('sav').textContent = ((21.40 - l1) / 21.40 * 100).toFixed(1) + '%';
+  const left = Math.max(0, 600 - (t - 19.5) * 9.6); // 10 minutes squeezed into the scene
+  const m = Math.floor(left / 60), sec = Math.floor(left % 60);
+  $('timer').textContent = '● ' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function render(t) {
+  // A 0–4.6
+  $('A').style.opacity = vis(t, 0, 4.6, .3);
+  pop($('A_t'), t, .1);
+  ['b1','b2','b3','b4'].forEach((id, i) => pop($(id), t, .8 + i * .75, 24));
+  // B 4.6–9.6
+  $('B').style.opacity = vis(t, 4.6, 9.6, .3);
+  ['c1','c2','c3'].forEach((id, i) => pop($(id), t, 4.9 + i * .7, 50));
+  pop($('B_s'), t, 7.3);
+  // C 9.6–12.8
+  $('C').style.opacity = vis(t, 9.6, 12.8, .3);
+  pop($('C_a'), t, 9.8); zoom($('C_logo'), t, 10.3); pop($('C_b'), t, 11.0);
+  // D 12.8–28.2
+  $('D').style.opacity = vis(t, 12.8, 28.2, .3);
+  const stage = t < 16.3 ? 1 : t < 19.5 ? 2 : 3;
+  ['s1','s2','s3'].forEach((id, i) => $(id).classList.toggle('on', i + 1 === stage));
+  $('st').textContent = ['Post what you need to buy', 'Suppliers quote, sealed', 'Live auction: prices drop'][stage - 1];
+  $('st').style.opacity = inn(t, [12.9, 16.3, 19.5][stage - 1], .3);
+  $('P1').style.opacity = vis(t, 13.0, 16.3, .3);
+  document.querySelectorAll('#P1 .chip').forEach((c, i) => { c.style.opacity = inn(t, 14.3 + i * .25, .25); });
+  $('P2').style.opacity = vis(t, 16.3, 19.5, .3);
+  document.querySelectorAll('#P2 .srow').forEach((r, i) => pop(r, t, 16.5 + i * .35, 20));
+  $('P2n').style.opacity = inn(t, 18.2, .3);
+  $('P3').style.opacity = inn(t, 19.5, .3);
+  auction(t);
+  $('P3n').style.opacity = inn(t, 26.8, .4);
+  // E 28.2–33.8
+  $('E').style.opacity = vis(t, 28.2, 33.8, .3);
+  pop($('E_a'), t, 28.4); zoom($('E_b'), t, 29.0); pop($('E_c'), t, 29.6); pop($('E_d'), t, 30.4); pop($('E_e'), t, 30.9); pop($('E_f'), t, 31.8);
+  // F 33.8–40
+  $('F').style.opacity = inn(t, 33.8, .3);
+  zoom($('F_logo'), t, 34.0);
+  ['F1','F2','F3'].forEach((id, i) => pop($(id), t, 34.8 + i * .45));
+  pop($('F_url'), t, 36.4, 40); pop($('F_s'), t, 36.9);
+  // progress bar
+  $('bar').style.width = (t / T * 100) + '%';
+}
+buildBoard();
+window.render = render;
+render(0);
+</script>
+</body></html>
