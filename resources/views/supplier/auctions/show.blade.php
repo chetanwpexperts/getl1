@@ -5,7 +5,8 @@
 @section('content')
     <p data-notice role="status" class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" @if (empty($state['notice'])) hidden @endif>{{ $state['notice'] ?? '' }}</p>
     @php
-        $cfg = [
+        $practice = $practice ?? false;
+        $cfg = $practice ? ['role' => 'supplier', 'practice' => true, 'state' => $state] : [
             'role' => 'supplier',
             'stateUrl' => route('supplier.auctions.state', $auction->id),
             'bidUrl' => route('supplier.auctions.bid', $auction->id),
@@ -13,9 +14,15 @@
             'state' => $state,
         ];
     @endphp
+    @if ($practice)
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            <p><span class="font-semibold">Practice auction.</span> Three simulated suppliers bid against you for 5 minutes. Same screen and rules as a real auction; nothing is saved and no buyer sees it.</p>
+            <a href="{{ route('supplier.auctions.practice') }}" class="rounded-lg border border-sky-300 bg-white px-3 py-1.5 font-semibold hover:bg-sky-100">Start again</a>
+        </div>
+    @endif
 
     <div data-auction="{{ json_encode($cfg) }}">
-        <a href="{{ route('supplier.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← RFQs</a>
+        <a href="{{ $practice ? route('dashboard') : route('supplier.rfqs.index') }}" class="text-sm text-slate-600 hover:text-slate-900">← {{ $practice ? 'Dashboard' : 'RFQs' }}</a>
 
         <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
             <div>

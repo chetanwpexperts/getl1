@@ -40,6 +40,7 @@ export function initAuction() {
     }
 
     async function refresh() {
+        if (cfg.practice) { dirty = true; return; }
         if (fetching) return;
         fetching = true;
         const t0 = Date.now();
@@ -52,6 +53,11 @@ export function initAuction() {
     }
 
     function schedulePolling() {
+        if (cfg.practice) {
+            const dot = $('[data-connection]');
+            if (dot) { dot.textContent = 'Practice mode · nothing is saved'; dot.dataset.state = 'up'; }
+            return;
+        }
         clearInterval(pollTimer);
         // Socket up: a slow safety poll. Socket down: poll every 2 seconds.
         pollTimer = setInterval(refresh, socketUp ? 20000 : 2000);
@@ -65,6 +71,7 @@ export function initAuction() {
     // ------------------------------------------------------------------ socket
 
     async function connectSocket() {
+        if (cfg.practice) return;
         const key = import.meta.env.VITE_REVERB_APP_KEY;
         if (!key) return; // not configured: polling only
         try {
@@ -547,6 +554,7 @@ export function initAuction() {
     });
 
     async function send(attempt = 1) {
+        if (cfg.practice) return practiceBid();
         try {
             const body = { amount: pending.amount, idempotency_key: pending.key };
             if (pending.item) body.item = pending.item;
@@ -595,10 +603,84 @@ export function initAuction() {
         submitBtn.textContent = 'Confirm bid';
     });
 
+    // ------------------------------------------------------------------ practice (no server)
+    //
+    // Three simulated suppliers with hidden lowest prices bid against the user. Same rules as a
+    // real lot auction: beat your own price by the minimum drop, typo guard against L1, auto-extend.
+
+    const bots = [
+        { name: 'b1', amount: 98500, floor: 93800, at: Date.now() - 3000000 },
+        { name: 'b2', amount: 99200, floor: 95200, at: Date.now() - 2500000 },
+        { name: 'b3', amount: 101000, floor: 96900, at: Date.now() - 2000000 },
+    ];
+    let myAt = Date.now() - 3600000;
+
+    function practiceRecompute(extendOnBid = false) {
+        const now = Date.now();
+        const rows = [...bots.map((b) => ({ me: false, amount: b.amount, at: b.at })), { me: true, amount: state.my_amount, at: myAt }]
+            .sort((x, y) => x.amount - y.amount || x.at - y.at);
+        const next = { ...state, server_time: now };
+        next.my_rank = rows.findIndex((r) => r.me) + 1;
+        next.l1_amount = rows[0].amount;
+        next.min_decrement = Math.round(state.my_amount * 0.005 * 100) / 100;
+        next.max_next_bid = Math.round((state.my_amount - next.min_decrement) * 100) / 100;
+        next.floor = Math.round(rows[0].amount * 0.9 * 100) / 100;
+        if (extendOnBid && next.status === 'live' && next.extensions_used < next.max_extensions && next.ends_at - now <= next.extend_window_sec * 1000) {
+            next.ends_at += next.extend_by_sec * 1000;
+            next.extensions_used += 1;
+        }
+        offset = 0;
+        state = next;
+        dirty = true;
+        return next;
+    }
+
+    function practiceBid() {
+        const amount = Number(pending.amount);
+        if (state.status !== 'live') return say('The practice auction has ended. Start again to try once more.');
+        if (amount > state.max_next_bid) return say(`Your bid must be at most ${fmt(state.max_next_bid)}.`);
+        if (amount < state.floor) return say('That’s too far below the current lowest price. Check for a typo.');
+        state.my_amount = amount;
+        myAt = Date.now();
+        const before = state.extensions_used;
+        const next = practiceRecompute(true);
+        state.my_bids = [{ amount, kind: 'live', rank: next.my_rank, at: myAt }, ...state.my_bids].slice(0, 10);
+        say(`Bid placed. You are L${next.my_rank}.${next.extensions_used > before ? ' The auction was extended.' : ''} (Practice: nothing is saved.)`, true);
+        if (pending.input) pending.input.value = '';
+        pending = null;
+        if (confirmBox) confirmBox.hidden = true;
+    }
+
+    function practiceTick() {
+        if (state.status !== 'live') return;
+        if (Date.now() >= state.ends_at) {
+            state = { ...state, status: 'closed' };
+            dirty = true;
+            say(state.my_rank === 1 ? 'Practice over: you finished L1. In a real auction the buyer would now review and award.' : `Practice over: you finished L${state.my_rank}.`, state.my_rank === 1);
+            return;
+        }
+        // A competitor who isn't leading (or sometimes the leader) moves, never below its hidden floor.
+        const l1 = Math.min(...bots.map((b) => b.amount), state.my_amount);
+        const movers = bots.filter((b) => b.amount > b.floor && (b.amount > l1 || Math.random() < 0.15));
+        if (movers.length) {
+            const b = movers[Math.floor(Math.random() * movers.length)];
+            const own = b.amount * (1 - (0.3 + Math.random() * 0.6) / 100);
+            const target = Math.random() < 0.55 ? Math.min(own, l1 - 50 - Math.random() * 400) : own; // sometimes just improve, not lead
+            b.amount = Math.max(b.floor, Math.round(target / 10) * 10);
+            b.at = Date.now();
+            practiceRecompute(true);
+        }
+        setTimeout(practiceTick, 6000 + Math.random() * 7000);
+    }
+
     // ------------------------------------------------------------------ start
 
     schedulePolling();
     connectSocket();
+    if (cfg.practice) {
+        practiceRecompute();
+        setTimeout(practiceTick, 3000);
+    }
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
     requestAnimationFrame(render);
 }

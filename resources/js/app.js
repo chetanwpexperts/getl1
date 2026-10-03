@@ -158,6 +158,12 @@ document.addEventListener('DOMContentLoaded', () => {
         applyFormat();
     }
 
+    // Confirm one specific button: <button data-confirm-click="Sure?">
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-confirm-click]');
+        if (btn && !window.confirm(btn.dataset.confirmClick)) e.preventDefault();
+    });
+
     // Confirm before destructive actions: <form data-confirm="Are you sure?">
     document.addEventListener('submit', (e) => {
         const msg = e.target.dataset?.confirm;

@@ -13,6 +13,9 @@
     foreach (\App\Models\RfqQuestion::with('supplier:id,name')->where('rfq_id', $rfq->id)->whereNotNull('supplier_org_id')->get() as $rq) {
         $names['rfq_question:'.$rq->id] = $rq->supplier?->name;
     }
+    foreach (\App\Models\CounterOffer::with('supplier:id,name')->where('rfq_id', $rfq->id)->get() as $co) {
+        $names['counter_offer:'.$co->id] = $co->supplier?->name;
+    }
     $auctionIds = \App\Models\Auction::where('rfq_id', $rfq->id)->where('status', '!=', 'cancelled')->pluck('id');
 @endphp
 

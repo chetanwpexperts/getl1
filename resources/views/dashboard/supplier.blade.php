@@ -64,7 +64,8 @@
                     <li class="flex gap-3"><span class="font-semibold text-emerald-700">2</span> Join the live auction at the set time and lower your price.</li>
                     <li class="flex gap-3"><span class="font-semibold text-emerald-700">3</span> You only see your own rank (L1, L2…), never other names.</li>
                 </ol>
-                <p class="mt-4 text-xs text-slate-500">GetL1 is always free for suppliers.</p>
+                <a href="{{ route('supplier.auctions.practice') }}" class="mt-4 flex items-center justify-center gap-2 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Try a practice auction</a>
+                <p class="mt-3 text-xs text-slate-500">GetL1 is always free for suppliers.</p>
             </section>
         </aside>
     </div>

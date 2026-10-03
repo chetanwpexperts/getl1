@@ -74,6 +74,7 @@ class RfqController extends Controller
             'auction' => $this->myAuctions()->where('rfq_id', $rfq->id)->latest('id')->first(),
             'order' => \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)
                 ->where('supplier_org_id', $this->current->id())->where('status', \App\Enums\AwardStatus::PoSent->value)->first(),
+            'offers' => \App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('supplier_org_id', $this->current->id())->latest('id')->get(),
             'questions' => \App\Models\RfqQuestion::visibleTo($rfq->id, $this->current->id())->orderBy('created_at')->orderBy('id')->get(),
             'gstRates' => QuoteService::GST_RATES,
             'paymentTerms' => RfqService::PAYMENT_TERMS,
@@ -121,6 +122,18 @@ class RfqController extends Controller
 
         return redirect()->to(route('supplier.rfqs.show', $invite).'#questions')
             ->with('status', 'Question sent to the buyer. You will get an email when it is answered.');
+    }
+
+    public function respondOffer(Request $request, int $invite, int $offer, \App\Services\CounterOfferService $offers): RedirectResponse
+    {
+        $invite = $this->findOwn($invite);
+        $o = \App\Models\CounterOffer::where('rfq_id', $invite->rfq_id)->where('supplier_org_id', $this->current->id())->findOrFail($offer);
+        $data = $request->validate(['decision' => ['required', 'in:accept,decline'], 'note' => ['nullable', 'string', 'max:1000']]);
+        $offers->respond($o, $request->user(), $data['decision'] === 'accept', $data['note'] ?? null);
+
+        return redirect()->to(route('supplier.rfqs.show', $invite->id).'#counter-offer')->with('status', $data['decision'] === 'accept'
+            ? 'Counter-offer accepted. The buyer has been told; your price for the award is now '.\App\Support\Money::inr($o->offered_amount).'.'
+            : 'Counter-offer declined. Your price stays as it was.');
     }
 
     public function downloadAttachment(int $invite, int $attachment): StreamedResponse

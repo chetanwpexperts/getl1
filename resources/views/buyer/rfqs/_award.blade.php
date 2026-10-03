@@ -101,6 +101,7 @@
                                 <span class="inline-flex w-9 justify-center rounded-md {{ $c['rank'] === 1 ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-700' }} px-1.5 py-0.5 text-xs font-semibold">L{{ $c['rank'] }}</span>
                                 <span class="font-medium">{{ $c['supplier']->name }}</span>
                                 @if ($c['supplier']->isVerified())<span class="text-xs text-emerald-700">✓ Verified</span>@endif
+                                @if (! empty($c['negotiated']))<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Negotiated (was {{ $inr($c['negotiated']->current_amount) }})</span>@endif
                             </span>
                             <span class="tabular-nums">
                                 {{ $inr($c['basic']) }} <span class="text-xs text-slate-500">before GST</span>
@@ -132,6 +133,8 @@
                 </div>
             </form>
         </section>
+
+        @include('buyer.rfqs._counter-offer')
 
     @elseif ($itemCandidates->isNotEmpty() && in_array($currentRole?->value, ['buyer_admin', 'buyer_user'], true))
         @include('buyer.rfqs._award-items')

@@ -87,6 +87,49 @@ class AwardService
      */
     public function candidates(Rfq $rfq): Collection
     {
+        return $this->withNegotiated($rfq, $this->rankedCandidates($rfq));
+    }
+
+    /**
+     * Accepted counter-offers replace that supplier's price; the list is then re-ranked by price
+     * (landed cost for sealed quotes), keeping the earlier order for ties.
+     */
+    private function withNegotiated(Rfq $rfq, Collection $candidates): Collection
+    {
+        $accepted = \App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('status', \App\Models\CounterOffer::ACCEPTED)
+            ->orderBy('id')->get()->keyBy('supplier_org_id');
+        if ($accepted->isEmpty()) {
+            return $candidates->map(fn ($c) => $c + ['negotiated' => null]);
+        }
+
+        return $candidates->map(function ($c) use ($accepted) {
+            $offer = $accepted[$c['supplier']->id] ?? null;
+            if (! $offer) {
+                return $c + ['negotiated' => null];
+            }
+            $old = (float) $c['basic'];
+            $new = (float) $offer->offered_amount;
+            if ($c['landed'] !== null && $old > 0) {
+                // GST moves with the price; freight stays as quoted.
+                $row = collect($this->rfqs->comparison(Rfq::withoutGlobalScopes()->find($offer->rfq_id)))->first(fn ($r) => $r['quote']->supplier_org_id === $c['supplier']->id);
+                $c['landed'] = $row ? Money::round($new + $row['gst'] * $new / $old + $row['freight']) : $c['landed'];
+            }
+
+            return array_merge($c, ['basic' => $new, 'negotiated' => $offer]);
+        })
+            ->values()
+            ->map(fn ($c, $i) => $c + ['order' => $i])
+            ->sort(fn ($a, $b) => [$a['landed'] ?? $a['basic'], $a['order']] <=> [$b['landed'] ?? $b['basic'], $b['order']])
+            ->values()
+            ->map(function ($c, $i) {
+                unset($c['order']);
+
+                return array_merge($c, ['rank' => $i + 1]);
+            });
+    }
+
+    private function rankedCandidates(Rfq $rfq): Collection
+    {
         $auction = $this->latestAuction($rfq);
 
         if ($auction && Standings::effectiveStatus($auction) === AuctionStatus::Closed) {
@@ -336,10 +379,12 @@ class AwardService
             ]);
 
             $rfq->update(['status' => RfqStatus::Evaluating]);
+            $this->withdrawOpenOffers($rfq, $by);
 
             $this->audit->log('awarded', $award, after: [
                 'supplier' => $chosen['supplier']->name, 'rank' => $chosen['rank'], 'total' => $chosen['basic'],
                 'source' => $chosen['source'], 'reason' => $award->reason, 'needs_approval' => $needsApproval,
+                'negotiated' => $chosen['negotiated'] ? (float) $chosen['negotiated']->offered_amount : null,
             ], user: $by, organizationId: $rfq->organization_id);
             if (! $needsApproval) {
                 $this->audit->log('award_approved', $award, after: ['by' => 'automatic (no approval required)'], user: $by, organizationId: $rfq->organization_id);
@@ -504,6 +549,15 @@ class AwardService
 
             return $award;
         });
+    }
+
+    /** Awarding closes any counter-offer still waiting for an answer. */
+    private function withdrawOpenOffers(Rfq $rfq, User $by): void
+    {
+        foreach (\App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('status', \App\Models\CounterOffer::PENDING)->get() as $o) {
+            $o->update(['status' => \App\Models\CounterOffer::WITHDRAWN, 'responded_at' => now()]);
+            $this->audit->log('counter_offer_withdrawn', $o, after: ['why' => 'awarded'], user: $by, organizationId: $rfq->organization_id);
+        }
     }
 
     private function latestAuction(Rfq $rfq): ?Auction

@@ -33,6 +33,7 @@ class AuctionScheduledMail extends Mailable
             'url' => route('supplier.auctions.show', $this->auction->id),
             'starts' => $this->auction->starts_at->ist()->format('d M Y, h:i A').' IST',
             'duration' => $this->auction->starts_at->diffInMinutes($this->auction->ends_at),
+            'practiceUrl' => route('supplier.auctions.practice'),
         ]);
     }
 }

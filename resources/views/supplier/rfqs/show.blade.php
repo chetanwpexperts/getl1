@@ -48,6 +48,8 @@
         </div>
     @endif
 
+    @include('supplier.rfqs._counter-offer')
+
     @if ($auction)
         @php
             $aStatus = \App\Services\Auction\Standings::effectiveStatus($auction)->value;
@@ -70,6 +72,9 @@
                 {{ $aStatus === 'live' ? 'Join auction' : ($aStatus === 'scheduled' ? 'Open auction room' : 'View your result') }}
             </a>
         </div>
+        @if ($aStatus === 'scheduled' && ! $auction->isJapanese() && ! $auction->isPerItem())
+            <p class="mt-2 text-sm text-slate-600">First time? <a href="{{ route('supplier.auctions.practice') }}" class="font-medium text-emerald-700 hover:underline">Try a 5-minute practice auction</a> to learn the screen. Nothing is saved.</p>
+        @endif
     @endif
 
     <div class="mt-8 grid gap-8 lg:grid-cols-3">

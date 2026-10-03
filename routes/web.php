@@ -246,6 +246,10 @@ Route::middleware('auth')->group(function () {
                 Route::post('/rfqs/{rfq}/award', [BuyerAwardController::class, 'store'])->whereNumber('rfq')->middleware('throttle:20,1')->name('awards.store');
                 Route::post('/rfqs/{rfq}/questions/{question}/answer', [\App\Http\Controllers\Buyer\QuestionController::class, 'answer'])
                     ->whereNumber(['rfq', 'question'])->middleware('throttle:30,1')->name('rfqs.questions.answer');
+                Route::post('/rfqs/{rfq}/counter-offers', [\App\Http\Controllers\Buyer\CounterOfferController::class, 'store'])
+                    ->whereNumber('rfq')->middleware('throttle:10,1')->name('rfqs.offers.store');
+                Route::post('/rfqs/{rfq}/counter-offers/{offer}/withdraw', [\App\Http\Controllers\Buyer\CounterOfferController::class, 'withdraw'])
+                    ->whereNumber(['rfq', 'offer'])->middleware('throttle:20,1')->name('rfqs.offers.withdraw');
                 Route::post('/rfqs/{rfq}/clarifications', [\App\Http\Controllers\Buyer\QuestionController::class, 'announce'])
                     ->whereNumber('rfq')->middleware('throttle:10,1')->name('rfqs.clarifications.store');
             });
@@ -266,11 +270,14 @@ Route::middleware('auth')->group(function () {
             Route::post('/rfqs/{invite}/decline', [SupplierRfqController::class, 'decline'])->whereNumber('invite')->name('rfqs.decline');
             Route::post('/rfqs/{invite}/quote', [SupplierRfqController::class, 'quote'])
                 ->whereNumber('invite')->middleware('throttle:20,1')->name('rfqs.quote');
+            Route::post('/rfqs/{invite}/counter-offers/{offer}', [SupplierRfqController::class, 'respondOffer'])
+                ->whereNumber(['invite', 'offer'])->middleware('throttle:10,1')->name('rfqs.offers.respond');
             Route::post('/rfqs/{invite}/questions', [SupplierRfqController::class, 'ask'])
                 ->whereNumber('invite')->middleware('throttle:10,1')->name('rfqs.questions.store');
             Route::get('/rfqs/{invite}/attachments/{attachment}', [SupplierRfqController::class, 'downloadAttachment'])
                 ->whereNumber(['invite', 'attachment'])->name('rfqs.attachments.download');
 
+            Route::get('/auctions/practice', [SupplierAuctionController::class, 'practice'])->name('auctions.practice');
             Route::get('/auctions/{auction}', [SupplierAuctionController::class, 'show'])->whereNumber('auction')->name('auctions.show');
             Route::get('/auctions/{auction}/state', [SupplierAuctionController::class, 'state'])
                 ->whereNumber('auction')->middleware('throttle:120,1')->name('auctions.state');

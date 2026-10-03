@@ -32,6 +32,7 @@ class LiveVersion
             RfqInvite::where('rfq_id', $rfq->id)->orderBy('id')->get(['id', 'status'])->map(fn ($i) => $i->id.$i->status->value)->implode(','),
             RfqAttachment::where('rfq_id', $rfq->id)->count(),
             self::questionPart(\App\Models\RfqQuestion::where('rfq_id', $rfq->id)),
+            self::questionPart(\App\Models\CounterOffer::where('rfq_id', $rfq->id)),
             self::auctionPart($auction),
             self::awardPart($rfq->id),
         ], [$rfq->isOpenForQuotes() ? $rfq->quote_deadline : null, ...self::auctionTimes($auction)]);
@@ -49,6 +50,7 @@ class LiveVersion
             Quote::where('rfq_id', $rfq->id)->where('supplier_org_id', $invite->supplier_org_id)->value('submitted_at'),
             RfqAttachment::where('rfq_id', $rfq->id)->count(),
             self::questionPart(\App\Models\RfqQuestion::visibleTo($rfq->id, (int) $invite->supplier_org_id)),
+            self::questionPart(\App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('supplier_org_id', $invite->supplier_org_id)),
             self::auctionPart($auction, false),
             self::awardPart($rfq->id, $invite->supplier_org_id),
         ], [$rfq->isOpenForQuotes() ? $rfq->quote_deadline : null, ...self::auctionTimes($auction)]);
