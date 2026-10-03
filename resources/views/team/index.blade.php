@@ -8,7 +8,8 @@
         $roleHelp = [
             'buyer_admin' => 'Everything, including team, billing and approvals.',
             'buyer_user' => 'Creates RFQs, runs auctions and manages suppliers.',
-            'approver' => 'Reviews and approves awards. Can view RFQs.',
+            'approver' => 'Approves purchase requests and awards. Can view RFQs.',
+            'requester' => 'Raises purchase requests and tracks them. Sees no prices, suppliers or orders.',
             'supplier_user' => 'Quotes, bids and accepts purchase orders.',
         ];
         $used = $members->count();

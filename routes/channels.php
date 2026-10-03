@@ -18,7 +18,8 @@ Broadcast::channel('user.{userId}', fn (User $user, int $userId) => (int) $user-
 Broadcast::channel('auction.{auctionId}.buyer', function (User $user, int $auctionId) {
     $auction = Auction::withoutGlobalScopes()->find($auctionId);
 
-    return $auction !== null && $user->belongsToOrganization($auction->organization_id);
+    // Any member of the buyer company except requesters, who never see prices.
+    return $auction !== null && $user->hasRoleIn($auction->organization_id, 'buyer_admin', 'buyer_user', 'approver');
 });
 
 Broadcast::channel('auction.{auctionId}.supplier.{orgId}', function (User $user, int $auctionId, int $orgId) {

@@ -555,7 +555,7 @@ class AwardService
             }
 
             $awarder = User::find($award->awarded_by);
-            if ($awarder && $awarder->belongsToOrganization($award->organization_id)) {
+            if ($awarder && $awarder->hasRoleIn($award->organization_id, OrgRole::BuyerAdmin, OrgRole::BuyerUser, OrgRole::Approver)) {
                 DB::afterCommit(fn () => Mail::to($awarder->email)->queue(new AwardDecisionMail($award)));
                 $ref = Rfq::withoutGlobalScopes()->whereKey($award->rfq_id)->value('ref_no');
                 Notifier::toUsers([$awarder], $award->organization_id, 'orders',

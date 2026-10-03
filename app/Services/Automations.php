@@ -262,7 +262,8 @@ class Automations
             ->wherePivotIn('role', [OrgRole::BuyerAdmin->value, OrgRole::BuyerUser->value])
             ->get()
             // The RFQ's creator, whatever their role, but only while still in the company.
-            ->when($rfq->created_by, fn ($c) => $c->push($org->users()->where('users.id', $rfq->created_by)->first()))
+            ->when($rfq->created_by, fn ($c) => $c->push($org->users()->where('users.id', $rfq->created_by)
+                ->wherePivotIn('role', [OrgRole::BuyerAdmin->value, OrgRole::BuyerUser->value, OrgRole::Approver->value])->first()))
             ->filter(fn ($u) => $u && $u->email)
             ->unique('id')
             ->values();

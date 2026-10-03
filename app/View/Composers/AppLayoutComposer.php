@@ -50,6 +50,20 @@ class AppLayoutComposer
             }
             $view->with(request()->attributes->get($badgeKey));
 
+            // Purchase requests needing this person: to approve (approvers/admins) or to buy (buyers).
+            $role = $user->roleIn($org)?->value;
+            if ($org->isBuyer() && in_array($role, ['buyer_admin', 'buyer_user', 'approver'], true)) {
+                $statuses = array_merge(in_array($role, ['buyer_admin', 'approver'], true) ? [\App\Models\PurchaseRequest::PENDING] : [],
+                    in_array($role, ['buyer_admin', 'buyer_user'], true) ? [\App\Models\PurchaseRequest::APPROVED] : []);
+                $view->with('requestsAttention', \App\Models\PurchaseRequest::withoutGlobalScopes()->where('organization_id', $org->id)
+                    ->whereIn('status', $statuses)
+                    ->where(fn ($q) => $q->where('status', '!=', \App\Models\PurchaseRequest::PENDING)->orWhere('requested_by', '!=', $user->id))
+                    ->count());
+            }
+            if ($role === 'requester') {
+                return; // no auction button or other buying details for requesters
+            }
+
             // Running or starting-soon auction: shown as a button in the header on every page.
             // Same result for the header and both menus: look it up once per request.
             $memo = 'getl1.active_auction.'.$org->id;

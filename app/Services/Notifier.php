@@ -71,7 +71,10 @@ class Notifier
     {
         try {
             if ($orgId) {
-                $members = DB::table('org_user')->where('organization_id', $orgId)->whereIn('user_id', array_keys($users))->pluck('user_id')->all();
+                // Current members only. Requesters only ever get alerts about their own requests.
+                $members = DB::table('org_user')->where('organization_id', $orgId)->whereIn('user_id', array_keys($users))
+                    ->when(! str_contains($url, '/buyer/requests/'), fn ($q) => $q->where('role', '!=', OrgRole::Requester->value))
+                    ->pluck('user_id')->all();
                 $users = array_intersect_key($users, array_flip($members));
             }
             if (! $users) {

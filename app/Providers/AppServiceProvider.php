@@ -72,6 +72,7 @@ class AppServiceProvider extends ServiceProvider
             'counter_offer' => \App\Models\CounterOffer::class,
             'goods_receipt' => \App\Models\GoodsReceipt::class,
             'supplier_invoice' => \App\Models\SupplierInvoice::class,
+            'purchase_request' => \App\Models\PurchaseRequest::class,
             'quote' => Quote::class,
             'auction' => Auction::class,
             'bid' => Bid::class,

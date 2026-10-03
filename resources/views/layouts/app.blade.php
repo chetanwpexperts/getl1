@@ -20,8 +20,11 @@
     $groups = [];
     if (isset($currentOrg)) {
         $groups[''] = [['dashboard', 'Dashboard', 'home', 'dashboard', null]];
-        if ($isBuyer) {
+        if ($isBuyer && $role === 'requester') {
+            $groups[''] = [['buyer.requests.index', 'My requests', 'documents', 'buyer.requests.*', null]];
+        } elseif ($isBuyer) {
             $groups['Buying'] = array_values(array_filter([
+                ['buyer.requests.index', 'Requests', 'documents', 'buyer.requests.*', $requestsAttention ?? 0],
                 ['buyer.rfqs.index', 'RFQs & auctions', 'rfqs', 'buyer.rfqs.*|buyer.auctions.*', null],
                 in_array($role, ['buyer_admin', 'approver'], true) ? ['buyer.approvals.index', 'Approvals', 'approvals', 'buyer.approvals.*', $pendingApprovals ?? 0] : null,
                 ['buyer.orders.index', 'Purchase orders', 'orders', 'buyer.orders.*', null],
@@ -138,14 +141,14 @@
                         </div>
                         <div class="p-1 text-sm">
                             <a href="{{ route('account.edit') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"><x-icon name="profile" class="size-5 text-slate-400" /> My profile</a>
-                            @isset($currentOrg)
+                            @if (isset($currentOrg) && $role !== 'requester')
                                 <a href="{{ route('company.edit') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"><x-icon name="company" class="size-5 text-slate-400" /> Company profile</a>
                                 @if ($isBuyer)
                                     <a href="{{ route('buyer.billing.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"><x-icon name="billing" class="size-5 text-slate-400" /> Plan &amp; billing</a>
                                 @else
                                     <a href="{{ route('supplier.documents.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"><x-icon name="documents" class="size-5 text-slate-400" /> Documents &amp; KYC</a>
                                 @endif
-                            @endisset
+                            @endif
                             @if ($user->is_platform_admin)
                                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"><x-icon name="admin" class="size-5 text-slate-400" /> Admin console</a>
                             @endif
@@ -161,7 +164,7 @@
 
         {{-- Row 2: main menu --}}
         <nav class="border-t border-slate-100" aria-label="Main menu"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <ul class="-mb-px flex items-center gap-8 overflow-x-auto text-sm font-medium [scrollbar-width:none] lg:overflow-visible">
+            <ul class="-mb-px flex items-center gap-6 overflow-x-auto text-sm font-medium [scrollbar-width:none] xl:gap-7 xl:overflow-visible">
                 @foreach ($tabs as [$route, $label, $icon, $pattern, $badge])
                     @php $on = $is($pattern); @endphp
                     <li class="shrink-0">
@@ -179,7 +182,7 @@
                             <summary class="flex cursor-pointer list-none items-center gap-2 border-b-2 px-0.5 py-3.5 transition [&::-webkit-details-marker]:hidden {{ $companyOn ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800' }}">
                                 <x-icon name="company" class="size-[18px] {{ $companyOn ? 'text-emerald-700' : 'text-slate-400' }}" /> Company <x-icon name="down" class="size-3.5" />
                             </summary>
-                            <div class="fixed z-40 mt-1 w-60 rounded-xl border border-slate-200 bg-white p-1 shadow-xl lg:absolute lg:left-0 lg:top-full">
+                            <div class="fixed z-40 mt-1 w-60 rounded-xl border border-slate-200 bg-white p-1 shadow-xl xl:absolute xl:left-0 xl:top-full">
                                 @foreach ($companyItems as [$route, $label, $icon, $pattern])
                                     <a href="{{ route($route) }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm {{ $is($pattern) ? 'bg-emerald-50 font-semibold text-emerald-800' : 'text-slate-700 hover:bg-slate-50' }}">
                                         <x-icon :name="$icon" class="size-5 text-slate-400" /> {{ $label }}

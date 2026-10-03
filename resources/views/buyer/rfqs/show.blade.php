@@ -34,6 +34,12 @@
                 @if ($rfq->category)<span>{{ $rfq->category->name }}</span>@endif
                 <span>{{ $rfq->isPerItem() ? 'Item-by-item bidding' : 'One total for all items' }}</span>
                 @if ($deadline)<span>Quotes close <span class="font-medium text-slate-800">{{ $deadline }} IST</span></span>@endif
+                @php $fromRequests = \App\Models\PurchaseRequest::where('rfq_id', $rfq->id)->get(['id', 'pr_number']); @endphp
+                @if ($fromRequests->isNotEmpty())
+                    <span>From
+                        @foreach ($fromRequests as $p)<a href="{{ route('buyer.requests.show', $p->id) }}" class="font-medium text-emerald-700 hover:underline">{{ $p->pr_number }}</a>{{ $loop->last ? '' : ', ' }}@endforeach
+                    </span>
+                @endif
             </p>
         </div>
 
