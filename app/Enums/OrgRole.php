@@ -7,6 +7,7 @@ enum OrgRole: string
     case BuyerAdmin = 'buyer_admin';
     case BuyerUser = 'buyer_user';
     case Approver = 'approver';
+    case Requester = 'requester';
     case SupplierUser = 'supplier_user';
 
     public function label(): string
@@ -15,6 +16,7 @@ enum OrgRole: string
             self::BuyerAdmin => 'Admin',
             self::BuyerUser => 'Buyer',
             self::Approver => 'Approver',
+            self::Requester => 'Requester',
             self::SupplierUser => 'Supplier',
         };
     }
@@ -23,7 +25,7 @@ enum OrgRole: string
     public static function forType(OrganizationType $type): array
     {
         return $type === OrganizationType::Buyer
-            ? [self::BuyerAdmin, self::BuyerUser, self::Approver]
+            ? [self::BuyerAdmin, self::BuyerUser, self::Approver, self::Requester]
             : [self::SupplierUser];
     }
 }

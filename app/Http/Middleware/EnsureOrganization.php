@@ -39,8 +39,17 @@ class EnsureOrganization
         abort_if($org->status === 'suspended', 403, 'This organization is suspended. Contact support.');
 
         $this->current->set($org);
+        $role = $user->roleIn($org);
         view()->share('currentOrg', $org);
-        view()->share('currentRole', $user->roleIn($org));
+        view()->share('currentRole', $role);
+
+        // Requesters (store/plant staff) only ever reach their purchase requests: no prices,
+        // suppliers, RFQs or orders. Any other page sends them back to their requests.
+        if ($role === \App\Enums\OrgRole::Requester && ! $request->routeIs('buyer.requests.*')) {
+            abort_unless($request->isMethod('GET'), 403);
+
+            return redirect()->route('buyer.requests.index');
+        }
 
         return $next($request);
     }

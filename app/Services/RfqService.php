@@ -296,6 +296,7 @@ class RfqService
         $wasPublished = $rfq->status === RfqStatus::Published;
         $rfq->update(['status' => RfqStatus::Cancelled]);
         $this->audit->log('rfq_cancelled', $rfq, after: ['reason' => $reason], user: $by, organizationId: $rfq->organization_id);
+        app(PurchaseRequestService::class)->release($rfq, $by); // its purchase requests go back to the purchase team
 
         if ($wasPublished) {
             $this->notifySuppliers($rfq, 'cancelled', $reason);

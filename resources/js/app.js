@@ -35,6 +35,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Purchase requests: "Create RFQ from selected" only when something is ticked.
+    document.querySelectorAll('[data-pr-convert]').forEach((form) => {
+        const btn = form.querySelector('[data-pr-convert-btn]');
+        if (!btn) return;
+        const sync = () => { btn.disabled = !form.querySelector('input[name="ids[]"]:checked'); };
+        form.addEventListener('change', sync);
+        sync();
+    });
+
     // AI RFQ: wait for the read to finish, then open the filled form.
     const aiJob = document.querySelector('[data-ai-job]');
     if (aiJob && !aiJob.querySelector('[data-ai-failed]:not([hidden])')) {

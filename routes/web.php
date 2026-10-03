@@ -168,6 +168,19 @@ Route::middleware('auth')->group(function () {
 
         // Buyer area
         Route::middleware('org.type:buyer')->prefix('buyer')->name('buyer.')->group(function () {
+            // Purchase requests: every buyer role, including requesters (who only see their own).
+            Route::controller(\App\Http\Controllers\Buyer\PurchaseRequestController::class)->prefix('requests')->name('requests.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/new', 'create')->name('create');
+                Route::post('/', 'store')->middleware('throttle:20,1')->name('store');
+                Route::post('/convert', 'convert')->middleware('throttle:20,1')->name('convert');
+                Route::get('/{id}', 'show')->whereNumber('id')->name('show');
+                Route::middleware('throttle:30,1')->group(function () {
+                    Route::post('/{id}/approve', 'approve')->whereNumber('id')->name('approve');
+                    Route::post('/{id}/reject', 'reject')->whereNumber('id')->name('reject');
+                    Route::post('/{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+                });
+            });
             Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
 
             // RFQs: everyone in the buyer company can view
