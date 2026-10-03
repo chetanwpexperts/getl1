@@ -364,4 +364,23 @@ class PayablesTest extends TestCase
         $this->receive($a, ['box' => ['received' => 100]], now()->subDays(8)->setTimezone('Asia/Kolkata')->toDateString())->assertSessionHasNoErrors();
         $this->assertSame($before, $inv->fresh()->due_date->toDateString());
     }
+
+    public function test_marking_msme_later_reworks_unpaid_due_dates(): void
+    {
+        $b = $this->po('B', 'credit_60');   // B is not MSME: 60 days from invoice date
+        $this->accept('B', $b);
+        $this->invoice('B', $b);
+        $inv = SupplierInvoice::withoutGlobalScopes()->firstOrFail();
+        $this->assertFalse($inv->is_msme);
+        $this->assertSame($inv->invoice_date->copy()->addDays(60)->toDateString(), $inv->due_date->toDateString());
+
+        // The buyer ticks MSME in its supplier list: capped at 45 days.
+        $entry = BuyerSupplier::where('buyer_org_id', $this->buyer->id)->where('supplier_org_id', $this->s['B'][0]->id)->firstOrFail();
+        $this->actingAs($this->buyerUser)->put(route('buyer.suppliers.update', $entry->id), [
+            'company_name' => 'Beta Corrugators', 'contact_email' => $entry->contact_email, 'is_msme' => '1',
+        ])->assertSessionHasNoErrors();
+        $inv->refresh();
+        $this->assertTrue($inv->is_msme);
+        $this->assertSame($inv->invoice_date->copy()->addDays(45)->toDateString(), $inv->due_date->toDateString());
+    }
 }

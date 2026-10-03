@@ -78,4 +78,25 @@ class MsmeDueDate
 
         return ['due_date' => $from->startOfDay()->addDays($days), 'is_msme' => $msme, 'basis' => $basis];
     }
+
+    /**
+     * MSME status changed (Udyam number added or removed, or the buyer ticked/unticked MSME):
+     * re-work the due date of every unpaid invoice from that supplier (optionally for one buyer).
+     */
+    public static function refreshSupplier(int $supplierOrgId, ?int $buyerOrgId = null): int
+    {
+        $n = 0;
+        $invoices = \App\Models\SupplierInvoice::withoutGlobalScopes()->where('supplier_org_id', $supplierOrgId)
+            ->when($buyerOrgId, fn ($q) => $q->where('organization_id', $buyerOrgId))
+            ->whereIn('status', [\App\Models\SupplierInvoice::SUBMITTED, \App\Models\SupplierInvoice::APPROVED])->get();
+        foreach ($invoices as $inv) {
+            $award = $inv->award;
+            $latest = ReceiptService::summary($award)['latest'];
+            $due = self::for($award, Carbon::parse($inv->invoice_date->toDateString()), $latest ? Carbon::parse($latest)->startOfDay() : null);
+            $inv->update(['due_date' => $due['due_date']->toDateString(), 'due_basis' => $due['basis'], 'is_msme' => $due['is_msme']]);
+            $n++;
+        }
+
+        return $n;
+    }
 }

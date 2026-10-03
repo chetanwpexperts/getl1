@@ -154,7 +154,11 @@ class SupplierListService
         if (! $entry->supplier_org_id && $entry->isDirty(['contact_email', 'contact_phone'])) {
             $entry->supplier_org_id = $this->linkableSupplierId($entry->buyer, $data);
         }
+        $msmeChanged = $entry->isDirty('is_msme');
         $entry->save();
+        if ($msmeChanged && $entry->supplier_org_id) {
+            \App\Services\Payables\MsmeDueDate::refreshSupplier($entry->supplier_org_id, $entry->buyer_org_id);
+        }
 
         $this->audit->log('supplier_list_updated', $entry, before: $before, after: $entry->only(array_keys($data)),
             user: $by, organizationId: $entry->buyer_org_id);

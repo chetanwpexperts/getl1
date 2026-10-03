@@ -83,7 +83,12 @@ class CompanyProfileController extends Controller
         if ($identityChanged && $org->isVerified()) {
             $org->verified_at = null;
         }
+        $udyamChanged = $org->isDirty('udyam_no');
         $org->save();
+        if ($udyamChanged && $org->isSupplier()) {
+            // MSME status changed: unpaid invoices get their legal due date re-worked.
+            \App\Services\Payables\MsmeDueDate::refreshSupplier($org->id);
+        }
 
         if ($org->isSupplier()) {
             $org->categories()->sync($data['categories'] ?? []);
