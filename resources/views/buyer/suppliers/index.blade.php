@@ -47,13 +47,13 @@
     <div class="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="w-full min-w-[640px] text-sm">
             <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
-                <tr><th class="px-5 py-3.5">Supplier</th><th class="px-5 py-3.5">Contact</th><th class="px-5 py-3.5">Tag</th><th class="px-5 py-3.5">On GetL1</th><th class="px-5 py-3.5"></th></tr>
+                <tr><th class="px-5 py-3.5">Supplier</th><th class="px-5 py-3.5">Contact</th><th class="px-5 py-3.5">Tag</th><th class="px-5 py-3.5">On GetL1</th><th class="px-5 py-3.5">Score</th><th class="px-5 py-3.5"></th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($suppliers as $s)
                     <tr class="{{ $s->status === 'blocked' ? 'bg-slate-50 text-slate-500' : '' }}">
                         <td class="px-5 py-3.5">
-                            <span class="font-medium">{{ $s->company_name }}</span>
+                            <a href="{{ route('buyer.suppliers.show', $s->id) }}" class="font-medium hover:underline">{{ $s->company_name }}</a>
                             @if ($s->status === 'blocked')<span class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-800">Blocked</span>@endif
                             @if ($s->contact_name)<span class="block text-xs text-slate-500">{{ $s->contact_name }}</span>@endif
                         </td>
@@ -72,6 +72,15 @@
                             @else
                                 <span class="text-xs text-slate-500">Not yet</span>
                             @endif
+                            @if (($profiles[$s->id]['checks'] ?? null) === 'warn')<span class="mt-1 block text-xs font-medium text-amber-800">⚠ Check GST details</span>@endif
+                        </td>
+                        <td class="px-5 py-3.5">
+                            @php $sc = $profiles[$s->id]['score'] ?? null; @endphp
+                            @if ($sc && $sc['score'] !== null)
+                                @include('buyer.suppliers._score-badge', ['score' => $sc['score'], 'grade' => $sc['grade']])
+                            @else
+                                <span class="text-xs text-slate-400">—</span>
+                            @endif
                         </td>
                         <td class="whitespace-nowrap px-5 py-3.5 text-right">
                             @if ($canManage)
@@ -84,7 +93,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-4 py-10 text-center text-slate-600">
+                    <tr><td colspan="6" class="px-4 py-10 text-center text-slate-600">
                         @if (array_filter($filters)) No suppliers match your search. @else No suppliers yet. Add one, or import your list from Excel. @endif
                     </td></tr>
                 @endforelse

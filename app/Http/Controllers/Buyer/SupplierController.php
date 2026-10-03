@@ -42,10 +42,41 @@ class SupplierController extends Controller
             ->paginate(25)
             ->withQueryString();
 
+        // Score and checks for the registered suppliers on this page (scores cached for an hour).
+        $profiles = [];
+        foreach ($suppliers as $s) {
+            if ($s->supplier) {
+                $profiles[$s->id] = [
+                    'score' => \App\Services\Suppliers\SupplierProfile::cachedScore($this->current->id(), $s->supplier->id),
+                    'checks' => \App\Services\Suppliers\SupplierProfile::checksSummary(\App\Services\Suppliers\SupplierProfile::checks($s->supplier)),
+                ];
+            }
+        }
+
         return view('buyer.suppliers.index', [
             'suppliers' => $suppliers,
+            'profiles' => $profiles,
             'tags' => BuyerSupplier::where('buyer_org_id', $this->current->id())->whereNotNull('tag')->distinct()->orderBy('tag')->pluck('tag'),
             'filters' => ['q' => $q, 'status' => $status, 'tag' => $tag],
+        ]);
+    }
+
+    /** Supplier page: registration checks, scorecard from this company's dealings, recent POs and contracts. */
+    public function show(int $supplier): View
+    {
+        $entry = $this->findOwn($supplier)->load('supplier');
+        $org = $entry->supplier;
+        $buyerId = $this->current->id();
+
+        return view('buyer.suppliers.show', [
+            'entry' => $entry,
+            'org' => $org,
+            'checks' => $org ? \App\Services\Suppliers\SupplierProfile::checks($org) : [],
+            'score' => $org ? \App\Services\Suppliers\SupplierProfile::score($buyerId, $org->id) : null,
+            'orders' => $org ? \App\Models\Award::with('rfq:id,ref_no,title')->where('supplier_org_id', $org->id)
+                ->where('status', \App\Enums\AwardStatus::PoSent)->latest('po_sent_at')->limit(10)->get() : collect(),
+            'contracts' => $org ? \App\Models\RateContract::where('supplier_org_id', $org->id)->latest('id')->limit(10)->get() : collect(),
+            'canManage' => request()->user()->hasRoleIn($this->current->get(), 'buyer_admin', 'buyer_user'),
         ]);
     }
 

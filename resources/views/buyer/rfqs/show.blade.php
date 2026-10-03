@@ -174,6 +174,8 @@
                                     <td class="px-5 py-3.5">
                                         <span class="font-medium">{{ $row['quote']->supplier->name }}</span>
                                         @if ($row['quote']->supplier->isVerified())<span class="ml-1 text-xs text-emerald-700">✓ Verified</span>@endif
+                                        @php $sc = \App\Services\Suppliers\SupplierProfile::cachedScore($rfq->organization_id, $row['quote']->supplier->id); @endphp
+                                        @if ($sc['score'] !== null)<span class="ml-1">@include('buyer.suppliers._score-badge', ['score' => $sc['score'], 'grade' => $sc['grade']])</span>@endif
                                         @if ($row['quote']->notes)<span class="block text-xs text-slate-500">{{ \Illuminate\Support\Str::limit($row['quote']->notes, 120) }}</span>@endif
                                     </td>
                                     <td class="px-5 py-3.5 text-right tabular-nums">{{ \App\Support\Money::inr($row['basic']) }}</td>

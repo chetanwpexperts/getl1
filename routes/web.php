@@ -183,6 +183,7 @@ Route::middleware('auth')->group(function () {
                 });
             });
             Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+            Route::get('/suppliers/{supplier}', [SupplierController::class, 'show'])->whereNumber('supplier')->name('suppliers.show');
 
             // RFQs: everyone in the buyer company can view
             Route::get('/rfqs', [BuyerRfqController::class, 'index'])->name('rfqs.index');
