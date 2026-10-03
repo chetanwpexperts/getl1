@@ -74,6 +74,7 @@ class RfqController extends Controller
             'auction' => $this->myAuctions()->where('rfq_id', $rfq->id)->latest('id')->first(),
             'order' => \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)
                 ->where('supplier_org_id', $this->current->id())->where('status', \App\Enums\AwardStatus::PoSent->value)->first(),
+            'questions' => \App\Models\RfqQuestion::visibleTo($rfq->id, $this->current->id())->orderBy('created_at')->orderBy('id')->get(),
             'gstRates' => QuoteService::GST_RATES,
             'paymentTerms' => RfqService::PAYMENT_TERMS,
             'freightTerms' => RfqService::FREIGHT_TERMS,
@@ -110,6 +111,16 @@ class RfqController extends Controller
         $quote = $quotes->submit($this->findOwn($invite), $request->user(), $data);
 
         return back()->with('status', 'Quote submitted and sealed until the deadline. You can revise it until then.');
+    }
+
+    public function ask(Request $request, int $invite, \App\Services\RfqQuestionService $questions): RedirectResponse
+    {
+        $data = $request->validate(['question' => ['required', 'string', 'max:'.\App\Services\RfqQuestionService::MAX_LENGTH]],
+            ['question.required' => 'Type your question.']);
+        $questions->ask($this->findOwn($invite), $request->user(), $data['question']);
+
+        return redirect()->to(route('supplier.rfqs.show', $invite).'#questions')
+            ->with('status', 'Question sent to the buyer. You will get an email when it is answered.');
     }
 
     public function downloadAttachment(int $invite, int $attachment): StreamedResponse

@@ -207,6 +207,8 @@
                     @if ($quote)<p class="border-t border-slate-100 px-5 py-3 text-sm">{{ $auction ? 'Your sealed quote total' : 'Your total' }} (ex-GST): <span class="font-semibold">{{ \App\Support\Money::inr($quote->total) }}</span>@if ($auction) <span class="text-slate-500">· your auction bids are in the auction room</span>@endif</p>@endif
                 @endif
             </section>
+
+            @include('supplier.rfqs._questions')
         </div>
 
         <div class="space-y-6">

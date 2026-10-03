@@ -10,6 +10,9 @@
     foreach (\App\Models\Award::with('supplier:id,name')->where('rfq_id', $rfq->id)->get() as $aw) {
         $names['award:'.$aw->id] = $aw->supplier?->name;
     }
+    foreach (\App\Models\RfqQuestion::with('supplier:id,name')->where('rfq_id', $rfq->id)->whereNotNull('supplier_org_id')->get() as $rq) {
+        $names['rfq_question:'.$rq->id] = $rq->supplier?->name;
+    }
     $auctionIds = \App\Models\Auction::where('rfq_id', $rfq->id)->where('status', '!=', 'cancelled')->pluck('id');
 @endphp
 

@@ -224,6 +224,9 @@
     {{-- Award, approval and purchase order --}}
     @include('buyer.rfqs._award')
 
+    {{-- Supplier questions and clarifications --}}
+    @include('buyer.rfqs._questions')
+
     <div class="mt-8 grid gap-8 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             {{-- Items --}}

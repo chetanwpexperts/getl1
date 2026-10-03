@@ -31,6 +31,7 @@ class LiveVersion
                 ->map(fn ($q) => $q->id.'@'.$q->submitted_at->getTimestamp())->implode(','),
             RfqInvite::where('rfq_id', $rfq->id)->orderBy('id')->get(['id', 'status'])->map(fn ($i) => $i->id.$i->status->value)->implode(','),
             RfqAttachment::where('rfq_id', $rfq->id)->count(),
+            self::questionPart(\App\Models\RfqQuestion::where('rfq_id', $rfq->id)),
             self::auctionPart($auction),
             self::awardPart($rfq->id),
         ], [$rfq->isOpenForQuotes() ? $rfq->quote_deadline : null, ...self::auctionTimes($auction)]);
@@ -47,9 +48,18 @@ class LiveVersion
             $invite->status->value,
             Quote::where('rfq_id', $rfq->id)->where('supplier_org_id', $invite->supplier_org_id)->value('submitted_at'),
             RfqAttachment::where('rfq_id', $rfq->id)->count(),
+            self::questionPart(\App\Models\RfqQuestion::visibleTo($rfq->id, (int) $invite->supplier_org_id)),
             self::auctionPart($auction, false),
             self::awardPart($rfq->id, $invite->supplier_org_id),
         ], [$rfq->isOpenForQuotes() ? $rfq->quote_deadline : null, ...self::auctionTimes($auction)]);
+    }
+
+    /** Questions and answers on an RFQ: count and last change. */
+    private static function questionPart($query): string
+    {
+        $row = $query->toBase()->selectRaw('count(*) as n, max(updated_at) as t')->first();
+
+        return ($row->n ?? 0).'@'.($row->t ?? '');
     }
 
     /** @return array{v:string, refresh_at:?int} */

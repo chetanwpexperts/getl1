@@ -68,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
             'lead' => \App\Models\Lead::class,
             'rfq' => Rfq::class,
             'rfq_invite' => RfqInvite::class,
+            'rfq_question' => \App\Models\RfqQuestion::class,
             'quote' => Quote::class,
             'auction' => Auction::class,
             'bid' => Bid::class,

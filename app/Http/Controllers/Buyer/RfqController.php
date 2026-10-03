@@ -126,6 +126,8 @@ class RfqController extends Controller
             'approvalLimit' => $this->current->get()->award_approval_limit,
             'hasApprover' => $this->current->get()->users()->wherePivot('role', \App\Enums\OrgRole::Approver->value)->exists(),
             'activity' => self::activity($rfq),
+            'questions' => \App\Models\RfqQuestion::with(['supplier:id,name', 'asker:id,name', 'answerer:id,name'])
+                ->where('rfq_id', $rfq->id)->where('organization_id', $rfq->organization_id)->orderBy('created_at')->orderBy('id')->get(),
             'unsealed' => $unsealed,
             // Sealed: only a count, never amounts.
             'quoteCount' => $quoteCount,
@@ -282,6 +284,7 @@ class RfqController extends Controller
             'quote' => Quote::where('rfq_id', $rfq->id)->pluck('id')->all(),
             'auction' => \App\Models\Auction::withoutGlobalScopes()->where('rfq_id', $rfq->id)->pluck('id')->all(),
             'award' => \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->pluck('id')->all(),
+            'rfq_question' => \App\Models\RfqQuestion::where('rfq_id', $rfq->id)->pluck('id')->all(),
         ];
 
         return \App\Models\AuditLog::with('user:id,name')
