@@ -300,7 +300,7 @@ class ItemWiseTest extends TestCase
             $this->assertArrayHasKey('min_decrement_value', $e->errors());
         }
 
-        $this->actingAs($this->buyerUser)->get(route('buyer.auctions.create', $this->rfq->id))->assertOk()->assertSee('each item is ranked on its own');
+        $this->actingAs($this->buyerUser)->get(route('buyer.auctions.create', $this->rfq->id))->assertOk()->assertSee('each item is ranked on its own')->assertDontSee('Japanese auction');
         $a = app(AuctionService::class)->schedule($this->rfq->fresh(), $this->buyerUser, $this->rules());
         $this->assertTrue($a->isPerItem());
         $this->assertEquals(87000, (float) $a->start_price);

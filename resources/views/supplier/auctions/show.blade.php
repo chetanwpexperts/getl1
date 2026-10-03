@@ -32,7 +32,42 @@
             </div>
         </div>
 
-        @if (($state['basis'] ?? 'lot_total') === 'per_item')
+        @if (($state['format'] ?? 'english') === 'japanese')
+        <div class="mt-6 grid gap-4 lg:grid-cols-3">
+            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+                <p class="text-sm text-slate-600">Round <span class="font-semibold text-slate-900" data-jp-round>—</span> of up to <span data-jp-max>—</span> · Round price (before GST)</p>
+                <p class="mt-2 text-5xl font-bold tracking-tight tabular-nums" data-jp-price>—</p>
+                <p class="mt-2 text-sm text-slate-500">Next round: <span class="font-medium text-slate-700" data-jp-next>—</span></p>
+
+                <div class="mt-6" data-jp-action>
+                    <button type="button" data-jp-accept class="w-full rounded-xl bg-emerald-700 px-6 py-4 text-lg font-semibold text-white shadow-sm hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+                        Accept <span data-jp-accept-price>—</span>
+                    </button>
+                    <p class="mt-2 text-xs text-slate-500">Accepting means you'll supply the full RFQ at this price. Don't accept and you drop out for good.</p>
+                </div>
+                <p class="mt-6 rounded-xl px-4 py-3 text-sm font-medium" data-jp-status></p>
+                <p class="auction-message mt-3 text-sm" data-bid-message role="status" aria-live="polite"></p>
+            </section>
+
+            <div class="space-y-4">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-sm text-slate-600">Suppliers still in</p>
+                    <p class="mt-1 text-4xl font-semibold tabular-nums"><span data-jp-in>—</span><span class="text-xl text-slate-400"> / {{ $state['participants'] }}</span></p>
+                    <p class="mt-1 text-xs text-slate-500"><span data-jp-accepted>0</span> accepted this round</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-sm text-slate-600">Your last accepted price</p>
+                    <p class="mt-1 text-2xl font-semibold tabular-nums" data-my-amount>—</p>
+                    <p class="mt-1 text-xs text-slate-500">Floor price: <span data-jp-floor>—</span></p>
+                </div>
+            </div>
+        </div>
+
+        <section class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Your acceptances</h2>
+            <ul class="max-h-80 divide-y divide-slate-100 overflow-y-auto text-sm" data-my-bids></ul>
+        </section>
+        @elseif (($state['basis'] ?? 'lot_total') === 'per_item')
         <div class="mt-6 grid gap-4 sm:grid-cols-3">
             <div class="auction-rank rounded-xl border p-5 text-center" data-rank-badge data-rank="other">
                 <p class="text-sm">Items where you're L1</p>
@@ -172,7 +207,9 @@
 
         <p class="mt-6 text-xs text-slate-500">
             Other suppliers can't see your name or prices. Times follow the GetL1 server clock (IST).
-            @if ($auction->extend_window_sec)
+            @if ($auction->isJapanese())
+                Japanese auction: each round lasts {{ $auction->round_seconds }} seconds. The last supplier still accepting wins; if nobody accepts a round, whoever accepted the previous round first wins.
+            @elseif ($auction->extend_window_sec)
                 A bid in the last {{ $auction->extend_window_sec / 60 }} min extends the auction by {{ $auction->extend_by_sec / 60 }} min (up to {{ $auction->max_extensions }} times).
             @endif
         </p>

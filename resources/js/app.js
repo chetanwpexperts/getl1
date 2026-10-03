@@ -138,6 +138,26 @@ document.addEventListener('DOMContentLoaded', () => {
         update();
     }
 
+    // Auction form: show the fields for the chosen auction type; hidden fields are disabled so
+    // they are neither validated by the browser nor sent.
+    const auctionForm = document.querySelector('[data-auction-form]');
+    if (auctionForm) {
+        const applyFormat = () => {
+            const chosen = auctionForm.querySelector('[data-format-switch]:checked')?.value ?? 'english_reverse';
+            auctionForm.querySelectorAll('[data-format-only]').forEach((el) => {
+                const on = el.dataset.formatOnly === chosen;
+                el.hidden = !on;
+                el.querySelectorAll('input, select, textarea').forEach((f) => { f.disabled = !on; });
+            });
+            auctionForm.querySelectorAll('[data-text-japanese]').forEach((el) => {
+                el.dataset.textEnglish ??= el.textContent;
+                el.textContent = chosen === 'japanese' ? el.dataset.textJapanese : el.dataset.textEnglish;
+            });
+        };
+        auctionForm.addEventListener('change', (e) => { if (e.target.matches('[data-format-switch]')) applyFormat(); });
+        applyFormat();
+    }
+
     // Confirm before destructive actions: <form data-confirm="Are you sure?">
     document.addEventListener('submit', (e) => {
         const msg = e.target.dataset?.confirm;

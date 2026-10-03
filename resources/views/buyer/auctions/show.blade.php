@@ -24,8 +24,12 @@
                     <span data-status="{{ $state['status'] }}" class="auction-status">{{ ucfirst($state['status']) }}</span>
                 </div>
                 <p class="mt-1 text-sm text-slate-600">
-                    Live reverse auction · {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST ·
-                    suppliers see {{ $auction->visibility === 'rank_and_l1' ? 'their rank and the lowest price' : 'their rank only' }}
+                    @if ($auction->isJapanese())
+                        Japanese auction · {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST · {{ $auction->round_seconds }}-second rounds from {{ \App\Support\Money::inr($auction->opening_price) }}
+                    @else
+                        Live reverse auction · {{ $auction->starts_at->ist()->format('d M Y, h:i A') }} IST ·
+                        suppliers see {{ $auction->visibility === 'rank_and_l1' ? 'their rank and the lowest price' : 'their rank only' }}
+                    @endif
                 </p>
             </div>
             <div class="text-right">
@@ -43,7 +47,7 @@
 
         <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-                <p class="text-sm text-emerald-900">{{ ($state['basis'] ?? 'lot_total') === 'per_item' ? 'Best total, each item at its L1' : 'Current L1' }} (before GST)</p>
+                <p class="text-sm text-emerald-900">{{ ($state['format'] ?? '') === 'japanese' ? 'Leading price' : (($state['basis'] ?? 'lot_total') === 'per_item' ? 'Best total, each item at its L1' : 'Current L1') }} (before GST)</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums text-emerald-800" data-l1>—</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
@@ -55,11 +59,40 @@
                 <p class="text-sm text-slate-600">Live bids</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums" data-bid-count>0</p>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-                <p class="text-sm text-slate-600">Extensions used</p>
-                <p class="mt-1 text-3xl font-semibold tabular-nums" data-extensions>0</p>
-            </div>
+            @if ($auction->isJapanese())
+                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+                    <p class="text-sm text-slate-600">Round length</p>
+                    <p class="mt-1 text-3xl font-semibold tabular-nums">{{ $auction->round_seconds }} s</p>
+                </div>
+            @else
+                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+                    <p class="text-sm text-slate-600">Extensions used</p>
+                    <p class="mt-1 text-3xl font-semibold tabular-nums" data-extensions>0</p>
+                </div>
+            @endif
         </div>
+
+        @if (($state['format'] ?? 'english') === 'japanese')
+            <div class="mt-6 grid gap-6 lg:grid-cols-3">
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-6 py-4">
+                        <h2 class="font-semibold">Round <span data-jp-round>—</span> · <span data-jp-price>—</span></h2>
+                        <span class="text-sm text-slate-500"><span data-jp-in>—</span> still in · <span data-jp-accepted>0</span> accepted · next <span data-jp-next>—</span></span>
+                    </div>
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                            <tr><th class="px-5 py-3.5">Rank</th><th class="px-5 py-3.5">Supplier</th><th class="px-5 py-3.5">This round</th><th class="px-5 py-3.5 text-right">Last accepted</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100" data-jp-bidders></tbody>
+                    </table>
+                </section>
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Rounds</h2>
+                    <ul class="max-h-96 divide-y divide-slate-100 overflow-y-auto text-sm" data-jp-rounds></ul>
+                    <p class="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">Floor <span data-jp-floor>—</span> · up to <span data-jp-max>—</span> rounds</p>
+                </section>
+            </div>
+        @endif
 
         @if (($state['basis'] ?? 'lot_total') === 'per_item')
             <section class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -78,7 +111,7 @@
             </section>
         @endif
 
-        <div class="mt-6 grid gap-6 lg:grid-cols-3">
+        <div class="mt-6 grid gap-6 lg:grid-cols-3" @if (($state['format'] ?? 'english') === 'japanese') hidden @endif>
             <section class="rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
                 <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">{{ ($state['basis'] ?? 'lot_total') === 'per_item' ? 'If one supplier took every item' : 'Standings' }}</h2>
                 <div class="overflow-x-auto">
@@ -142,9 +175,13 @@
 
         <p class="mt-6 text-xs text-slate-500">
             Times are server time (IST). Every bid is recorded with time, user and IP and can't be edited.
+            @if ($auction->isJapanese())
+                Rules: price drops {{ $auction->min_decrement_type === 'percent' ? rtrim(rtrim((string) $auction->min_decrement_value, '0'), '.').'% of the opening price' : \App\Support\Money::inr($auction->min_decrement_value) }} every {{ $auction->round_seconds }} seconds down to a floor {{ rtrim(rtrim((string) $auction->max_decrement_pct, '0'), '.') }}% below the opening price; suppliers accept each round to stay in.
+            @else
             Rules: minimum drop {{ $auction->min_decrement_type === 'percent' ? rtrim(rtrim((string) $auction->min_decrement_value, '0'), '.').'%' : \App\Support\Money::inr($auction->min_decrement_value) }},
             typo guard {{ rtrim(rtrim((string) $auction->max_decrement_pct, '0'), '.') }}%,
             auto-extend {{ $auction->extend_window_sec ? ($auction->extend_by_sec / 60).' min when bid in last '.($auction->extend_window_sec / 60).' min, up to '.$auction->max_extensions.' times' : 'off' }}.
+            @endif
         </p>
     </div>
 @endsection

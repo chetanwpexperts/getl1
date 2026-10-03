@@ -96,6 +96,9 @@ class BidService
             if ($a->isPerItem()) {
                 return $this->placeOnItem($a, $supplier, $user, $amount, $idempotencyKey, $ip, $userAgent, $itemId);
             }
+            if ($a->isJapanese()) {
+                return $this->acceptRound($a, $supplier, $user, $amount, $idempotencyKey, $ip, $userAgent, $itemId);
+            }
 
             $mine = Bid::where('auction_id', $a->id)->where('supplier_org_id', $supplier->id)
                 ->orderByDesc('created_at')->orderByDesc('id')->first();
@@ -226,6 +229,55 @@ class BidService
         return ['bid' => $bid, 'duplicate' => false, 'extended' => $extended, 'auction' => $a];
     }
 
+    /**
+     * Japanese: accept the current round's price. $round is the round the supplier saw; if the round
+     * has moved on, nothing is recorded and the supplier is told the new price.
+     */
+    private function acceptRound(Auction $a, Organization $supplier, User $user, float $amount, string $idempotencyKey, ?string $ip, ?string $userAgent, ?int $round): array
+    {
+        $participates = Bid::where('auction_id', $a->id)->where('supplier_org_id', $supplier->id)->where('kind', Bid::KIND_SEALED)->exists();
+        if (! $participates) {
+            SecurityLog::warning('auction_bid_not_participant', ['auction_id' => $a->id, 'supplier_org_id' => $supplier->id]);
+            abort(404);
+        }
+
+        $st = Japanese::state($a);
+        if ($round !== $st['round'] || abs($amount - $st['price']) > 0.004) {
+            $this->fail('round_moved', 'The round has moved on. The price is now '.\App\Support\Money::inr($st['price']).'. Check and accept again if you want to stay in.');
+        }
+        if (! $st['in']->contains($supplier->id)) {
+            $this->fail('dropped_out', 'You dropped out in an earlier round, so you can’t accept this one.');
+        }
+        if ($st['accepted']->contains($supplier->id)) {
+            $this->fail('already_accepted', 'You have already accepted this round. Wait for the next round.');
+        }
+
+        $bid = new Bid([
+            'auction_id' => $a->id,
+            'supplier_org_id' => $supplier->id,
+            'user_id' => $user->id,
+            'kind' => Bid::KIND_LIVE,
+            'round' => $st['round'],
+            'idempotency_key' => $idempotencyKey,
+            'amount' => $st['price'],
+            'rank_at_submit' => $st['accepted']->count() + 1, // order of acceptance in this round
+            'ip' => $ip,
+            'user_agent' => $userAgent ? substr($userAgent, 0, 255) : null,
+        ]);
+        $bid->created_at = now();
+        $bid->save();
+
+        if ($st['accepted']->isEmpty()) {
+            // First to accept this round leads at this price.
+            $a->current_l1 = $st['price'];
+            $a->current_l1_supplier_org_id = $supplier->id;
+        }
+        $a->bid_count++;
+        $a->save();
+
+        return ['bid' => $bid, 'duplicate' => false, 'extended' => false, 'auction' => $a];
+    }
+
     /** Auto-extend: a bid in the last window pushes the end out (up to the limit). */
     private function maybeExtend(Auction $a): bool
     {
@@ -254,6 +306,14 @@ class BidService
         } elseif ($effective === AuctionStatus::Closed) {
             $a->status = AuctionStatus::Closed;
             $a->opened_at ??= $a->starts_at;
+            if ($a->isJapanese()) {
+                // Ended when its last round ended; the winner is the top of the round ranking.
+                $st = Japanese::state($a);
+                $winner = $st['standings']->first();
+                $a->ends_at = $st['finished_at'];
+                $a->current_l1 = $winner['amount'] ?? $a->current_l1;
+                $a->current_l1_supplier_org_id = $winner['supplier_org_id'] ?? $a->current_l1_supplier_org_id;
+            }
             $a->closed_at ??= $a->ends_at;
             // The RFQ moves on to evaluation/award.
             \App\Models\Rfq::withoutGlobalScopes()->whereKey($a->rfq_id)

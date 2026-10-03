@@ -25,6 +25,9 @@ class Standings
         if ($auction->isPerItem()) {
             return self::lotTotals($auction);
         }
+        if ($auction->isJapanese()) {
+            return Japanese::state($auction)['standings'];
+        }
 
         $bids = Bid::where('auction_id', $auction->id)
             ->orderBy('created_at')->orderBy('id')
@@ -143,6 +146,10 @@ class Standings
     /** Effective status by the server clock (a scheduled auction past its start is live, etc.). */
     public static function effectiveStatus(Auction $auction): AuctionStatus
     {
+        if ($auction->isJapanese()) {
+            return self::japaneseStatus($auction);
+        }
+
         if ($auction->status === AuctionStatus::Scheduled && ! $auction->starts_at->isFuture()) {
             return $auction->ends_at->isFuture() ? AuctionStatus::Live : AuctionStatus::Closed;
         }
@@ -152,5 +159,18 @@ class Standings
         }
 
         return $auction->status;
+    }
+
+    /** Japanese: live from the start time until a round ends with one or no acceptance (or the floor round ends). */
+    private static function japaneseStatus(Auction $auction): AuctionStatus
+    {
+        if (! in_array($auction->status, [AuctionStatus::Scheduled, AuctionStatus::Live], true)) {
+            return $auction->status;
+        }
+        if ($auction->starts_at->isFuture()) {
+            return AuctionStatus::Scheduled;
+        }
+
+        return Japanese::state($auction)['finished'] ? AuctionStatus::Closed : AuctionStatus::Live;
     }
 }

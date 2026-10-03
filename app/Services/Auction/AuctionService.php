@@ -49,16 +49,22 @@ class AuctionService
 
     public static function rules(): array
     {
+        $english = 'required_unless:format,'.Auction::JAPANESE;
+
         return [
+            'format' => ['nullable', 'in:'.Auction::ENGLISH.','.Auction::JAPANESE],
             'starts_at' => ['required', 'date_format:Y-m-d\TH:i'],
-            'duration_min' => ['required', 'integer', 'min:'.self::minDuration(), 'max:'.(int) app(\App\Services\PlatformSettings::class)->get('auction.max_duration_min')],
+            'duration_min' => [$english, 'nullable', 'integer', 'min:'.self::minDuration(), 'max:'.(int) app(\App\Services\PlatformSettings::class)->get('auction.max_duration_min')],
             'min_decrement_type' => ['required', 'in:percent,amount'],
             'min_decrement_value' => ['required', 'numeric', 'gt:0', 'max:999999999'],
             'max_decrement_pct' => ['required', 'numeric', 'min:1', 'max:50'],
-            'extend_window_sec' => ['required', 'integer', 'in:0,60,120,180,300'],
-            'extend_by_sec' => ['required', 'integer', 'in:60,120,180,300'],
-            'max_extensions' => ['required', 'integer', 'min:0', 'max:'.(int) app(\App\Services\PlatformSettings::class)->get('auction.max_extensions_limit')],
-            'visibility' => ['required', 'in:rank_only,rank_and_l1'],
+            'extend_window_sec' => [$english, 'nullable', 'integer', 'in:0,60,120,180,300'],
+            'extend_by_sec' => [$english, 'nullable', 'integer', 'in:60,120,180,300'],
+            'max_extensions' => [$english, 'nullable', 'integer', 'min:0', 'max:'.(int) app(\App\Services\PlatformSettings::class)->get('auction.max_extensions_limit')],
+            'visibility' => [$english, 'nullable', 'in:rank_only,rank_and_l1'],
+            // Japanese
+            'opening_price' => ['required_if:format,'.Auction::JAPANESE, 'nullable', 'numeric', 'gt:0', 'max:99999999999'],
+            'round_seconds' => ['required_if:format,'.Auction::JAPANESE, 'nullable', 'integer', 'in:'.implode(',', Japanese::ROUND_SECONDS)],
         ];
     }
 
@@ -79,6 +85,10 @@ class AuctionService
         }
 
         $perItem = $rfq->isPerItem();
+        $japanese = ($data['format'] ?? Auction::ENGLISH) === Auction::JAPANESE;
+        if ($japanese && $perItem) {
+            throw ValidationException::withMessages(['format' => 'A Japanese auction runs on the total. For an item-by-item RFQ, use the standard auction.']);
+        }
         if ($perItem) {
             // Item-wise: the start is the best rate on every line combined; drops are a percentage of each rate.
             if ($data['min_decrement_type'] !== 'percent') {
@@ -94,6 +104,13 @@ class AuctionService
         } else {
             $startPrice = (float) $quotes->min('total');
         }
+        if ($japanese) {
+            $opening = (float) $data['opening_price'];
+            if ($opening < $startPrice * 0.5 || $opening > $startPrice * 1.5) {
+                throw ValidationException::withMessages(['opening_price' => 'Set the opening price within 50% of the best sealed quote ('.\App\Support\Money::inr($startPrice).'), to avoid a typo.']);
+            }
+            // Savings are still measured against the best sealed quote (start_price).
+        }
         if ($data['min_decrement_type'] === 'percent' && (float) $data['min_decrement_value'] > 10) {
             throw ValidationException::withMessages(['min_decrement_value' => 'A minimum decrement above 10% is not practical.']);
         }
@@ -101,7 +118,7 @@ class AuctionService
             throw ValidationException::withMessages(['min_decrement_value' => 'The minimum decrement can be at most 10% of the start price.']);
         }
 
-        $auction = DB::transaction(function () use ($rfq, $by, $data, $quotes, $startsAt, $startPrice, $perItem) {
+        $auction = DB::transaction(function () use ($rfq, $by, $data, $quotes, $startsAt, $startPrice, $perItem, $japanese) {
             // Re-check inside the lock that nobody scheduled one in parallel.
             $locked = Rfq::withoutGlobalScopes()->whereKey($rfq->id)->lockForUpdate()->first();
             if ($locked->status !== RfqStatus::Published) {
@@ -111,7 +128,14 @@ class AuctionService
             // Plan limit: live auctions per month. Beyond it, a prepaid auction credit is used.
             $useCredit = $this->consumeAllowance($rfq->organization_id);
 
-            $endsAt = $startsAt->copy()->addMinutes((int) $data['duration_min']);
+            if ($japanese) {
+                // Latest possible end: every round down to the floor. It usually ends earlier.
+                $probe = new Auction(['opening_price' => $data['opening_price'], 'min_decrement_type' => $data['min_decrement_type'],
+                    'min_decrement_value' => $data['min_decrement_value'], 'max_decrement_pct' => $data['max_decrement_pct']]);
+                $endsAt = $startsAt->copy()->addSeconds(Japanese::maxRounds($probe) * (int) $data['round_seconds']);
+            } else {
+                $endsAt = $startsAt->copy()->addMinutes((int) $data['duration_min']);
+            }
             $best = $quotes->sortBy([['total', 'asc'], ['submitted_at', 'asc']])->first();
 
             $auction = Auction::create([
@@ -119,19 +143,21 @@ class AuctionService
                 'organization_id' => $rfq->organization_id,
                 'created_by' => $by->id,
                 'paid_with_credit' => $useCredit,
-                'format' => 'english_reverse',
+                'format' => $japanese ? Auction::JAPANESE : Auction::ENGLISH,
                 'bid_basis' => $perItem ? Rfq::BASIS_PER_ITEM : Rfq::BASIS_LOT,
                 'start_price' => $startPrice,
+                'opening_price' => $japanese ? $data['opening_price'] : null,
+                'round_seconds' => $japanese ? (int) $data['round_seconds'] : null,
                 'min_decrement_type' => $data['min_decrement_type'],
                 'min_decrement_value' => $data['min_decrement_value'],
                 'max_decrement_pct' => $data['max_decrement_pct'],
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
                 'original_ends_at' => $endsAt,
-                'extend_window_sec' => $data['extend_window_sec'],
-                'extend_by_sec' => $data['extend_by_sec'],
-                'max_extensions' => $data['max_extensions'],
-                'visibility' => $data['visibility'],
+                'extend_window_sec' => $japanese ? 0 : $data['extend_window_sec'],
+                'extend_by_sec' => $japanese ? 60 : $data['extend_by_sec'],
+                'max_extensions' => $japanese ? 0 : $data['max_extensions'],
+                'visibility' => $japanese ? 'rank_only' : $data['visibility'],
                 'status' => AuctionStatus::Scheduled,
                 'current_l1' => $startPrice,
                 'current_l1_supplier_org_id' => $perItem ? null : $best->supplier_org_id,
@@ -159,7 +185,7 @@ class AuctionService
 
             $this->audit->log('auction_scheduled', $auction, after: [
                 'starts_at' => $startsAt->toIso8601String(), 'ends_at' => $endsAt->toIso8601String(),
-                'start_price' => $startPrice, 'participants' => $quotes->count(), 'bid_basis' => $perItem ? 'per_item' : 'lot_total',
+                'start_price' => $startPrice, 'participants' => $quotes->count(), 'bid_basis' => $perItem ? 'per_item' : 'lot_total', 'format' => $japanese ? 'japanese' : 'english',
                 'rules' => collect($data)->except('starts_at')->all(),
             ], user: $by, organizationId: $rfq->organization_id);
 
@@ -205,6 +231,8 @@ class AuctionService
         $due = Auction::withoutGlobalScopes()
             ->where(fn ($q) => $q->where('status', AuctionStatus::Scheduled->value)->where('starts_at', '<=', now()))
             ->orWhere(fn ($q) => $q->where('status', AuctionStatus::Live->value)->whereNull('paused_at')->where('ends_at', '<=', now()))
+            // Japanese auctions can finish before their latest possible end: check every running one.
+            ->orWhere(fn ($q) => $q->where('status', AuctionStatus::Live->value)->whereNull('paused_at')->where('format', Auction::JAPANESE))
             ->pluck('id');
 
         foreach ($due as $id) {

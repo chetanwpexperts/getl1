@@ -25,7 +25,8 @@ class AuctionState
             ->get(['supplier_org_id', 'rfq_item_id', 'amount', 'rank_at_submit', 'created_at']);
         $itemNames = $auction->isPerItem() ? self::items($auction)->pluck('name', 'id') : collect();
 
-        return self::common($auction) + ($auction->isPerItem() ? self::buyerItems($auction, $names) : []) + [
+        return self::common($auction) + ($auction->isPerItem() ? self::buyerItems($auction, $names) : [])
+            + ($auction->isJapanese() ? self::buyerJapanese($auction, $names) : []) + [
             'role' => 'buyer',
             'start_price' => (float) $auction->start_price,
             'current_l1' => $auction->current_l1 !== null ? (float) $auction->current_l1 : null,
@@ -54,6 +55,9 @@ class AuctionState
     {
         if ($auction->isPerItem()) {
             return self::supplierItems($auction, $supplierOrgId);
+        }
+        if ($auction->isJapanese()) {
+            return self::supplierJapanese($auction, $supplierOrgId);
         }
 
         $standings = Standings::for($auction);
@@ -176,6 +180,74 @@ class AuctionState
         ];
     }
 
+    /** Japanese, shared: the round, its price and timing, and how many are still in. */
+    private static function japaneseCommon(Auction $auction, array $st): array
+    {
+        $max = Japanese::maxRounds($auction);
+
+        return [
+            'round' => $st['round'],
+            'max_rounds' => $max,
+            'round_price' => $st['price'],
+            'next_price' => $st['round'] < $max ? Japanese::price($auction, $st['round'] + 1) : null,
+            'floor_price' => Japanese::floor($auction),
+            'round_seconds' => (int) $auction->round_seconds,
+            'still_in' => $st['in']->count(),
+            'accepted_count' => $st['accepted']->count(),
+        ];
+    }
+
+    /** Japanese, buyer: who is still in, who accepted this round, who dropped out and when. */
+    private static function buyerJapanese(Auction $auction, \Illuminate\Support\Collection $names): array
+    {
+        $st = Japanese::state($auction);
+        $rounds = Bid::where('auction_id', $auction->id)->where('kind', Bid::KIND_LIVE)->whereNotNull('round')
+            ->selectRaw('round, count(*) as n, min(amount) as price')->groupBy('round')->orderByDesc('round')->limit(30)->get();
+
+        return self::japaneseCommon($auction, $st) + [
+            'bidders' => $st['standings']->map(fn ($r) => [
+                'id' => $r['supplier_org_id'],
+                'supplier' => $names[$r['supplier_org_id']]->name ?? 'Supplier',
+                'in' => ! $st['finished'] && $st['in']->contains($r['supplier_org_id']),
+                'accepted' => $st['accepted']->contains($r['supplier_org_id']),
+                'last_round' => $r['round'],
+                'last_price' => $r['round'] > 0 ? $r['amount'] : null,
+                'rank' => $r['rank'],
+            ])->all(),
+            'rounds' => $rounds->map(fn ($r) => ['round' => (int) $r->round, 'accepted' => (int) $r->n, 'price' => (float) $r->price])->all(),
+        ];
+    }
+
+    /** Japanese, supplier: own position only, plus how many are still in (never who). */
+    private static function supplierJapanese(Auction $auction, int $supplierOrgId): array
+    {
+        $st = Japanese::state($auction);
+        $me = $st['standings']->firstWhere('supplier_org_id', $supplierOrgId);
+        $in = $st['in']->contains($supplierOrgId);
+        $mine = Bid::where('auction_id', $auction->id)->where('supplier_org_id', $supplierOrgId)
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(10)->get(['amount', 'kind', 'round', 'created_at']);
+
+        return self::common($auction) + self::japaneseCommon($auction, $st) + [
+            'role' => 'supplier',
+            'participants' => $st['standings']->count(),
+            'my_status' => $st['finished'] ? 'finished' : (! $in ? 'out' : ($st['accepted']->contains($supplierOrgId) ? 'accepted' : 'in')),
+            'my_rank' => $st['finished'] ? ($me['rank'] ?? null) : null,
+            'my_amount' => $me && $me['round'] > 0 ? $me['amount'] : null,
+            'my_last_round' => $me['round'] ?? 0,
+            'l1_amount' => null,
+            'max_next_bid' => null,
+            'min_decrement' => null,
+            'floor' => null,
+            'my_bids' => $mine->map(fn ($b) => [
+                'amount' => (float) $b->amount,
+                'kind' => $b->kind,
+                'rank' => null,
+                'round' => $b->round,
+                'at' => $b->created_at->getTimestampMs(),
+            ])->all(),
+        ];
+    }
+
     private static function items(Auction $auction): \Illuminate\Support\Collection
     {
         return \App\Models\RfqItem::where('rfq_id', $auction->rfq_id)->orderBy('line_no')->orderBy('id')
@@ -187,17 +259,22 @@ class AuctionState
         return [
             'id' => $auction->id,
             'basis' => $auction->isPerItem() ? 'per_item' : 'lot_total',
+            'format' => $auction->isJapanese() ? 'japanese' : 'english',
             'status' => Standings::effectiveStatus($auction)->value,
             'server_time' => now()->getTimestampMs(),
             'starts_at' => $auction->starts_at->getTimestampMs(),
-            'ends_at' => $auction->ends_at->getTimestampMs(),
+            // Japanese: the countdown is for the running round.
+            'ends_at' => $auction->isJapanese() && Standings::effectiveStatus($auction) === \App\Enums\AuctionStatus::Live
+                ? Japanese::state($auction)['round_ends_at']->getTimestampMs() : $auction->ends_at->getTimestampMs(),
             'extensions_used' => $auction->extensions_used,
             'max_extensions' => $auction->max_extensions,
             'extend_window_sec' => $auction->extend_window_sec,
             'extend_by_sec' => $auction->extend_by_sec,
             'visibility' => $auction->visibility,
             'paused' => $auction->isPaused(),
-            'paused_remaining_ms' => $auction->isPaused() ? $auction->remainingMs() : null,
+            'paused_remaining_ms' => ! $auction->isPaused() ? null : ($auction->isJapanese()
+                ? max(0, Japanese::state($auction)['round_ends_at']->getTimestampMs() - $auction->paused_at->getTimestampMs())
+                : $auction->remainingMs()),
             'notice' => $auction->isPaused()
                 ? 'Bidding is paused by GetL1 for a technical check. The clock is stopped and resumes with the same time left.' : null,
         ];

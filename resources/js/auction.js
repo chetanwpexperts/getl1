@@ -116,8 +116,8 @@ export function initAuction() {
         }
         const label = $('[data-countdown-label]');
         if (label) {
-            label.textContent = state.paused ? 'Paused · time left'
-                : ({ scheduled: 'Starts in', live: 'Ends in', closed: 'Auction closed', cancelled: 'Cancelled' }[state.status] ?? '');
+            label.textContent = state.paused ? (state.format === 'japanese' ? 'Paused · round time left' : 'Paused · time left')
+                : ({ scheduled: 'Starts in', live: state.format === 'japanese' ? `Round ${state.round} ends in` : 'Ends in', closed: 'Auction closed', cancelled: 'Cancelled' }[state.status] ?? '');
         }
 
         // Crossing a boundary (start/end): ask the server for the authoritative state.
@@ -202,7 +202,7 @@ export function initAuction() {
     function renderBuyer() {
         setLive('[data-l1]', fmt(state.current_l1));
         setText('[data-start-price]', fmt(state.start_price));
-        setLive('[data-savings]', state.savings_pct === null ? '—' : `${state.savings_pct.toFixed(2)}%`);
+        setLive('[data-savings]', state.savings_pct === null || state.savings_pct < 0 ? '—' : `${state.savings_pct.toFixed(2)}%`);
         setLive('[data-bid-count]', String(state.bid_count));
         setLive('[data-extensions]', `${state.extensions_used} of ${state.max_extensions}`);
 
@@ -219,6 +219,38 @@ export function initAuction() {
                 if (s.rank === 1) tr.className = 'bg-emerald-50';
                 return tr;
             }, (s) => `${s.amount}|${s.bids}`); // flash on a new price; rank moves just slide
+        }
+
+        if (state.format === 'japanese') renderJapaneseCommon();
+        const bidders = $('[data-jp-bidders]');
+        if (bidders && state.bidders) {
+            renderList(bidders, state.bidders, (b) => `j${b.id}`, (b) => {
+                const status = state.status === 'closed' ? (b.rank === 1 ? 'Winner' : `Out after round ${b.last_round}`)
+                    : b.accepted ? '✓ Accepted' : b.in ? 'Waiting…' : (b.last_round ? `Dropped out (round ${b.last_round + 1})` : 'Never accepted');
+                const tr = row([
+                    [`L${b.rank}`, 'px-5 py-3 font-semibold'],
+                    [b.supplier, 'px-5 py-3'],
+                    [status, `px-5 py-3 ${b.accepted || (state.status === 'closed' && b.rank === 1) ? 'font-medium text-emerald-700' : b.in ? 'text-amber-700' : 'text-slate-400'}`],
+                    [b.last_price === null ? '—' : fmt(b.last_price), 'px-5 py-3 text-right tabular-nums'],
+                ]);
+                if (b.rank === 1) tr.className = 'bg-emerald-50';
+                return tr;
+            }, (b) => `${b.accepted}|${b.in}|${b.last_round}`);
+        }
+        const rounds = $('[data-jp-rounds]');
+        if (rounds && state.rounds) {
+            renderList(rounds, state.rounds.length ? state.rounds : [null], (r) => (r ? `r${r.round}-${r.accepted}` : 'none'), (r) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between gap-3 px-5 py-2.5';
+                if (!r) { li.textContent = 'No acceptances yet.'; li.className += ' text-slate-500'; return li; }
+                const left = document.createElement('span');
+                left.textContent = `Round ${r.round} · ${fmt(r.price)}`;
+                const right = document.createElement('span');
+                right.className = 'text-slate-500';
+                right.textContent = `${r.accepted} accepted`;
+                li.append(left, right);
+                return li;
+            });
         }
 
         const board = $('[data-items-board]');
@@ -315,7 +347,55 @@ export function initAuction() {
         renderMyBids();
     }
 
+    function renderJapaneseCommon() {
+        setText('[data-jp-round]', String(state.round));
+        setText('[data-jp-max]', String(state.max_rounds));
+        setLive('[data-jp-price]', fmt(state.round_price));
+        setText('[data-jp-next]', state.next_price === null ? 'floor reached' : fmt(state.next_price));
+        setText('[data-jp-floor]', fmt(state.floor_price));
+        setLive('[data-jp-in]', String(state.still_in));
+        setLive('[data-jp-accepted]', String(state.accepted_count));
+    }
+
+    function renderSupplierJapanese() {
+        renderJapaneseCommon();
+        setLive('[data-my-amount]', fmt(state.my_amount));
+        setText('[data-jp-accept-price]', fmt(state.round_price));
+        const btn = $('[data-jp-accept]');
+        const canAccept = state.status === 'live' && !state.paused && state.my_status === 'in';
+        if (btn && !btn.dataset.confirming) btn.disabled = !canAccept;
+        const action = $('[data-jp-action]');
+        if (action) action.hidden = state.status !== 'live' || state.my_status !== 'in';
+        const box = $('[data-jp-status]');
+        if (box) {
+            const [text, tone] = state.paused ? ['Paused by GetL1. The round clock is stopped; you lose no time.', 'amber']
+                : state.status === 'scheduled' ? ['Round 1 opens when the countdown reaches zero.', 'slate']
+                : state.status === 'cancelled' ? ['This auction was cancelled.', 'slate']
+                : state.status === 'closed' ? [state.my_rank === 1 ? 'Auction over: you are L1 at your last accepted price. The buyer will review and award.' : `Auction over: you finished L${state.my_rank ?? '—'}.`, state.my_rank === 1 ? 'emerald' : 'slate']
+                : state.my_status === 'accepted' ? [`You're in at ${fmt(state.round_price)}. Wait for round ${state.round + 1}.`, 'emerald']
+                : state.my_status === 'out' ? ['You dropped out. You can watch until the end.', 'slate']
+                : ['Accept before the countdown ends to stay in.', 'amber'];
+            box.textContent = text;
+            box.className = `mt-6 rounded-xl px-4 py-3 text-sm font-medium ${{ emerald: 'bg-emerald-50 text-emerald-800', amber: 'bg-amber-50 text-amber-900', slate: 'bg-slate-50 text-slate-700' }[tone]}`;
+        }
+        const list = $('[data-my-bids]');
+        if (list) {
+            renderList(list, state.my_bids, (b) => `m${b.at}-${b.round ?? 's'}`, (b) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between gap-3 px-4 py-2';
+                const left = document.createElement('span');
+                left.textContent = b.kind === 'sealed' ? `${fmt(b.amount)} (sealed quote)` : `Round ${b.round}: accepted ${fmt(b.amount)}`;
+                const right = document.createElement('span');
+                right.className = 'text-slate-500';
+                right.textContent = time(b.at);
+                li.append(left, right);
+                return li;
+            });
+        }
+    }
+
     function renderSupplier() {
+        if (state.format === 'japanese') return renderSupplierJapanese();
         if (state.basis === 'per_item') return renderSupplierItems();
         const rankBefore = $('[data-my-rank]')?.textContent;
         setLive('[data-my-rank]', state.my_rank ? `L${state.my_rank}` : '—');
@@ -425,6 +505,42 @@ export function initAuction() {
         });
     });
 
+    // Japanese: one button, tapped twice (accept → confirm) so a stray tap never commits.
+    const jpBtn = $('[data-jp-accept]');
+    if (jpBtn) {
+        let resetTimer = null;
+        const reset = () => {
+            delete jpBtn.dataset.confirming;
+            jpBtn.innerHTML = '';
+            jpBtn.append('Accept ');
+            const span = document.createElement('span');
+            span.dataset.jpAcceptPrice = '';
+            span.textContent = fmt(state.round_price);
+            jpBtn.append(span);
+            dirty = true;
+        };
+        jpBtn.addEventListener('click', async () => {
+            say('');
+            if (!jpBtn.dataset.confirming) {
+                jpBtn.dataset.confirming = String(state.round);
+                jpBtn.textContent = `Tap again to accept ${fmt(state.round_price)}`;
+                clearTimeout(resetTimer);
+                resetTimer = setTimeout(reset, 4000);
+                return;
+            }
+            clearTimeout(resetTimer);
+            if (Number(jpBtn.dataset.confirming) !== state.round) {
+                reset();
+                return say(`The round moved on. The price is now ${fmt(state.round_price)}.`);
+            }
+            pending = { amount: Number(state.round_price).toFixed(2), round: state.round, key: uuid() };
+            jpBtn.disabled = true;
+            jpBtn.textContent = 'Accepting…';
+            await send();
+            reset();
+        });
+    }
+
     confirmBox?.querySelector('[data-bid-cancel]')?.addEventListener('click', () => {
         pending = null;
         confirmBox.hidden = true;
@@ -434,6 +550,7 @@ export function initAuction() {
         try {
             const body = { amount: pending.amount, idempotency_key: pending.key };
             if (pending.item) body.item = pending.item;
+            if (pending.round) body.round = pending.round;
             const res = await fetch(cfg.bidUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -443,12 +560,16 @@ export function initAuction() {
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 apply(data.state);
-                const it = pending.item ? (data.state.items || []).find((x) => x.id === pending.item) : null;
-                const rank = it ? it.my_rank : data.state.my_rank;
-                say(`Bid placed. You are L${rank}${it ? ` on ${it.name}` : ''}.${data.extended ? ' The auction was extended.' : ''}`, true);
+                if (pending.round) {
+                    say(''); // the status box already says "You're in"
+                } else {
+                    const it = pending.item ? (data.state.items || []).find((x) => x.id === pending.item) : null;
+                    const rank = it ? it.my_rank : data.state.my_rank;
+                    say(`Bid placed. You are L${rank}${it ? ` on ${it.name}` : ''}.${data.extended ? ' The auction was extended.' : ''}`, true);
+                }
                 if (pending.input) pending.input.value = '';
                 pending = null;
-                confirmBox.hidden = true;
+                if (confirmBox) confirmBox.hidden = true;
             } else if (res.status === 419) {
                 say('Your session expired. Refresh the page and bid again.');
             } else if (res.status === 429) {

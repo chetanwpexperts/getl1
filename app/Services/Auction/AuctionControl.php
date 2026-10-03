@@ -78,6 +78,9 @@ class AuctionControl
             if ($a->status !== AuctionStatus::Live) {
                 $this->refuse('Time can only be added to a running auction.');
             }
+            if ($a->isJapanese()) {
+                $this->refuse('A Japanese auction runs in fixed rounds. Pause it instead if suppliers need time.');
+            }
             $before = $a->ends_at->copy();
             $a->update(['ends_at' => $a->ends_at->copy()->addMinutes($minutes)]);
             $this->log('auction_time_added_by_getl1', $a, $admin, ['minutes' => $minutes, 'reason' => $reason,

@@ -12,8 +12,11 @@ class Auction extends Model
 {
     use BelongsToOrganization;
 
+    public const ENGLISH = 'english_reverse';
+    public const JAPANESE = 'japanese';
+
     protected $fillable = [
-        'rfq_id', 'organization_id', 'created_by', 'cancel_reason', 'paid_with_credit', 'format', 'bid_basis', 'start_price', 'min_decrement_type', 'min_decrement_value',
+        'rfq_id', 'organization_id', 'created_by', 'cancel_reason', 'paid_with_credit', 'format', 'bid_basis', 'start_price', 'opening_price', 'round_seconds', 'min_decrement_type', 'min_decrement_value',
         'max_decrement_pct', 'starts_at', 'ends_at', 'original_ends_at', 'extend_window_sec', 'extend_by_sec',
         'max_extensions', 'extensions_used', 'visibility', 'status', 'current_l1', 'current_l1_supplier_org_id',
         'bid_count', 'opened_at', 'closed_at', 'paused_at', 'pause_reason', 'paused_seconds',
@@ -25,6 +28,7 @@ class Auction extends Model
             'status' => AuctionStatus::class,
             'paid_with_credit' => 'boolean',
             'start_price' => 'decimal:2',
+            'opening_price' => 'decimal:2',
             'min_decrement_value' => 'decimal:2',
             'max_decrement_pct' => 'decimal:2',
             'current_l1' => 'decimal:2',
@@ -58,6 +62,12 @@ class Auction extends Model
     public function isPerItem(): bool
     {
         return $this->bid_basis === Rfq::BASIS_PER_ITEM;
+    }
+
+    /** Japanese (falling-price rounds): accept each round's price or drop out. */
+    public function isJapanese(): bool
+    {
+        return $this->format === self::JAPANESE;
     }
 
     public function isLive(): bool

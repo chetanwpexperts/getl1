@@ -34,8 +34,50 @@
         </div>
     @else
         <div class="mt-6 grid gap-6 lg:grid-cols-3">
-            <form method="POST" action="{{ route('buyer.auctions.store', $rfq->id) }}" class="space-y-6 lg:col-span-2">
+            @php $format = old('format', 'english_reverse'); @endphp
+            <form method="POST" action="{{ route('buyer.auctions.store', $rfq->id) }}" class="space-y-6 lg:col-span-2" data-auction-form>
                 @csrf
+                @if ($rfq->isPerItem())
+                    <input type="hidden" name="format" value="english_reverse">
+                @else
+                    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+                        <h2 class="text-sm font-semibold">Auction type</h2>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            @foreach ([
+                                'english_reverse' => ['Standard reverse auction', 'Suppliers bid lower and lower until time runs out. They see their rank. Best for most purchases.'],
+                                'japanese' => ['Japanese auction', 'The price drops every round. Suppliers accept to stay in or drop out. Last one standing wins. Fast and very transparent.'],
+                            ] as $v => [$l, $d])
+                                <label class="flex cursor-pointer gap-3 rounded-xl border border-slate-300 p-3 text-sm has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50">
+                                    <input type="radio" name="format" value="{{ $v }}" class="mt-0.5" data-format-switch @checked($format === $v)>
+                                    <span><span class="block font-medium">{{ $l }}</span><span class="block text-slate-600">{{ $d }}</span></span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('format') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </section>
+                @endif
+
+                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5" data-format-only="japanese" @if ($format !== 'japanese') hidden @endif>
+                    <h2 class="text-sm font-semibold">Rounds</h2>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="opening_price" class="block text-sm font-medium text-slate-700">Opening price (₹, before GST)</label>
+                            <input id="opening_price" name="opening_price" inputmode="decimal" required value="{{ old('opening_price', number_format((float) $best->total, 2, '.', '')) }}" class="{{ $input }}">
+                            <p class="mt-1 text-xs text-slate-500">Round 1 price. The best sealed quote is filled in; start a little higher to give room.</p>
+                            @error('opening_price') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label for="round_seconds" class="block text-sm font-medium text-slate-700">Each round lasts</label>
+                            <select id="round_seconds" name="round_seconds" class="{{ $input }}">
+                                @foreach (\App\Services\Auction\Japanese::ROUND_SECONDS as $sec)
+                                    <option value="{{ $sec }}" @selected((int) old('round_seconds', 60) === $sec)>{{ $sec < 60 ? $sec.' seconds' : ($sec / 60).' '.\Illuminate\Support\Str::plural('minute', $sec / 60) }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-slate-500">Suppliers must accept within the round or they drop out.</p>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                     <h2 class="text-sm font-semibold">Timing</h2>
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -45,7 +87,7 @@
                             <p class="mt-1 text-xs text-slate-500">At least 5 minutes from now, so suppliers can get ready.</p>
                             @error('starts_at') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
-                        <div>
+                        <div data-format-only="english_reverse" @if ($format === 'japanese') hidden @endif>
                             <label for="duration_min" class="block text-sm font-medium text-slate-700">Duration</label>
                             <select id="duration_min" name="duration_min" class="{{ $input }}">
                                 @foreach (\App\Services\Auction\AuctionService::durationOptions() as $m)
@@ -53,7 +95,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div>
+                        <div data-format-only="english_reverse" @if ($format === 'japanese') hidden @endif>
                             <label for="extend_window_sec" class="block text-sm font-medium text-slate-700">Auto-extend if a bid comes in the last</label>
                             <select id="extend_window_sec" name="extend_window_sec" class="{{ $input }}">
                                 @foreach ([0 => 'Off', 60 => '1 minute', 120 => '2 minutes', 180 => '3 minutes', 300 => '5 minutes'] as $v => $l)
@@ -61,7 +103,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 gap-3" data-format-only="english_reverse" @if ($format === 'japanese') hidden @endif>
                             <div>
                                 <label for="extend_by_sec" class="block text-sm font-medium text-slate-700">Extend by</label>
                                 <select id="extend_by_sec" name="extend_by_sec" class="{{ $input }}">
@@ -76,14 +118,15 @@
                             </div>
                         </div>
                     </div>
-                    <p class="mt-3 text-xs text-slate-500">Auto-extend stops "last-second sniping": everyone gets a fair chance to respond.</p>
+                    <p class="mt-3 text-xs text-slate-500" data-format-only="english_reverse" @if ($format === 'japanese') hidden @endif>Auto-extend stops "last-second sniping": everyone gets a fair chance to respond.</p>
+                    <p class="mt-3 text-xs text-slate-500" data-format-only="japanese" @if ($format !== 'japanese') hidden @endif>It ends as soon as a round finishes with one supplier (or none) accepting, or at the floor price.</p>
                 </section>
 
                 <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
                     <h2 class="text-sm font-semibold">Bidding rules</h2>
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700">Minimum drop per bid</label>
+                            <label class="block text-sm font-medium text-slate-700" data-text-japanese="Price drop each round">Minimum drop per bid</label>
                             <div class="mt-1 flex gap-2">
                                 <input name="min_decrement_value" inputmode="decimal" required value="{{ old('min_decrement_value', $defaults['auction.default_min_decrement_pct']) }}" class="{{ $input }} mt-0">
                                 @if ($rfq->isPerItem())
@@ -96,15 +139,16 @@
                                     </select>
                                 @endif
                             </div>
-                            <p class="mt-1 text-xs text-slate-500">{{ $rfq->isPerItem() ? 'Item by item: each new rate must beat the supplier\'s own rate for that item by at least this much.' : 'Each new bid must beat the supplier\'s own price by at least this much.' }}</p>
+                            <p class="mt-1 text-xs text-slate-500" data-text-japanese="Percent of the opening price, or a fixed amount in rupees.">{{ $rfq->isPerItem() ? 'Item by item: each new rate must beat the supplier\'s own rate for that item by at least this much.' : 'Each new bid must beat the supplier\'s own price by at least this much.' }}</p>
                             @error('min_decrement_value') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="max_decrement_pct" class="block text-sm font-medium text-slate-700">Typo guard (max % below current L1)</label>
+                            <label for="max_decrement_pct" class="block text-sm font-medium text-slate-700" data-text-japanese="Lowest price (% below opening)">Typo guard (max % below current L1)</label>
                             <input id="max_decrement_pct" name="max_decrement_pct" inputmode="decimal" required value="{{ old('max_decrement_pct', $defaults['auction.default_max_decrement_pct']) }}" class="{{ $input }}">
-                            <p class="mt-1 text-xs text-slate-500">Blocks accidental bids like ₹1,200 instead of ₹12,000.</p>
+                            <p class="mt-1 text-xs text-slate-500" data-text-japanese="Rounds stop at this price, so it never goes below what is realistic.">Blocks accidental bids like ₹1,200 instead of ₹12,000.</p>
+                            @error('max_decrement_pct') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
-                        <div class="sm:col-span-2">
+                        <div class="sm:col-span-2" data-format-only="english_reverse" @if ($format === 'japanese') hidden @endif>
                             <span class="block text-sm font-medium text-slate-700">What suppliers see</span>
                             <div class="mt-2 grid gap-3 sm:grid-cols-2">
                                 @foreach (['rank_only' => ['Rank only', 'Suppliers see L1/L2/L3, not the winning price. Recommended.'],

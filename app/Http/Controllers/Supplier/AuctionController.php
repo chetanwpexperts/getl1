@@ -46,11 +46,12 @@ class AuctionController extends Controller
             'amount' => ['required', 'string', 'max:20'],
             'idempotency_key' => ['required', 'string', 'max:64'],
             'item' => ['nullable', 'integer', 'min:1'], // item-wise auctions: the RFQ line being bid on
+            'round' => ['nullable', 'integer', 'min:1', 'max:65000'], // Japanese auctions: the round being accepted
         ]);
 
         $auction = $this->findParticipating($auction);
         $result = $bids->place($auction, $this->current->get(), $request->user(), $data['amount'], $data['idempotency_key'],
-            $request->ip(), $request->userAgent(), isset($data['item']) ? (int) $data['item'] : null);
+            $request->ip(), $request->userAgent(), isset($data['round']) ? (int) $data['round'] : (isset($data['item']) ? (int) $data['item'] : null));
 
         return response()->json([
             'ok' => true,
