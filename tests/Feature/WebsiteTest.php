@@ -46,6 +46,28 @@ class WebsiteTest extends TestCase
         $this->get('/robots.txt')->assertOk()->assertSee('Disallow: /'); // not production: never indexed
     }
 
+    public function test_feature_pages_for_search_engines(): void
+    {
+        $this->get('/features')->assertOk()->assertSee('Your whole purchase cycle, in one place')->assertSee('images/features/', false);
+        foreach (\App\Support\FeaturePages::PAGES as $slug => $p) {
+            $html = $this->get('/features/'.$slug)->assertOk()->assertSee($p['h1'])->getContent();
+            $this->assertStringContainsString('<title>'.e($p['title']), $html);
+            $this->assertStringContainsString('"FAQPage"', $html);
+            $this->assertStringContainsString('"BreadcrumbList"', $html);
+            foreach ($p['sections'] as $sec) {
+                $this->assertFileExists(public_path('images/features/'.$sec['image']));
+            }
+        }
+        $this->get('/features/not-a-page')->assertNotFound();
+        $this->get('/sitemap.xml')->assertOk()->assertSee(route('site.feature', 'msme-payment-tracker'))->assertSee(route('site.features'));
+        $this->get('/')->assertOk()->assertSee('"FAQPage"', false)->assertSee(route('site.features'));
+
+        // Also served while the site is in website-only mode.
+        config(['site.mode' => 'website']);
+        $this->get('/features')->assertOk();
+        $this->get('/features/supplier-management')->assertOk();
+    }
+
     public function test_lead_is_saved_and_both_sides_are_emailed(): void
     {
         $this->post('/contact', $this->lead())->assertRedirect(route('site.contact.thanks'));

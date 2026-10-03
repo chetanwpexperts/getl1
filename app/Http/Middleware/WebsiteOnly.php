@@ -15,11 +15,11 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class WebsiteOnly
 {
-    public const PATHS = ['/', 'pricing', 'for-suppliers', 'contact', 'contact/thanks', 'terms', 'privacy', 'refunds', 'shipping', 'sitemap.xml', 'robots.txt', 'up',
+    public const PATHS = ['/', 'pricing', 'features', 'for-suppliers', 'contact', 'contact/thanks', 'terms', 'privacy', 'refunds', 'shipping', 'sitemap.xml', 'robots.txt', 'up',
         'login', 'logout', 'forgot-password', 'reset-password', 'manifest.webmanifest', 'sw.js', 'offline', 'start'];
 
     /** GetL1 staff still reach the admin console (login is limited to staff in this mode). */
-    public const PREFIXES = ['admin/', 'reset-password/'];
+    public const PREFIXES = ['admin/', 'reset-password/', 'features/'];
 
     public function handle(Request $request, Closure $next): Response
     {

@@ -27,6 +27,19 @@ class SiteController extends Controller
         return view('site.pricing', ['plans' => $this->plans()]);
     }
 
+    public function features(): View
+    {
+        return view('site.features', ['pages' => \App\Support\FeaturePages::PAGES]);
+    }
+
+    public function feature(string $slug): View
+    {
+        $page = \App\Support\FeaturePages::get($slug);
+        abort_unless($page, 404);
+
+        return view('site.feature', ['slug' => $slug, 'page' => $page, 'others' => collect(\App\Support\FeaturePages::PAGES)->except($slug)]);
+    }
+
     public function page(string $page): View
     {
         return view('site.'.$page);
@@ -102,8 +115,9 @@ class SiteController extends Controller
 
     public function sitemap(): Response
     {
-        $urls = collect(['home', 'site.pricing', 'site.suppliers', 'site.contact', 'site.terms', 'site.privacy', 'site.refunds', 'site.shipping'])
-            ->map(fn ($r) => route($r));
+        $urls = collect(['home', 'site.features', 'site.pricing', 'site.suppliers', 'site.contact', 'site.terms', 'site.privacy', 'site.refunds', 'site.shipping'])
+            ->map(fn ($r) => route($r))
+            ->merge(collect(array_keys(\App\Support\FeaturePages::PAGES))->map(fn ($s) => route('site.feature', $s)));
 
         return response()->view('site.sitemap', ['urls' => $urls])->header('Content-Type', 'application/xml');
     }

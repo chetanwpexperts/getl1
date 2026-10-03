@@ -2,7 +2,7 @@
     $appOn = config('site.mode') !== 'website';
     $cta = $appOn ? route('register') : route('site.contact');
     $ctaLabel = $appOn ? 'Start free trial' : 'Get early access';
-    $nav = [['site.suppliers', 'For suppliers'], ['site.pricing', 'Pricing'], ['site.contact', 'Contact']];
+    $nav = [['site.features', 'Features'], ['site.suppliers', 'For suppliers'], ['site.pricing', 'Pricing'], ['site.contact', 'Contact']];
     $title = trim($__env->yieldContent('title'));
     $siteName = config('site.name', 'GetL1');
     $defaultTitle = config('site.home_title') ?: $siteName.': Make your suppliers compete. Buy at L1.';
@@ -41,6 +41,7 @@
         'description' => 'Reverse auction and e-procurement software for Indian SMEs.',
         'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'INR'],
     ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
+    @stack('head')
 </head>
 <body class="min-h-screen bg-white font-sans text-slate-900 antialiased">
     @if (config('site.announcement_on') && config('site.announcement_text'))
@@ -103,6 +104,10 @@ GSTIN {{ config('site.gstin') }}@endif</p>
                 <p class="font-semibold">Product</p>
                 <ul class="mt-3 space-y-2 text-slate-600">
                     <li><a href="{{ route('home') }}#how" class="hover:text-slate-900">How it works</a></li>
+                    <li><a href="{{ route('site.features') }}" class="hover:text-slate-900">All features</a></li>
+                    @foreach (\App\Support\FeaturePages::PAGES as $fs => $fp)
+                        <li><a href="{{ route('site.feature', $fs) }}" class="hover:text-slate-900">{{ $fp['nav'] }}</a></li>
+                    @endforeach
                     <li><a href="{{ route('site.pricing') }}" class="hover:text-slate-900">Pricing</a></li>
                     <li><a href="{{ route('site.suppliers') }}" class="hover:text-slate-900">For suppliers</a></li>
                     <li><a href="{{ route('site.contact') }}" class="hover:text-slate-900">Book a demo</a></li>

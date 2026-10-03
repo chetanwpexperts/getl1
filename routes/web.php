@@ -34,6 +34,8 @@ Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::name('site.')->group(function () {
     Route::get('/pricing', [SiteController::class, 'pricing'])->name('pricing');
     Route::get('/for-suppliers', [SiteController::class, 'page'])->defaults('page', 'suppliers')->name('suppliers');
+    Route::get('/features', [SiteController::class, 'features'])->name('features');
+    Route::get('/features/{slug}', [SiteController::class, 'feature'])->where('slug', '[a-z0-9-]+')->name('feature');
     Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
     Route::post('/contact', [SiteController::class, 'storeLead'])->middleware('throttle:10,1')->name('contact.store');
     Route::get('/contact/thanks', [SiteController::class, 'thanks'])->name('contact.thanks');

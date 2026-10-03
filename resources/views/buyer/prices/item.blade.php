@@ -31,7 +31,7 @@
 
     @if ($chron->count() > 1)
         @php
-            $w = 720; $h = 160; $pad = 24;
+            $w = 1200; $h = 200; $pad = 24;
             $span = max(0.01, $max - $min);
             $x = fn ($i) => $pad + ($chron->count() === 1 ? 0 : $i * ($w - 2 * $pad) / ($chron->count() - 1));
             $y = fn ($v) => $h - $pad - (((float) $v - $min) / $span) * ($h - 2 * $pad);
@@ -39,7 +39,7 @@
         @endphp
         <section class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 class="text-sm font-semibold">Rate over time</h2>
-            <svg viewBox="0 0 {{ $w }} {{ $h }}" class="mt-3 h-40 w-full" role="img" aria-label="Rate paid over time">
+            <svg viewBox="0 0 {{ $w }} {{ $h }}" class="mt-3 h-48 w-full" role="img" aria-label="Rate paid over time">
                 <line x1="{{ $pad }}" x2="{{ $w - $pad }}" y1="{{ $h - $pad }}" y2="{{ $h - $pad }}" stroke="#e2e8f0" />
                 <path d="{{ $path }}" fill="none" stroke="#047857" stroke-width="2" stroke-linejoin="round" />
                 @foreach ($chron as $i => $p)

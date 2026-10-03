@@ -13,9 +13,16 @@
         ['What if someone bids in the last second?', 'Late bids extend the auction by a few minutes, so everyone gets a fair chance to respond. The extension is limited, so the auction always ends.'],
         ['Do I have to give the order to L1?', 'No. You compare landed cost, delivery and supplier history, then award. If you pick someone other than L1 you note the reason, which keeps your audit trail clean.'],
         ['Is our data safe?', 'Each company\'s data is kept separate. Quotes stay sealed until your deadline, every action is logged, and documents are stored privately. Your last purchase price is never shown to suppliers.'],
+        ['Does it help with MSME payments under Section 43B(h)?', 'Yes. Suppliers upload invoices against your purchase order, and GetL1 works out each MSME due date (within the agreed period, never more than 45 days from accepting the goods) and reminds you before it is due.'],
         ['Does it handle GST and purchase orders?', 'Yes. The purchase order is created automatically with CGST/SGST or IGST based on both GSTINs, amount in words, and your terms, then emailed to the supplier.'],
     ];
 @endphp
+
+@push('head')
+    <script type="application/ld+json">{!! json_encode(['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => array_map(fn ($f) => [
+        '@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]],
+    ], $faq)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
+@endpush
 
 @section('content')
     {{-- Hero --}}
@@ -123,19 +130,28 @@
                     ['Suppliers bid from their phone', 'A link on WhatsApp or email is all they need. No app, no training, no fee.'],
                     ['AI reads your requirement', 'Excel indents, PDFs, WhatsApp text and handwritten lists in English, Hindi or Punjabi words become a clean RFQ.'],
                     ['Fair, transparent auctions', 'Minimum bid steps, rank-only view, automatic extensions and a server clock everyone shares.'],
-                    ['Approvals that fit your team', 'Set an amount above which the owner or manager approves. Nobody approves their own award.'],
+                    ['Approvals that fit your team', 'Approval levels by amount or when L1 isn\'t chosen: manager, plant head, director. Nobody approves their own award.', 'purchase-requests-and-approvals'],
+                    ['Purchase requests from the floor', 'Store and plant staff raise requests for free; approved ones become an RFQ in one click.', 'purchase-requests-and-approvals'],
                     ['Purchase orders with GST', 'CGST/SGST or IGST chosen from GSTINs, amount in words, your terms, numbered automatically.'],
                     ['Savings you can show', 'Savings versus sealed quotes and your last purchase price, by month and financial year, with CSV export.'],
-                    ['Verified suppliers', 'GSTIN checks and document review give genuine suppliers a verified badge.'],
+                    ['Supplier scorecards', 'Delivery, quality and response scored from your own orders, with GSTIN and PAN checks.', 'supplier-management'],
+                    ['Rate contracts and price history', 'Lock in agreed rates and see what you paid for every item over time.', 'supplier-management'],
+                    ['Goods receipt and invoice matching', 'Record deliveries and rejections; invoices are checked against the PO and goods received.', 'purchase-orders-grn-invoices'],
+                    ['MSME 45-day payments', 'Due dates under the MSMED Act and Section 43B(h) worked out, with reminders.', 'msme-payment-tracker'],
                     ['A complete audit trail', 'Every quote, bid, approval and change is recorded with time and user, and can\'t be edited.'],
+                    ['Live alerts', 'New quotes, auctions going live, approvals and deliveries pop up instantly, on screen and on your phone.'],
                     ['Automatic follow-ups', 'Reminders to suppliers who haven\'t quoted, auction alerts and results go out on their own.'],
-                ] as [$h, $p])
+                ] as $f)
+                    @php [$h, $p] = $f; $link = $f[2] ?? null; @endphp
                     <div>
-                        <p class="flex items-center gap-2 font-semibold text-white"><span class="text-emerald-400">✓</span> {{ $h }}</p>
+                        <p class="flex items-center gap-2 font-semibold text-white"><span class="text-emerald-400">✓</span>
+                            @if ($link)<a href="{{ route('site.feature', $link) }}" class="hover:underline">{{ $h }}</a>@else{{ $h }}@endif
+                        </p>
                         <p class="mt-1.5 pl-6 text-sm leading-relaxed text-slate-400">{{ $p }}</p>
                     </div>
                 @endforeach
             </div>
+            <a href="{{ route('site.features') }}" class="mt-10 inline-block font-semibold text-emerald-400 hover:underline">See all features →</a>
         </div>
     </section>
 
