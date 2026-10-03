@@ -125,9 +125,19 @@ class TeamTest extends TestCase
     {
         [$org, $owner] = $this->buyer();
         app(PlanService::class)->current($org)->forceFill(['max_users' => 1])->save();
-        $this->actingAs($owner)->get(route('team.index'))->assertSee('All 1 seats on your plan are in use');
+        $this->actingAs($owner)->get(route('team.index'))->assertSee('only free requesters can be added');
         $this->actingAs($owner)->post(route('team.store'), ['name' => 'Ravi', 'email' => 'ravi@buyer.in', 'role' => 'buyer_user'])->assertSessionHasErrors('email');
         $this->assertNull(User::where('email', 'ravi@buyer.in')->first());
+
+        // Requesters are free: they can still be added, and don't use a seat.
+        $this->actingAs($owner)->post(route('team.store'), ['name' => 'Store', 'email' => 'store@buyer.in', 'role' => 'requester'])->assertSessionHasNoErrors();
+        $store = User::where('email', 'store@buyer.in')->firstOrFail();
+        $this->assertSame(1, TeamController::paidSeatsUsed($org));
+        $this->actingAs($owner)->get(route('team.index'))->assertSee('1 of 1');
+
+        // ...but can't be moved into a paid role while the seats are full.
+        $this->actingAs($owner)->put(route('team.role', $store->id), ['role' => 'buyer_user'])->assertSessionHasErrors('role');
+        $this->assertSame(OrgRole::Requester, $store->fresh()->roleIn($org));
     }
 
     public function test_supplier_owner_adds_colleagues(): void

@@ -12,15 +12,17 @@
             'requester' => 'Raises purchase requests and tracks them. Sees no prices, suppliers or orders.',
             'supplier_user' => 'Quotes, bids and accepts purchase orders.',
         ];
-        $used = $members->count();
+        $used = $paidUsed; // requesters don't use a seat
         $full = $seats !== null && $used >= $seats;
+        $canRequester = collect($roles)->contains(\App\Enums\OrgRole::Requester);
+        $locked = $full && ! $canRequester; // seats full: only free requesters can still be added
         $initials = fn ($n) => collect(preg_split('/\s+/', trim((string) $n)))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('');
     @endphp
 
     <x-page-header title="Team" :subtitle="'People who can sign in for '.$org->name.'.'">
         @if ($seats !== null)
             <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm shadow-sm">
-                <span class="font-semibold tabular-nums">{{ $used }} of {{ $seats }}</span> <span class="text-slate-500">seats used</span>
+                <span class="font-semibold tabular-nums">{{ $used }} of {{ $seats }}</span> <span class="text-slate-500">seats used · requesters are free</span>
             </span>
         @endif
     </x-page-header>
@@ -103,7 +105,7 @@
                         <h2 class="font-semibold">Add a team member</h2>
                         <p class="text-sm text-slate-500">They get an email to set their password.</p>
                     </div>
-                    <fieldset @disabled($full) class="space-y-4 px-6 py-5">
+                    <fieldset @disabled($locked) class="space-y-4 px-6 py-5">
                         <div>
                             <label for="name" class="block text-sm font-medium">Full name</label>
                             <input id="name" name="name" value="{{ old('name') }}" required maxlength="120" class="{{ $input }}">
@@ -124,8 +126,9 @@
                                 <legend class="text-sm font-medium">Role</legend>
                                 <div class="mt-2 space-y-2">
                                     @foreach ($roles as $r)
+                                        @continue($full && $r !== \App\Enums\OrgRole::Requester)
                                         <label class="flex cursor-pointer gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50/50">
-                                            <input type="radio" name="role" value="{{ $r->value }}" @checked(old('role', 'buyer_user') === $r->value) class="mt-0.5 accent-emerald-700">
+                                            <input type="radio" name="role" value="{{ $r->value }}" @checked(old('role', $full ? 'requester' : 'buyer_user') === $r->value) class="mt-0.5 accent-emerald-700">
                                             <span><span class="block text-sm font-medium">{{ $r->label() }}</span><span class="block text-xs text-slate-500">{{ $roleHelp[$r->value] ?? '' }}</span></span>
                                         </label>
                                     @endforeach
@@ -137,7 +140,10 @@
                         @endif
                     </fieldset>
                     <div class="border-t border-slate-100 px-6 py-4">
-                        @if ($full)
+                        @if ($full && $canRequester)
+                            <p class="mb-3 text-sm text-slate-600">All {{ $seats }} seats are in use, so only free requesters can be added. <a href="{{ route('buyer.billing.index') }}" class="font-medium text-emerald-700 hover:underline">Upgrade</a> for more buyers or approvers.</p>
+                            <button class="w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">Send invitation</button>
+                        @elseif ($full)
                             <p class="text-sm text-slate-600">All {{ $seats }} seats on your plan are in use. <a href="{{ route('buyer.billing.index') }}" class="font-medium text-emerald-700 hover:underline">Upgrade your plan</a> to add more people.</p>
                         @else
                             <button class="w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">Send invitation</button>

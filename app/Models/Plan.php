@@ -35,7 +35,7 @@ class Plan extends Model
         $f = $this->features ?? [];
         $list = [
             $this->max_auctions_month === null ? 'Unlimited live auctions' : $this->max_auctions_month.' live '.\Illuminate\Support\Str::plural('auction', $this->max_auctions_month).' / month',
-            'Up to '.$this->max_users.' team members',
+            'Up to '.$this->max_users.' team members, plus free requesters',
             'Unlimited RFQs, quotes & suppliers',
             'Purchase orders & approvals',
         ];

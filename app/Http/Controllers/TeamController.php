@@ -25,6 +25,29 @@ class TeamController extends Controller
 {
     public function __construct(private CurrentOrganization $current, private AuditLogger $audit) {}
 
+    /** Requesters are free (up to MAX_REQUESTERS); everyone else uses a plan seat. */
+    public const MAX_REQUESTERS = 100;
+
+    public static function paidSeatsUsed(\App\Models\Organization $org): int
+    {
+        return $org->users()->wherePivot('role', '!=', OrgRole::Requester->value)->count();
+    }
+
+    private function assertRoom(\App\Models\Organization $org, PlanService $plans, string $role, string $field): void
+    {
+        if ($role === OrgRole::Requester->value) {
+            if ($org->users()->wherePivot('role', OrgRole::Requester->value)->count() >= self::MAX_REQUESTERS) {
+                throw ValidationException::withMessages([$field => 'You can add up to '.self::MAX_REQUESTERS.' requesters. Write to us if you need more.']);
+            }
+
+            return;
+        }
+        $limit = $this->seatLimit($org, $plans);
+        if ($limit !== null && self::paidSeatsUsed($org) >= $limit) {
+            throw ValidationException::withMessages([$field => "Your plan includes {$limit} team members (requesters are free). Upgrade under Plan & billing to add more."]);
+        }
+    }
+
     public function index(Request $request, PlanService $plans): View
     {
         $org = $this->current->get();
@@ -36,6 +59,7 @@ class TeamController extends Controller
             'roles' => OrgRole::forType($org->type),
             'canManage' => $this->canManage($request->user(), $org),
             'seats' => $this->seatLimit($org, $plans),
+            'paidUsed' => self::paidSeatsUsed($org),
         ]);
     }
 
@@ -55,10 +79,7 @@ class TeamController extends Controller
             'role' => ['required', Rule::in(array_map(fn ($r) => $r->value, OrgRole::forType($org->type)))],
         ], ['phone.regex' => 'Enter a 10-digit Indian mobile number.']);
 
-        $limit = $this->seatLimit($org, $plans);
-        if ($limit !== null && $org->users()->count() >= $limit) {
-            throw ValidationException::withMessages(['email' => "Your plan includes {$limit} team members. Upgrade under Plan & billing to add more."]);
-        }
+        $this->assertRoom($org, $plans, $data['role'], 'email');
 
         $user = User::where('email', $data['email'])->first();
         if ($user && $user->belongsToOrganization($org)) {
@@ -100,6 +121,9 @@ class TeamController extends Controller
         $old = $member->roleIn($org);
         if ($old?->value === $data['role']) {
             return back();
+        }
+        if ($old === OrgRole::Requester) { // moving into a paid seat
+            $this->assertRoom($org, app(PlanService::class), $data['role'], 'role');
         }
         $org->users()->updateExistingPivot($member->id, ['role' => $data['role']]);
         $this->audit->log('team_role_changed', $member, before: ['role' => $old?->value], after: ['role' => $data['role']], user: $request->user(), organizationId: $org->id);
