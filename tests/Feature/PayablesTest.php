@@ -303,4 +303,65 @@ class PayablesTest extends TestCase
         $this->actingAs($other)->get(route('buyer.invoices.file', $inv->id))->assertNotFound();
         $this->actingAs($this->s['A'][1])->get(route('buyer.payments.index'))->assertForbidden();
     }
+
+    public function test_review_fixes_dates_numbers_and_digest(): void
+    {
+        $a = $this->po('A', 'on_delivery'); // MSME, pay on delivery → due on acceptance day
+        $this->accept('A', $a);
+        $this->receive($a, ['box' => ['received' => 550]]);
+        $this->invoice('A', $a)->assertSessionHasNoErrors();
+        $inv = SupplierInvoice::withoutGlobalScopes()->firstOrFail();
+        $this->assertSame($inv->invoice_date->toDateString(), $inv->due_date->toDateString());
+
+        // Disputed: the same number can be used again for the corrected invoice.
+        $this->actingAs($this->buyerUser)->post(route('buyer.invoices.review', $inv->id), ['decision' => 'dispute', 'review_note' => 'Wrong GST split']);
+        $this->invoice('A', $a)->assertSessionHasNoErrors();
+        $fixed = SupplierInvoice::withoutGlobalScopes()->where('status', 'submitted')->firstOrFail();
+        $this->actingAs($this->buyerUser)->post(route('buyer.invoices.review', $fixed->id), ['decision' => 'approve']);
+
+        // Paid on the invoice date itself is fine (IST vs UTC dates).
+        $this->actingAs($this->buyerUser)->post(route('buyer.invoices.paid', $fixed->id), [
+            'paid_on' => $fixed->invoice_date->toDateString(), 'paid_amount' => '58410',
+        ])->assertSessionHasNoErrors();
+
+        // Next financial year the supplier may restart its numbering.
+        $b = $this->po('A', 'credit_30');
+        $this->accept('A', $b);
+        $this->travelTo(Carbon::parse('2027-04-02 05:00:00', 'UTC'));
+        $this->invoice('A', $b)->assertSessionHasNoErrors();
+        $this->invoice('A', $b)->assertSessionHasErrors('invoice_number'); // but not twice in the same year
+    }
+
+    public function test_first_overdue_day_counts_as_overdue_and_one_digest_a_day(): void
+    {
+        $a = $this->po('A', 'credit_15');
+        $this->accept('A', $a);
+        $this->receive($a, ['box' => ['received' => 550]]);
+        $this->invoice('A', $a);
+        $inv = SupplierInvoice::withoutGlobalScopes()->firstOrFail();
+
+        // 10:00 IST on the day after the due date.
+        $this->travelTo(Carbon::parse($inv->due_date->toDateString().' 10:00', 'Asia/Kolkata')->addDay());
+        $this->assertSame(-1, $inv->fresh()->daysLeft());
+        $this->assertTrue($inv->fresh()->isOverdue());
+
+        $this->assertGreaterThan(0, app(Automations::class)->remindMsmePayments());
+        // A new MSME invoice later the same day doesn't trigger a second digest.
+        $this->invoice('A', $a, ['invoice_number' => 'INV/26-27/099', 'taxable_amount' => '10', 'gst_amount' => '1.80', 'total_amount' => '11.80']);
+        $this->assertSame(0, app(Automations::class)->remindMsmePayments());
+    }
+
+    public function test_backdated_receipt_does_not_move_the_due_date(): void
+    {
+        $a = $this->po('A', 'credit_30');
+        $this->accept('A', $a);
+        $this->travel(10)->days();
+        $this->receive($a, ['box' => ['received' => 300]], now()->subDays(2)->setTimezone('Asia/Kolkata')->toDateString());
+        $this->invoice('A', $a, ['taxable_amount' => '27000', 'gst_amount' => '4860', 'total_amount' => '31860']);
+        $inv = SupplierInvoice::withoutGlobalScopes()->firstOrFail();
+        $before = $inv->due_date->toDateString();
+        // A delivery from earlier, entered late, mustn't pull the due date earlier.
+        $this->receive($a, ['box' => ['received' => 100]], now()->subDays(8)->setTimezone('Asia/Kolkata')->toDateString())->assertSessionHasNoErrors();
+        $this->assertSame($before, $inv->fresh()->due_date->toDateString());
+    }
 }

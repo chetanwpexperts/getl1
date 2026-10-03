@@ -140,9 +140,11 @@ class ReceiptService
             'accepted' => collect($lines)->sum('accepted'), 'rejected' => collect($lines)->sum('rejected'),
         ], user: $by, organizationId: $award->organization_id);
 
-        // Acceptance moves the legal due date of unpaid invoices on this PO.
+        // Acceptance moves the legal due date of unpaid invoices on this PO (same rule as at upload:
+        // the latest receipt on the PO, whatever order receipts were entered in).
+        $latest = Carbon::parse(self::summary($award)['latest'])->startOfDay();
         foreach (SupplierInvoice::withoutGlobalScopes()->where('award_id', $award->id)->whereIn('status', [SupplierInvoice::SUBMITTED, SupplierInvoice::APPROVED])->get() as $inv) {
-            $due = MsmeDueDate::for($award, $inv->invoice_date->copy(), $receivedOn->copy());
+            $due = MsmeDueDate::for($award, Carbon::parse($inv->invoice_date->toDateString()), $latest->copy());
             $inv->update(['due_date' => $due['due_date']->toDateString(), 'due_basis' => $due['basis'], 'is_msme' => $due['is_msme']]);
         }
 
@@ -152,8 +154,8 @@ class ReceiptService
     /** GRN-2026-0001, sequential per buyer company per year. */
     private function nextNumber(int $orgId): string
     {
-        $prefix = 'GRN-'.now()->year.'-';
-        $last = GoodsReceipt::withoutGlobalScopes()->where('organization_id', $orgId)->where('grn_number', 'like', $prefix.'%')->orderByDesc('grn_number')->value('grn_number');
+        $prefix = 'GRN-'.now()->setTimezone(config('app.display_timezone'))->year.'-';
+        $last = GoodsReceipt::withoutGlobalScopes()->where('organization_id', $orgId)->where('grn_number', 'like', $prefix.'%')->orderByDesc('id')->value('grn_number');
 
         return $prefix.str_pad((string) ((int) substr((string) $last, strlen($prefix)) + 1), 4, '0', STR_PAD_LEFT);
     }

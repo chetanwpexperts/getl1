@@ -98,8 +98,9 @@ class InvoiceService
             $invoice = DB::transaction(function () use ($award, $by, $data, $date, $taxable, $gst, $total, $gstin, $file, $ext, $path) {
                 $award = Award::withoutGlobalScopes()->whereKey($award->id)->lockForUpdate()->firstOrFail();
                 $number = strtoupper(trim($data['invoice_number']));
-                if (SupplierInvoice::withoutGlobalScopes()->where('supplier_org_id', $award->supplier_org_id)->where('invoice_number', $number)->exists()) {
-                    throw ValidationException::withMessages(['invoice_number' => "Invoice {$number} has already been uploaded. Each invoice number can be used once."]);
+                $key = SupplierInvoice::activeKey($award->supplier_org_id, $date, $number);
+                if (SupplierInvoice::withoutGlobalScopes()->where('active_key', $key)->exists()) {
+                    throw ValidationException::withMessages(['invoice_number' => "Invoice {$number} has already been uploaded for this financial year. Each invoice number can be used once."]);
                 }
                 $po = (float) $award->total + (float) $award->freight_total;
                 $already = (float) SupplierInvoice::withoutGlobalScopes()->where('award_id', $award->id)->where('status', '!=', SupplierInvoice::DISPUTED)->sum('taxable_amount');
@@ -115,6 +116,7 @@ class InvoiceService
                     'organization_id' => $award->organization_id,
                     'supplier_org_id' => $award->supplier_org_id,
                     'invoice_number' => $number,
+                    'active_key' => $key,
                     'invoice_date' => $date->toDateString(),
                     'taxable_amount' => $taxable,
                     'gst_amount' => $gst,
@@ -215,7 +217,7 @@ class InvoiceService
             if ($i->status !== SupplierInvoice::APPROVED) {
                 throw ValidationException::withMessages(['paid_on' => 'Only an approved invoice can be marked paid.']);
             }
-            if ($on->gt(now()->setTimezone($tz)->startOfDay()) || $on->lt($i->invoice_date)) {
+            if ($on->toDateString() > now()->setTimezone($tz)->toDateString() || $on->toDateString() < $i->invoice_date->toDateString()) {
                 throw ValidationException::withMessages(['paid_on' => 'The payment date must be between the invoice date and today.']);
             }
             if ($amt <= 0 || $amt > (float) $i->total_amount + 1) {
@@ -223,7 +225,7 @@ class InvoiceService
             }
             $i->update(['status' => SupplierInvoice::PAID, 'paid_on' => $on->toDateString(), 'paid_amount' => $amt,
                 'payment_ref' => $ref ? mb_substr(trim($ref), 0, 60) : null, 'paid_marked_by' => $by->id]);
-            $late = $i->due_date && $on->gt($i->due_date);
+            $late = $i->due_date && $on->toDateString() > $i->due_date->toDateString();
             $this->audit->log('invoice_paid', $i, after: ['invoice_number' => $i->invoice_number, 'amount' => $amt, 'paid_on' => $on->toDateString(),
                 'ref' => $i->payment_ref, 'late' => $late, 'msme' => $i->is_msme], user: $by, organizationId: $i->organization_id);
 
@@ -244,7 +246,8 @@ class InvoiceService
             if ($guard) {
                 $guard($i);
             }
-            $i->update(['status' => $to, 'review_note' => $note !== '' ? $note : null, 'reviewed_by' => $by->id, 'reviewed_at' => now()]);
+            $i->update(['status' => $to, 'review_note' => $note !== '' ? $note : null, 'reviewed_by' => $by->id, 'reviewed_at' => now()]
+                + ($to === SupplierInvoice::DISPUTED ? ['active_key' => null] : [])); // a corrected invoice may reuse the number
             $this->audit->log($to === SupplierInvoice::APPROVED ? 'invoice_approved' : 'invoice_disputed', $i,
                 after: ['invoice_number' => $i->invoice_number, 'note' => $i->review_note], user: $by, organizationId: $i->organization_id);
 

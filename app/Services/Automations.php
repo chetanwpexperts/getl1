@@ -49,8 +49,8 @@ class Automations
 
     /**
      * Once a day from 9 AM IST: each buyer company's admins get one email listing MSME invoices
-     * (submitted or approved, not paid) due within 7 days or overdue. Each invoice is marked
-     * with today's date so a company is never emailed twice in a day.
+     * (submitted or approved, not paid) due within 7 days or overdue. The company row records the
+     * day, so a company is never emailed twice in a day.
      */
     public function remindMsmePayments(): int
     {
@@ -65,17 +65,17 @@ class Automations
             ->where('is_msme', true)
             ->whereIn('status', [\App\Models\SupplierInvoice::SUBMITTED, \App\Models\SupplierInvoice::APPROVED])
             ->whereNotNull('due_date')->where('due_date', '<=', $now->copy()->addDays(7)->toDateString())
-            ->where(fn ($q) => $q->whereNull('last_reminded_on')->orWhere('last_reminded_on', '<', $today))
             ->orderBy('due_date')->get()->groupBy('organization_id');
 
         foreach ($due as $orgId => $invoices) {
-            // Claim today's digest for this company (safe if two schedulers overlap).
-            $claimed = \App\Models\SupplierInvoice::withoutGlobalScopes()->whereIn('id', $invoices->pluck('id'))
-                ->where(fn ($q) => $q->whereNull('last_reminded_on')->orWhere('last_reminded_on', '<', $today))
-                ->update(['last_reminded_on' => $today]);
+            // One digest per company per day: claim today on the company row (safe if two schedulers overlap).
+            $claimed = \App\Models\Organization::whereKey($orgId)
+                ->where(fn ($q) => $q->whereNull('payments_digest_on')->orWhere('payments_digest_on', '<', $today))
+                ->update(['payments_digest_on' => $today]);
             if ($claimed === 0) {
                 continue;
             }
+            \App\Models\SupplierInvoice::withoutGlobalScopes()->whereIn('id', $invoices->pluck('id'))->update(['last_reminded_on' => $today]);
             $org = \App\Models\Organization::find($orgId);
             $admins = $org?->users()->wherePivot('role', OrgRole::BuyerAdmin->value)->get() ?? collect();
             foreach ($admins->filter(fn ($u) => $u->email) as $user) {

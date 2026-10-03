@@ -20,7 +20,7 @@ class SupplierInvoice extends Model
     public const PAID = 'paid';
 
     protected $fillable = [
-        'award_id', 'organization_id', 'supplier_org_id', 'invoice_number', 'invoice_date', 'taxable_amount', 'gst_amount', 'total_amount',
+        'award_id', 'organization_id', 'supplier_org_id', 'invoice_number', 'active_key', 'invoice_date', 'taxable_amount', 'gst_amount', 'total_amount',
         'supplier_gstin', 'file_path', 'original_name', 'status', 'is_msme', 'due_date', 'due_basis', 'review_note', 'reviewed_by', 'reviewed_at',
         'paid_on', 'paid_amount', 'payment_ref', 'paid_marked_by', 'last_reminded_on', 'submitted_by',
     ];
@@ -61,6 +61,14 @@ class SupplierInvoice extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    /** Key that keeps an invoice number unique per supplier per Indian financial year (Apr–Mar). */
+    public static function activeKey(int $supplierOrgId, \Carbon\CarbonInterface $invoiceDate, string $number): string
+    {
+        $y = $invoiceDate->month >= 4 ? $invoiceDate->year : $invoiceDate->year - 1;
+
+        return $supplierOrgId.':'.$y.'-'.substr((string) ($y + 1), 2).':'.$number;
+    }
+
     /** Still to be paid (approved, or submitted and waiting for review). */
     public function isOutstanding(): bool
     {
@@ -73,9 +81,11 @@ class SupplierInvoice extends Model
         if (! $this->due_date) {
             return null;
         }
-        $today = now()->setTimezone(config('app.display_timezone'))->startOfDay();
+        // Plain calendar dates on both sides (today in IST), so the day after the due date is overdue.
+        $today = \Illuminate\Support\Carbon::parse(now()->setTimezone(config('app.display_timezone'))->toDateString());
+        $due = \Illuminate\Support\Carbon::parse($this->due_date->toDateString());
 
-        return (int) $today->diffInDays($this->due_date->copy()->startOfDay(), false);
+        return (int) round($today->diffInDays($due, false));
     }
 
     public function isOverdue(): bool

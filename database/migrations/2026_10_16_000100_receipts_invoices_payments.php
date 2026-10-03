@@ -42,6 +42,9 @@ return new class extends Migration
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete(); // buyer
             $table->foreignId('supplier_org_id')->constrained('organizations')->cascadeOnDelete();
             $table->string('invoice_number', 40);
+            // "<supplier>:<FY>:<number>" while the invoice counts; null once disputed, so a corrected
+            // invoice may reuse the number. GST rule 46: numbers are unique within a financial year.
+            $table->string('active_key', 80)->nullable()->unique();
             $table->date('invoice_date');
             $table->decimal('taxable_amount', 15, 2);
             $table->decimal('gst_amount', 15, 2);
@@ -63,7 +66,7 @@ return new class extends Migration
             $table->date('last_reminded_on')->nullable();
             $table->foreignId('submitted_by')->constrained('users');
             $table->timestamps();
-            $table->unique(['supplier_org_id', 'invoice_number']);
+            $table->index(['supplier_org_id', 'invoice_number']);
             $table->index(['organization_id', 'status', 'due_date']);
             $table->index('award_id');
         });
@@ -71,10 +74,15 @@ return new class extends Migration
         Schema::table('buyer_supplier_lists', function (Blueprint $table) {
             $table->boolean('is_msme')->default(false)->after('tag');
         });
+
+        Schema::table('organizations', function (Blueprint $table) {
+            $table->date('payments_digest_on')->nullable()->after('tally_settings'); // last MSME payment reminder
+        });
     }
 
     public function down(): void
     {
+        Schema::table('organizations', fn (Blueprint $table) => $table->dropColumn('payments_digest_on'));
         Schema::table('buyer_supplier_lists', fn (Blueprint $table) => $table->dropColumn('is_msme'));
         Schema::dropIfExists('supplier_invoices');
         Schema::dropIfExists('goods_receipts');
