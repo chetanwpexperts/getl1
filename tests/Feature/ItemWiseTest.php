@@ -373,4 +373,37 @@ class ItemWiseTest extends TestCase
         $this->assertSame('auction', $alpha->source);
         $this->assertSame($a->id, $alpha->auction_id);
     }
+
+    public function test_rank_only_never_reveals_the_l1_rate_through_the_typo_floor(): void
+    {
+        $a = $this->liveAuction();
+        ['box' => $box] = $this->items();
+        $res = $this->actingAs($this->s['A'][1])->getJson(route('supplier.auctions.state', $a->id))->assertOk();
+        $res->assertJsonPath('items.0.floor', null)->assertJsonPath('items.0.l1_rate', null);
+        // The server still refuses typos, without printing a price derived from L1.
+        $this->bid('C', $a, $box->id, '50')->assertStatus(422)
+            ->assertJsonPath('errors.amount.0', fn ($m) => ! str_contains($m, '₹'));
+    }
+
+    public function test_savings_report_compares_each_split_award_with_its_own_lines(): void
+    {
+        $this->rfq->items()->update(['last_purchase_price' => null]);
+        $box = $this->items()['box'];
+        $box->update(['last_purchase_price' => 100]);
+        $this->items()['tape']->update(['last_purchase_price' => 15]);
+        $this->quotesAndDeadline();
+        $this->choose(['box' => 'A', 'tape' => 'C'], ['reason' => 'Alpha delivers boxes faster'])->assertSessionHasNoErrors();
+
+        $report = app(\App\Services\Reports\SavingsReport::class)->build($this->buyer->id, 'all');
+        $alpha = $report['rows']->first(fn ($r) => $r['supplier'] === 'Alpha Packaging');
+        $gamma = $report['rows']->first(fn ($r) => $r['supplier'] === 'Gamma Tapes');
+        // Box: best sealed 85 × 1000 = 85,000 vs paid 90,000; tape: best sealed 10 × 200 = 2,000 vs paid 2,000.
+        $this->assertEquals(85000, $alpha['best_sealed']);
+        $this->assertEquals(-5000, $alpha['vs_sealed']);
+        $this->assertEquals(2000, $gamma['best_sealed']);
+        $this->assertEquals(0, $gamma['vs_sealed']);
+        $this->assertEquals(100000 - 90000, $alpha['vs_last']);
+        $this->assertEquals(3000 - 2000, $gamma['vs_last']);
+        $this->assertEquals(-5000, $report['totals']['vs_sealed']);
+    }
 }

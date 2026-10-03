@@ -97,14 +97,16 @@ class AwardService
     private function withNegotiated(Rfq $rfq, Collection $candidates): Collection
     {
         $accepted = \App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('status', \App\Models\CounterOffer::ACCEPTED)
-            ->orderBy('id')->get()->keyBy('supplier_org_id');
+            ->orderBy('id')->get()->keyBy('supplier_org_id'); // latest accepted offer per supplier wins
         if ($accepted->isEmpty()) {
             return $candidates->map(fn ($c) => $c + ['negotiated' => null]);
         }
 
         return $candidates->map(function ($c) use ($accepted) {
             $offer = $accepted[$c['supplier']->id] ?? null;
-            if (! $offer) {
+            // An offer counts only against the price it was made on: one made on sealed quotes no
+            // longer applies after a live auction, and an offer never raises a supplier's price.
+            if (! $offer || $offer->auction_id !== $c['auction_id'] || (float) $offer->offered_amount >= (float) $c['basic']) {
                 return $c + ['negotiated' => null];
             }
             $old = (float) $c['basic'];
@@ -513,6 +515,10 @@ class AwardService
     private function decide(Award $award, User $by, AwardStatus $to, ?string $note): Award
     {
         return DB::transaction(function () use ($award, $by, $to, $note) {
+            if ($award->group_key) {
+                // Same lock order for everyone deciding on this split: all its rows, by id.
+                Award::withoutGlobalScopes()->where('group_key', $award->group_key)->orderBy('id')->lockForUpdate()->get();
+            }
             $award = Award::withoutGlobalScopes()->whereKey($award->id)->lockForUpdate()->firstOrFail();
             if (! $award->isPending()) {
                 throw ValidationException::withMessages(['decision_note' => 'This award has already been decided.']);
@@ -523,7 +529,7 @@ class AwardService
 
             // An item-wise decision is approved or rejected as a whole.
             $members = $award->group_key
-                ? Award::withoutGlobalScopes()->where('group_key', $award->group_key)->where('status', AwardStatus::PendingApproval->value)->lockForUpdate()->get()
+                ? Award::withoutGlobalScopes()->where('group_key', $award->group_key)->where('status', AwardStatus::PendingApproval->value)->orderBy('id')->get()
                 : collect([$award]);
             foreach ($members as $member) {
                 $member->update([
@@ -554,7 +560,7 @@ class AwardService
     /** Awarding closes any counter-offer still waiting for an answer. */
     private function withdrawOpenOffers(Rfq $rfq, User $by): void
     {
-        foreach (\App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('status', \App\Models\CounterOffer::PENDING)->get() as $o) {
+        foreach (\App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('status', \App\Models\CounterOffer::PENDING)->lockForUpdate()->get() as $o) {
             $o->update(['status' => \App\Models\CounterOffer::WITHDRAWN, 'responded_at' => now()]);
             $this->audit->log('counter_offer_withdrawn', $o, after: ['why' => 'awarded'], user: $by, organizationId: $rfq->organization_id);
         }

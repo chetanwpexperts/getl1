@@ -87,6 +87,7 @@ class CounterOfferService
     public function withdraw(CounterOffer $offer, User $by): void
     {
         DB::transaction(function () use ($offer, $by) {
+            Rfq::withoutGlobalScopes()->whereKey($offer->rfq_id)->lockForUpdate()->first();
             $o = CounterOffer::whereKey($offer->id)->lockForUpdate()->firstOrFail();
             if (! $o->isOpen()) {
                 throw ValidationException::withMessages(['offer' => 'This counter-offer is no longer open.']);
@@ -99,6 +100,8 @@ class CounterOfferService
     public function respond(CounterOffer $offer, User $by, bool $accept, ?string $note = null): CounterOffer
     {
         $offer = DB::transaction(function () use ($offer, $by, $accept, $note) {
+            // Lock the RFQ first (award() does the same), so accepting and awarding can't cross.
+            Rfq::withoutGlobalScopes()->whereKey($offer->rfq_id)->lockForUpdate()->first();
             $o = CounterOffer::whereKey($offer->id)->lockForUpdate()->firstOrFail();
             if (! $o->isOpen()) {
                 throw ValidationException::withMessages(['offer' => $o->displayStatus() === 'expired'

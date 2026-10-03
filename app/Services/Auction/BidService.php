@@ -121,7 +121,8 @@ class BidService
             $floor = Standings::floor($a);
             if ($amount < $floor) {
                 $this->fail('below_floor', 'That’s more than '.rtrim(rtrim((string) $a->max_decrement_pct, '0'), '.').
-                    '% below the current lowest price. Check for a typo: the lowest accepted bid right now is '.\App\Support\Money::inr($floor).'.');
+                    '% below the current lowest price. Check for a typo'.($a->visibility === 'rank_and_l1'
+                        ? ': the lowest accepted bid right now is '.\App\Support\Money::inr($floor).'.' : '.'));
             }
 
             // Standings including this bid, computed before the insert so the rank is written with it
@@ -197,7 +198,8 @@ class BidService
         $floor = Standings::itemFloor($a, (float) $rows->first()['amount']);
         if ($amount < $floor) {
             $this->fail('below_floor', 'That’s more than '.rtrim(rtrim((string) $a->max_decrement_pct, '0'), '.').
-                '% below the current lowest rate for this item. Check for a typo: the lowest accepted rate right now is '.\App\Support\Money::inr($floor).'.');
+                '% below the current lowest rate for this item. Check for a typo'.($a->visibility === 'rank_and_l1'
+                    ? ': the lowest accepted rate right now is '.\App\Support\Money::inr($floor).'.' : '.'));
         }
 
         $now = now();

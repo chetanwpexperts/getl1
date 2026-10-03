@@ -128,7 +128,7 @@ class Standings
     /** Minimum drop from a supplier's own current price. */
     public static function minDecrement(Auction $auction, float $from): float
     {
-        return round($auction->minDecrementFrom($from), 2);
+        return max(0.01, round($auction->minDecrementFrom($from), 2));
     }
 
     /** Highest amount this supplier may bid next (must go at least one decrement below own price). */

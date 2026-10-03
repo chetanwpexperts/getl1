@@ -76,7 +76,8 @@ class AuctionState
             'l1_amount' => $auction->visibility === 'rank_and_l1' && $auction->current_l1 !== null ? (float) $auction->current_l1 : null,
             'max_next_bid' => $own !== null ? Standings::maxNextBid($auction, $own) : null,
             'min_decrement' => $own !== null ? Standings::minDecrement($auction, $own) : null,
-            'floor' => $auction->current_l1 !== null ? Standings::floor($auction) : null,
+            // The floor is derived from L1, so it's only shown when the buyer shows L1.
+            'floor' => $auction->visibility === 'rank_and_l1' && $auction->current_l1 !== null ? Standings::floor($auction) : null,
             'my_bids' => $mine->map(fn ($b) => [
                 'amount' => (float) $b->amount,
                 'kind' => $b->kind,
@@ -148,7 +149,7 @@ class AuctionState
                 'l1_rate' => $showL1 ? $l1 : null,
                 'max_next_bid' => Standings::maxNextBid($auction, $me['amount']),
                 'min_decrement' => Standings::minDecrement($auction, $me['amount']),
-                'floor' => Standings::itemFloor($auction, $l1),
+                'floor' => $showL1 ? Standings::itemFloor($auction, $l1) : null,
             ];
         }
 

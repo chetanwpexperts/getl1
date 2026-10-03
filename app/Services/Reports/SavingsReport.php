@@ -61,12 +61,28 @@ class SavingsReport
         $quoteStats = Quote::whereIn('rfq_id', $awards->pluck('rfq_id'))->whereNotNull('submitted_at')
             ->selectRaw('rfq_id, MIN(total) as best, COUNT(*) as n')->groupBy('rfq_id')->get()->keyBy('rfq_id');
 
-        $rows = $awards->map(function (Award $a) use ($rfqs, $quoteStats) {
+        // Item-wise RFQs: lowest sealed rate per line, so each (possibly partial) award is compared
+        // only with the lines it actually covers.
+        $lineBest = \App\Models\QuoteItem::query()
+            ->join('quotes', 'quotes.id', '=', 'quote_items.quote_id')
+            ->whereIn('quotes.rfq_id', $rfqs->filter->isPerItem()->keys())->whereNotNull('quotes.submitted_at')
+            ->selectRaw('quote_items.rfq_item_id, MIN(quote_items.unit_price) as best')->groupBy('quote_items.rfq_item_id')
+            ->pluck('best', 'rfq_item_id');
+
+        $rows = $awards->map(function (Award $a) use ($rfqs, $quoteStats, $lineBest) {
             $rfq = $rfqs[$a->rfq_id] ?? null;
             $paid = (float) $a->total;
-            $bestSealed = isset($quoteStats[$a->rfq_id]) ? (float) $quoteStats[$a->rfq_id]->best : null;
-            $last = $rfq && $rfq->items->isNotEmpty() && $rfq->items->every(fn ($i) => $i->last_purchase_price !== null)
-                ? round($rfq->items->sum(fn ($i) => (float) $i->last_purchase_price * (float) $i->qty), 2) : null;
+            if ($rfq && $rfq->isPerItem()) {
+                $lines = $rfq->items->whereIn('id', collect($a->lines['items'] ?? [])->pluck('rfq_item_id'));
+                $bestSealed = $lines->isNotEmpty() && $lines->every(fn ($i) => isset($lineBest[$i->id]))
+                    ? round($lines->sum(fn ($i) => (float) $lineBest[$i->id] * (float) $i->qty), 2) : null;
+                $last = $lines->isNotEmpty() && $lines->every(fn ($i) => $i->last_purchase_price !== null)
+                    ? round($lines->sum(fn ($i) => (float) $i->last_purchase_price * (float) $i->qty), 2) : null;
+            } else {
+                $bestSealed = isset($quoteStats[$a->rfq_id]) ? (float) $quoteStats[$a->rfq_id]->best : null;
+                $last = $rfq && $rfq->items->isNotEmpty() && $rfq->items->every(fn ($i) => $i->last_purchase_price !== null)
+                    ? round($rfq->items->sum(fn ($i) => (float) $i->last_purchase_price * (float) $i->qty), 2) : null;
+            }
 
             return [
                 'award' => $a,

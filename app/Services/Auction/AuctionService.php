@@ -106,8 +106,11 @@ class AuctionService
         }
         if ($japanese) {
             $opening = (float) $data['opening_price'];
-            if ($opening < $startPrice * 0.5 || $opening > $startPrice * 1.5) {
-                throw ValidationException::withMessages(['opening_price' => 'Set the opening price within 50% of the best sealed quote ('.\App\Support\Money::inr($startPrice).'), to avoid a typo.']);
+            if ($opening > $startPrice) {
+                throw ValidationException::withMessages(['opening_price' => 'The opening price can be at most the best sealed quote ('.\App\Support\Money::inr($startPrice).'), so the result is never above a price you already have.']);
+            }
+            if ($opening < $startPrice * 0.5) {
+                throw ValidationException::withMessages(['opening_price' => 'That is more than 50% below the best sealed quote ('.\App\Support\Money::inr($startPrice).'). Check for a typo.']);
             }
             // Savings are still measured against the best sealed quote (start_price).
         }
@@ -182,6 +185,12 @@ class AuctionService
             }
 
             $locked->update(['status' => RfqStatus::Auction]);
+
+            // Open counter-offers were made on the sealed prices; the auction replaces them.
+            foreach (\App\Models\CounterOffer::where('rfq_id', $rfq->id)->where('status', \App\Models\CounterOffer::PENDING)->lockForUpdate()->get() as $o) {
+                $o->update(['status' => \App\Models\CounterOffer::WITHDRAWN, 'responded_at' => now()]);
+                $this->audit->log('counter_offer_withdrawn', $o, after: ['why' => 'auction_scheduled'], user: $by, organizationId: $rfq->organization_id);
+            }
 
             $this->audit->log('auction_scheduled', $auction, after: [
                 'starts_at' => $startsAt->toIso8601String(), 'ends_at' => $endsAt->toIso8601String(),

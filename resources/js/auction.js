@@ -506,7 +506,7 @@ export function initAuction() {
             const amount = parse(input.value);
             if (!Number.isFinite(amount) || amount <= 0) return say(`Enter a valid rate for ${it.name}.`);
             if (amount > it.max_next_bid) return say(`Your rate for ${it.name} must be at most ${fmt(it.max_next_bid)}.`);
-            if (amount < it.floor) return say(`That's too far below the current lowest rate for ${it.name}. Check for a typo.`);
+            if (it.floor !== null && amount < it.floor) return say(`That's too far below the current lowest rate for ${it.name}. Check for a typo.`);
             const drop = ((1 - amount / it.my_rate) * 100).toFixed(2);
             ask({ amount: amount.toFixed(2), item: id, input }, drop, `${it.name} (line total ${fmt(amount * it.qty)})`);
         });

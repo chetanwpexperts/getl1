@@ -63,7 +63,7 @@
                         <div>
                             <label for="opening_price" class="block text-sm font-medium text-slate-700">Opening price (₹, before GST)</label>
                             <input id="opening_price" name="opening_price" inputmode="decimal" required value="{{ old('opening_price', number_format((float) $best->total, 2, '.', '')) }}" class="{{ $input }}">
-                            <p class="mt-1 text-xs text-slate-500">Round 1 price. The best sealed quote is filled in; start a little higher to give room.</p>
+                            <p class="mt-1 text-xs text-slate-500">Round 1 price, at most the best sealed quote (filled in). Rounds go down from here.</p>
                             @error('opening_price') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>

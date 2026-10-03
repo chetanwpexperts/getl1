@@ -174,4 +174,33 @@ class CounterOfferTest extends TestCase
         $this->assertSame(CounterOffer::WITHDRAWN, $open->fresh()->status);
         $this->respond('A', $open, 'accept')->assertSessionHasErrors('offer');
     }
+
+    public function test_offer_on_sealed_prices_never_overrides_a_lower_auction_price(): void
+    {
+        // B accepts 88,000 on the sealed prices…
+        $this->offer('B', '88000');
+        $this->respond('B', CounterOffer::firstOrFail(), 'accept');
+        // …then the buyer still runs an auction, and an open offer to A is withdrawn by it.
+        $this->offer('A', '89000');
+        $openA = CounterOffer::latest('id')->first();
+        $auction = app(\App\Services\Auction\AuctionService::class)->schedule($this->rfq->fresh(), $this->buyerUser, [
+            'starts_at' => now()->addMinutes(10)->setTimezone('Asia/Kolkata')->format('Y-m-d\TH:i'), 'duration_min' => 30,
+            'min_decrement_type' => 'percent', 'min_decrement_value' => '0.5', 'max_decrement_pct' => '20',
+            'extend_window_sec' => 0, 'extend_by_sec' => 60, 'max_extensions' => 0, 'visibility' => 'rank_only',
+        ]);
+        app(CurrentOrganization::class)->set(null);
+        $this->assertSame(CounterOffer::WITHDRAWN, $openA->fresh()->status);
+
+        // In the auction B goes down to 80,000.
+        $this->travelTo($auction->starts_at->copy()->addSecond());
+        $this->actingAs($this->s['B'][1])->postJson(route('supplier.auctions.bid', $auction->id), ['amount' => '80000', 'idempotency_key' => (string) \Illuminate\Support\Str::uuid()])->assertOk();
+        $this->travelTo($auction->starts_at->copy()->addMinutes(31));
+        app(\App\Services\Auction\AuctionService::class)->tick();
+
+        $c = app(\App\Services\AwardService::class)->candidates($this->rfq->fresh());
+        $b = $c->firstWhere('supplier.id', $this->s['B'][0]->id);
+        $this->assertEquals(80000, $b['basic'], 'The auction price stands; the older 88,000 offer is ignored');
+        $this->assertNull($b['negotiated']);
+        $this->assertSame(1, $b['rank']);
+    }
 }

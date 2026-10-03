@@ -124,6 +124,14 @@ class JapaneseAuctionTest extends TestCase
         $this->actingAs($this->buyerUser)->post(route('buyer.auctions.store', $this->rfq->id), $this->rules(['opening_price' => '10000']))
             ->assertSessionHasErrors('opening_price');
 
+        // Opening above the best sealed quote is refused: the result could end above a price we already have.
+        try {
+            app(AuctionService::class)->schedule($this->rfq->fresh(), $this->buyerUser, $this->rules(['opening_price' => '100001']));
+            $this->fail('Accepted an opening price above the best sealed quote');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('opening_price', $e->errors());
+        }
+
         // Opening price far from the sealed quotes is refused (typo guard).
         try {
             app(AuctionService::class)->schedule($this->rfq->fresh(), $this->buyerUser, $this->rules(['opening_price' => '10000']));
