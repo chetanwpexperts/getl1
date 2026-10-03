@@ -174,6 +174,16 @@ Route::middleware('auth')->group(function () {
             Route::get('/auctions/{auction}/bids.csv', [BuyerAuctionController::class, 'bidsCsv'])
                 ->whereNumber('auction')->middleware('throttle:20,1')->name('auctions.bids');
 
+            // Purchase-order register and exports: everyone in the buyer company.
+            Route::get('/orders', [\App\Http\Controllers\Buyer\OrderController::class, 'index'])->name('orders.index');
+            Route::middleware('throttle:20,1')->group(function () {
+                Route::get('/orders/export/tally-masters.xml', [\App\Http\Controllers\Buyer\OrderController::class, 'tallyMasters'])->name('orders.tally.masters');
+                Route::get('/orders/export/tally-vouchers.xml', [\App\Http\Controllers\Buyer\OrderController::class, 'tallyVouchers'])->name('orders.tally.vouchers');
+                Route::get('/orders/export/register.csv', [\App\Http\Controllers\Buyer\OrderController::class, 'csv'])->name('orders.csv');
+            });
+            Route::post('/orders/tally-settings', [\App\Http\Controllers\Buyer\OrderController::class, 'saveTally'])
+                ->middleware(['org.role:buyer_admin,buyer_user', 'throttle:20,1'])->name('orders.tally.settings');
+
             Route::get('/reports/savings', [\App\Http\Controllers\Buyer\ReportController::class, 'savings'])->name('reports.savings');
             Route::get('/reports/savings.csv', [\App\Http\Controllers\Buyer\ReportController::class, 'savingsCsv'])->middleware('throttle:20,1')->name('reports.savings.csv');
 

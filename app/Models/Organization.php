@@ -19,7 +19,7 @@ class Organization extends Model
     protected $fillable = [
         'type', 'name', 'slug', 'gstin', 'pan', 'udyam_no', 'email', 'phone',
         'address', 'city', 'state', 'pincode', 'locale', 'verified_at', 'status',
-        'award_approval_limit', 'po_terms', 'auction_credits', 'ai_credits',
+        'award_approval_limit', 'po_terms', 'auction_credits', 'ai_credits', 'tally_settings',
     ];
 
     protected function casts(): array
@@ -28,6 +28,7 @@ class Organization extends Model
             'type' => OrganizationType::class,
             'verified_at' => 'datetime',
             'award_approval_limit' => 'decimal:2',
+            'tally_settings' => 'array',
         ];
     }
 

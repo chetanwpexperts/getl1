@@ -24,6 +24,7 @@
             $groups['Buying'] = array_values(array_filter([
                 ['buyer.rfqs.index', 'RFQs & auctions', 'rfqs', 'buyer.rfqs.*|buyer.auctions.*', null],
                 in_array($role, ['buyer_admin', 'approver'], true) ? ['buyer.approvals.index', 'Approvals', 'approvals', 'buyer.approvals.*', $pendingApprovals ?? 0] : null,
+                ['buyer.orders.index', 'Purchase orders', 'orders', 'buyer.orders.*', null],
                 ['buyer.suppliers.index', 'Suppliers', 'suppliers', 'buyer.suppliers.*', null],
             ]));
             $groups['Insights'] = [['buyer.reports.savings', 'Savings', 'savings', 'buyer.reports.*', null]];
