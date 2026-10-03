@@ -150,19 +150,44 @@ class BidService
 
             $extended = $this->maybeExtend($a);
 
+            // Who was L1 until this bid (alerted after the commit, outside the lock).
+            $previousL1 = $a->current_l1_supplier_org_id;
+            $outbid = $previousL1 && $previousL1 !== $supplier->id && $l1['supplier_org_id'] === $supplier->id ? (int) $previousL1 : null;
+
             $a->current_l1 = $l1['amount'];
             $a->current_l1_supplier_org_id = $l1['supplier_org_id'];
             $a->bid_count++;
             $a->save();
 
-            return ['bid' => $bid, 'duplicate' => false, 'extended' => $extended, 'auction' => $a];
+            return ['bid' => $bid, 'duplicate' => false, 'extended' => $extended, 'auction' => $a, 'outbid' => $outbid];
         });
 
         if (! $result['duplicate']) {
             $this->broadcaster->push($result['auction']);
+            if (! empty($result['outbid'])) {
+                $this->alertOutbid($result['auction'], $result['outbid'], $result['bid']->rfq_item_id);
+            }
         }
 
         return ['bid' => $result['bid'], 'duplicate' => $result['duplicate'], 'extended' => $result['extended']];
+    }
+
+    /**
+     * The supplier who was L1 (overall, or on this item) until a bid gets one alert, at most every
+     * 3 minutes per auction. Runs after the commit; never affects the bid.
+     */
+    private function alertOutbid(Auction $a, int $orgId, ?int $itemId): void
+    {
+        rescue(function () use ($a, $orgId, $itemId) {
+            if (! \Illuminate\Support\Facades\Cache::add("notify:outbid:{$a->id}:{$orgId}", 1, 180)) {
+                return;
+            }
+            $ref = \App\Models\Rfq::withoutGlobalScopes()->whereKey($a->rfq_id)->value('ref_no');
+            $item = $itemId ? \App\Models\RfqItem::whereKey($itemId)->value('name') : null;
+            \App\Services\Notifier::toOrg($orgId, 'auctions', $item ? "You are no longer L1 on {$item}" : 'You are no longer L1',
+                "Another supplier has bid lower in the live auction for {$ref}. Place a better bid before the clock runs out.",
+                route('supplier.auctions.show', $a->id));
+        }, null, false);
     }
 
     /** Item-wise bid, inside the locked transaction: the same rules, applied to one RFQ line. */
@@ -203,7 +228,9 @@ class BidService
         }
 
         $now = now();
+        $previousL1 = (int) $rows->first()['supplier_org_id'];
         $rows = Standings::rank($rows->map(fn ($row) => $row['supplier_org_id'] === $supplier->id ? ['amount' => $amount, 'at' => $now] + $row : $row));
+        $outbid = $previousL1 !== $supplier->id && $rows->first()['supplier_org_id'] === $supplier->id ? $previousL1 : null;
         $byItem[$itemId] = $rows;
         $rank = $rows->firstWhere('supplier_org_id', $supplier->id)['rank'];
 
@@ -228,7 +255,7 @@ class BidService
         $a->bid_count++;
         $a->save();
 
-        return ['bid' => $bid, 'duplicate' => false, 'extended' => $extended, 'auction' => $a];
+        return ['bid' => $bid, 'duplicate' => false, 'extended' => $extended, 'auction' => $a, 'outbid' => $outbid];
     }
 
     /**

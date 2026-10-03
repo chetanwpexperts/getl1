@@ -82,6 +82,11 @@ class Automations
                 Mail::to($user->email)->queue(new \App\Mail\PaymentsDueMail($org, $invoices));
                 $sent++;
             }
+            $overdue = $invoices->filter->isOverdue()->count();
+            Notifier::toUsers($admins, (int) $orgId, 'payments',
+                $overdue ? "{$overdue} MSME ".($overdue === 1 ? 'payment is' : 'payments are').' overdue' : 'MSME payments due this week',
+                $invoices->count().' MSME '.($invoices->count() === 1 ? 'invoice is' : 'invoices are').' due within 7 days, '.\App\Support\Money::inr($invoices->sum('total_amount')).' in total.',
+                route('buyer.payments.index'));
         }
 
         return $sent;
@@ -117,10 +122,14 @@ class Automations
 
             foreach ($invites as $invite) {
                 $email = RfqService::recipientEmail($invite);
-                if (! $email || ! $this->claim(RfqInvite::query(), $invite->id, 'reminded_at')) {
+                if ((! $email && ! $invite->supplier_org_id) || ! $this->claim(RfqInvite::query(), $invite->id, 'reminded_at')) {
                     continue;
                 }
-                Mail::to($email)->queue(new RfqReminderMail($invite));
+                if ($email) {
+                    Mail::to($email)->queue(new RfqReminderMail($invite));
+                }
+                Notifier::toOrg($invite->supplier_org_id, 'sourcing', 'Quote deadline is close',
+                    "{$rfq->ref_no} · {$rfq->title}: quotes close at ".$rfq->quote_deadline->ist()->format('d M, h:i A').' IST.', route('supplier.rfqs.show', $invite->id));
                 $sent++;
             }
         }
@@ -150,6 +159,8 @@ class Automations
                 Mail::to($user->email)->queue(new QuotesOpenedMail($rfq, $summary));
                 $sent++;
             }
+            Notifier::toUsers($team, $rfq->organization_id, 'sourcing', 'Quotes are open',
+                "{$rfq->ref_no} · {$rfq->title}: the quote deadline has passed. Compare the quotes and decide the next step.", route('buyer.rfqs.show', $rfq->id));
         }
 
         return $sent;
@@ -176,6 +187,8 @@ class Automations
                     Mail::to($email)->queue(new AuctionReminderMail($auction, $invite->supplier_org_id));
                     $sent++;
                 }
+                Notifier::toOrg($invite->supplier_org_id, 'auctions', 'Auction starts soon',
+                    'Your live auction starts at '.$auction->starts_at->ist()->format('h:i A').' IST. Keep this page ready.', route('supplier.auctions.show', $auction->id));
             }
         }
 
@@ -198,15 +211,22 @@ class Automations
             $rfq = Rfq::withoutGlobalScopes()->with('organization')->findOrFail($auction->rfq_id);
             $standings = Standings::for($auction);
 
-            foreach ($this->buyerTeam($rfq) as $user) {
+            $team = $this->buyerTeam($rfq);
+            foreach ($team as $user) {
                 Mail::to($user->email)->queue(new AuctionResultBuyerMail($auction));
                 $sent++;
             }
+            Notifier::toUsers($team, $rfq->organization_id, 'auctions', 'Auction closed',
+                "{$rfq->ref_no} · {$rfq->title}: ".($auction->current_l1 !== null ? 'final L1 '.\App\Support\Money::inr($auction->current_l1).'. ' : '').'Review the result and award.', route('buyer.auctions.show', $auction->id));
             foreach ($this->participantInvites($auction) as $invite) {
                 $row = $standings->firstWhere('supplier_org_id', $invite->supplier_org_id);
                 if ($row && ($email = RfqService::recipientEmail($invite))) {
                     Mail::to($email)->queue(new AuctionResultSupplierMail($auction, $invite->supplier_org_id, $row['rank'], $row['amount'], $standings->count()));
                     $sent++;
+                }
+                if ($row) {
+                    Notifier::toOrg($invite->supplier_org_id, 'auctions', 'Auction closed: you finished L'.$row['rank'],
+                        "{$rfq->ref_no} · {$rfq->title}. Your final price: ".\App\Support\Money::inr($row['amount']).'. The buyer will decide the award.', route('supplier.auctions.show', $auction->id));
                 }
             }
         }
@@ -241,7 +261,8 @@ class Automations
         return $org->users()
             ->wherePivotIn('role', [OrgRole::BuyerAdmin->value, OrgRole::BuyerUser->value])
             ->get()
-            ->when($rfq->created_by, fn ($c) => $c->push(User::find($rfq->created_by)))
+            // The RFQ's creator, whatever their role, but only while still in the company.
+            ->when($rfq->created_by, fn ($c) => $c->push($org->users()->where('users.id', $rfq->created_by)->first()))
             ->filter(fn ($u) => $u && $u->email)
             ->unique('id')
             ->values();

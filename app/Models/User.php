@@ -36,6 +36,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'notification_prefs' => 'array',
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'invited_at' => 'datetime',
@@ -97,6 +98,17 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    /**
+     * The bell: this person's alerts, only for companies they still belong to.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<\Illuminate\Notifications\DatabaseNotification, $this>
+     */
+    public function visibleNotifications(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->notifications()->where(fn ($q) => $q->whereNull('organization_id')
+            ->orWhereIn('organization_id', \Illuminate\Support\Facades\DB::table('org_user')->where('user_id', $this->id)->select('organization_id')));
     }
 
     public function switchOrganization(Organization $organization): void

@@ -145,9 +145,13 @@ class AuctionControl
     {
         try {
             $rfq = Rfq::withoutGlobalScopes()->with('organization')->findOrFail($a->rfq_id);
-            foreach (app(Automations::class)->buyerTeam($rfq) as $u) {
+            $team = app(Automations::class)->buyerTeam($rfq);
+            foreach ($team as $u) {
                 Mail::to($u->email)->queue(new AuctionNoticeMail($a, $kind, $reason, $minutes, null));
             }
+            $title = ['paused' => 'Auction paused by GetL1', 'resumed' => 'Auction resumed', 'extended' => 'Auction extended by '.(int) $minutes.' min', 'cancelled' => 'Auction cancelled by GetL1'][$kind] ?? 'Auction updated';
+            $body = "{$rfq->ref_no} · {$rfq->title}".($reason ? ". Reason: {$reason}" : '.');
+            \App\Services\Notifier::toUsers($team, $rfq->organization_id, 'auctions', $title, $body, route('buyer.auctions.show', $a->id));
             $orgIds = Bid::where('auction_id', $a->id)->distinct()->pluck('supplier_org_id');
             $invites = RfqInvite::with(['listEntry', 'supplier'])->where('rfq_id', $a->rfq_id)->whereIn('supplier_org_id', $orgIds)->get();
             foreach ($invites as $inv) {
@@ -155,6 +159,7 @@ class AuctionControl
                 if ($email) {
                     Mail::to($email)->queue(new AuctionNoticeMail($a, $kind, $reason, $minutes, (int) $inv->supplier_org_id));
                 }
+                \App\Services\Notifier::toOrg((int) $inv->supplier_org_id, 'auctions', $title, $body, route('supplier.auctions.show', $a->id));
             }
         } catch (\Throwable $e) {
             Log::warning('auction_notice_failed', ['auction_id' => $a->id, 'kind' => $kind, 'error' => $e->getMessage()]);

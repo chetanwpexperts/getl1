@@ -316,8 +316,16 @@ class AuctionTest extends TestCase
         $this->travelTo($a->starts_at->copy()->addSecond());
         $this->assertSame(['opened' => 1, 'closed' => 0], $svc->tick());
         $this->assertSame(AuctionStatus::Live, $this->fresh($a)->status);
+        $this->assertContains('Auction is live now', $this->s['B'][1]->fresh()->notifications()->get()->pluck('data.title')->all());
+        $this->assertContains('Auction is live now', $this->buyerUser->fresh()->notifications()->get()->pluck('data.title')->all());
 
+        $wasL1 = $this->fresh($a)->current_l1_supplier_org_id;
         $this->bid('B', $a, '98000')->assertOk();
+        if ($wasL1 && $wasL1 !== $this->s['B'][0]->id) {
+            $loser = collect($this->s)->first(fn ($p) => $p[0]->id === $wasL1)[1];
+            $this->assertContains('You are no longer L1', $loser->fresh()->notifications()->get()->pluck('data.title')->all());
+        }
+        $this->assertNotContains('You are no longer L1', $this->s['B'][1]->fresh()->notifications()->get()->pluck('data.title')->all());
 
         $this->travelTo($this->fresh($a)->ends_at->copy()->addSecond());
         $this->assertSame(['opened' => 0, 'closed' => 1], $svc->tick());
@@ -327,6 +335,20 @@ class AuctionTest extends TestCase
         $this->assertEquals(98000, $log->after['final_l1']);
 
         $this->artisan('auctions:tick')->assertSuccessful();
+    }
+
+    public function test_live_alert_goes_out_once_even_when_a_bid_opened_the_auction(): void
+    {
+        $a = $this->scheduled();
+        $this->travelTo($a->starts_at->copy()->addSecond());
+        $this->bid('B', $a, '98000')->assertOk(); // the bid itself flips it to live
+        $this->assertSame(AuctionStatus::Live, $this->fresh($a)->status);
+
+        app(AuctionService::class)->tick();
+        app(AuctionService::class)->tick();
+        $count = fn ($u) => collect($u->fresh()->notifications()->get())->filter(fn ($n) => $n->data['title'] === 'Auction is live now')->count();
+        $this->assertSame(1, $count($this->s['A'][1]));
+        $this->assertSame(1, $count($this->buyerUser));
     }
 
     // ---------------------------------------------------------------- privacy and access

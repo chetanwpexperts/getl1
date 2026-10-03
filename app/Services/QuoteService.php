@@ -93,6 +93,16 @@ class QuoteService
                 after: ['total' => (float) $quote->total, 'items' => $items->count()],
                 user: $user, organizationId: $invite->rfq->organization_id);
 
+            // First quote from this supplier: tell the buyer team how many are in. No prices or names
+            // before the deadline, so the alert never weakens the sealed quotes.
+            if (! $before) {
+                $rfq = $invite->rfq;
+                $in = Quote::where('rfq_id', $rfq->id)->whereNotNull('submitted_at')->count();
+                $of = $rfq->invites()->count();
+                Notifier::toUsers(app(Automations::class)->buyerTeam($rfq), $rfq->organization_id, 'sourcing', "New quote received: {$rfq->ref_no}",
+                    "{$in} of {$of} suppliers have quoted on {$rfq->title}. Quotes open after the deadline.", route('buyer.rfqs.show', $rfq->id));
+            }
+
             return $quote;
         });
     }

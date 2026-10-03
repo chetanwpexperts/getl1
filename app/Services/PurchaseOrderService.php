@@ -165,6 +165,10 @@ class PurchaseOrderService
         if ($to) {
             Mail::to($to)->queue(new PurchaseOrderMail($award));
         }
+        $buyerName = Organization::whereKey($award->organization_id)->value('name');
+        Notifier::toOrg($award->supplier_org_id, 'orders', "New purchase order: {$award->po_number}",
+            "{$buyerName} issued a PO for {$rfq->ref_no} · {$rfq->title}, ".\App\Support\Money::inr($award->grand_total).' incl. GST. Please review and accept it.',
+            route('supplier.orders.show', $award->id));
 
         // Item-wise split: the "not selected" notes go out once, after the last PO of the decision.
         if ($award->group_key) {
@@ -185,6 +189,8 @@ class PurchaseOrderService
                 if ($email = RfqService::recipientEmail($invite)) {
                     Mail::to($email)->queue(new NotSelectedMail($rfq, $invite->supplier_org_id));
                 }
+                Notifier::toOrg($invite->supplier_org_id, 'sourcing', 'Not selected this time',
+                    "{$rfq->ref_no} · {$rfq->title} has been awarded to another supplier. Thank you for quoting.", route('supplier.rfqs.show', $invite->id));
             });
     }
 }

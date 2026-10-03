@@ -114,6 +114,9 @@ class TeamController extends Controller
         $this->guardMember($request, $org, $member);
 
         $org->users()->detach($member->id);
+        // Their alerts about this company go too.
+        \Illuminate\Support\Facades\DB::table('notifications')->where('notifiable_type', 'user')->where('notifiable_id', $member->id)
+            ->where('organization_id', $org->id)->delete();
         if ($member->current_organization_id === $org->id) {
             $member->forceFill(['current_organization_id' => null])->save();
         }

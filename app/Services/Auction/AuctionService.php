@@ -11,6 +11,7 @@ use App\Models\Quote;
 use App\Models\Rfq;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Notifier;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -272,11 +273,36 @@ class AuctionService
             }
         }
 
+        // "Auction is live" alert, once per auction, however it opened (this tick or a first bid).
+        $justOpened = Auction::withoutGlobalScopes()->where('status', AuctionStatus::Live->value)
+            ->whereNull('opened_notified_at')->where('starts_at', '>=', now()->subHour())->get();
+        foreach ($justOpened as $a) {
+            $claimed = Auction::withoutGlobalScopes()->whereKey($a->id)->whereNull('opened_notified_at')->update(['opened_notified_at' => now()]);
+            if ($claimed) {
+                $this->alertOpened($a);
+            }
+        }
+
         return ['opened' => $opened, 'closed' => $closed];
+    }
+
+    /** Auction just went live: every participating supplier and the buyer team get a live alert. */
+    private function alertOpened(Auction $a): void
+    {
+        rescue(function () use ($a) {
+            $rfq = \App\Models\Rfq::withoutGlobalScopes()->find($a->rfq_id);
+            foreach (Bid::where('auction_id', $a->id)->distinct()->pluck('supplier_org_id') as $orgId) {
+                Notifier::toOrg((int) $orgId, 'auctions', 'Auction is live now',
+                    "The live auction for {$rfq->ref_no} · {$rfq->title} has started. Join now to bid.", route('supplier.auctions.show', $a->id));
+            }
+            Notifier::toUsers(app(\App\Services\Automations::class)->buyerTeam($rfq), $rfq->organization_id, 'auctions', 'Auction is live now',
+                "{$rfq->ref_no} · {$rfq->title}. Watch the bids come in.", route('buyer.auctions.show', $a->id));
+        }, null, false);
     }
 
     private function notifyParticipants(Auction $auction): void
     {
+        $rfq = \App\Models\Rfq::withoutGlobalScopes()->find($auction->rfq_id);
         $orgIds = Bid::where('auction_id', $auction->id)->distinct()->pluck('supplier_org_id');
         $invites = \App\Models\RfqInvite::with(['listEntry', 'supplier'])
             ->where('rfq_id', $auction->rfq_id)->whereIn('supplier_org_id', $orgIds)->get();
@@ -286,6 +312,8 @@ class AuctionService
             if ($email) {
                 Mail::to($email)->queue(new AuctionScheduledMail($auction, $invite->supplier_org_id));
             }
+            Notifier::toOrg($invite->supplier_org_id, 'auctions', 'Live auction scheduled',
+                "{$rfq?->ref_no} · {$rfq?->title}: starts ".$auction->starts_at->ist()->format('d M, h:i A').' IST.', route('supplier.auctions.show', $auction->id));
         }
     }
 

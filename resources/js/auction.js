@@ -6,6 +6,8 @@
 // - Every bid attempt carries an idempotency key; a retry after a network error reuses it.
 // - All text is written with textContent (never innerHTML), so names can't inject markup.
 
+import { getEcho } from './echo';
+
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt = (v) => (v === null || v === undefined ? '—' : inr.format(v));
 const time = (ms) => new Date(ms).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
@@ -72,23 +74,9 @@ export function initAuction() {
 
     async function connectSocket() {
         if (cfg.practice) return;
-        const key = import.meta.env.VITE_REVERB_APP_KEY;
-        if (!key) return; // not configured: polling only
         try {
-            const [{ default: Echo }, { default: Pusher }] = await Promise.all([import('laravel-echo'), import('pusher-js')]);
-            window.Pusher = Pusher;
-            const scheme = import.meta.env.VITE_REVERB_SCHEME ?? 'https';
-            const echo = new Echo({
-                broadcaster: 'reverb',
-                key,
-                wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
-                wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? 80),
-                wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 443),
-                forceTLS: scheme === 'https',
-                enabledTransports: ['ws', 'wss'],
-                authEndpoint: '/broadcasting/auth',
-                auth: { headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' } },
-            });
+            const echo = await getEcho();
+            if (!echo) return; // not configured: polling only
             echo.private(cfg.channel).listen('.state', (s) => (s.refresh ? refresh() : apply(s)));
             echo.connector.pusher.connection.bind('state_change', ({ current }) => {
                 const up = current === 'connected';
@@ -98,6 +86,12 @@ export function initAuction() {
                     if (up) refresh(); // catch anything missed while disconnected
                 }
             });
+            // The shared socket may already be up (opened by the notification bell).
+            if (echo.connector.pusher.connection.state === 'connected' && !socketUp) {
+                socketUp = true;
+                schedulePolling();
+                refresh(); // catch anything between the first load and subscribing
+            }
         } catch {
             socketUp = false;
             schedulePolling();

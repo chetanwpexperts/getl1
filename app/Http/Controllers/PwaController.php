@@ -17,7 +17,7 @@ use Illuminate\Http\Response;
 class PwaController extends Controller
 {
     /** Bump to make every installed copy drop its cache and fetch fresh assets. */
-    public const VERSION = 'v1';
+    public const VERSION = 'v2';
 
     public function manifest(): JsonResponse
     {

@@ -22,6 +22,7 @@ class AccountController extends Controller
         return view('account.profile', [
             'user' => $user,
             'memberships' => $user->organizations()->orderBy('name')->get(),
+            'devices' => \App\Models\PushSubscription::where('user_id', $user->id)->latest('updated_at')->get(),
         ]);
     }
 

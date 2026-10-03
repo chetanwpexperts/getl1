@@ -323,6 +323,9 @@ class ItemWiseTest extends TestCase
         $fresh = Auction::withoutGlobalScopes()->find($a->id);
         $this->assertEquals(86000, (float) $fresh->current_l1);
         $this->assertSame(1, $fresh->bid_count);
+        // B held the box until now: one alert naming the item.
+        $this->assertContains('You are no longer L1 on '.$box->name, $this->s['B'][1]->fresh()->notifications()->get()->pluck('data.title')->all());
+        $this->assertSame(0, $this->s['A'][1]->fresh()->notifications()->where('data', 'like', '%no longer L1%')->count());
 
         // Rules apply per item: B's own box rate is 85, so it must go to at most 84.57.
         $this->bid('B', $a, $box->id, '84.80')->assertStatus(422);

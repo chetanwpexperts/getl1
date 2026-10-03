@@ -244,6 +244,14 @@ class PayablesTest extends TestCase
         $this->assertEquals(58360.50, (float) $good->paid_amount);
         $this->assertTrue(AuditLog::where('action', 'invoice_paid')->where('after->late', true)->exists());
         $this->assertStringContainsString('TDS', (new InvoiceDecisionMail($good))->render());
+
+        // Live alerts on both sides at each step.
+        $supplier = $this->s['A'][1]->fresh()->notifications()->get()->pluck('data.title')->all();
+        $this->assertContains("Goods received: {$a->po_number}", $supplier);
+        $this->assertContains('Invoice disputed: INV/26-27/045', $supplier);
+        $this->assertContains('Invoice approved: INV/26-27/046', $supplier);
+        $this->assertContains('Payment recorded: INV/26-27/046', $supplier);
+        $this->assertSame(2, collect($this->buyerUser->fresh()->notifications()->get()->pluck('data.title')->all())->filter(fn ($x) => $x === 'New invoice to review')->count());
     }
 
     public function test_due_date_rules(): void

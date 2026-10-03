@@ -253,6 +253,9 @@ class AwardTest extends TestCase
         $this->assertSame($approver->id, $a->approved_by);
         Mail::assertQueued(AwardDecisionMail::class, fn ($m) => $m->hasTo($this->buyerUser->email));
         Mail::assertQueued(PurchaseOrderMail::class);
+
+        $this->assertContains('Award waiting for your approval', $approver->fresh()->notifications()->get()->pluck('data.title')->all());
+        $this->assertContains('Award approved: '.$this->rfq->ref_no, $this->buyerUser->fresh()->notifications()->get()->pluck('data.title')->all());
     }
 
     public function test_rejected_award_can_be_redone(): void

@@ -278,10 +278,15 @@ class AwardService
             return $created;
         });
 
+        $alerted = false;
         foreach ($awards as $award) {
             if ($award->isPending()) {
                 foreach ($this->approvers($award) as $user) {
                     Mail::to($user->email)->queue(new AwardApprovalRequestMail($award));
+                }
+                if (! $alerted) { // one alert for the whole split decision
+                    $alerted = true;
+                    $this->alertApprovers($award, $awards->count());
                 }
             } else {
                 IssuePurchaseOrder::dispatch($award->id);
@@ -399,6 +404,7 @@ class AwardService
             foreach ($this->approvers($award) as $user) {
                 Mail::to($user->email)->queue(new AwardApprovalRequestMail($award));
             }
+            $this->alertApprovers($award, 1);
         } else {
             IssuePurchaseOrder::dispatch($award->id);
         }
@@ -549,12 +555,28 @@ class AwardService
             }
 
             $awarder = User::find($award->awarded_by);
-            if ($awarder) {
+            if ($awarder && $awarder->belongsToOrganization($award->organization_id)) {
                 DB::afterCommit(fn () => Mail::to($awarder->email)->queue(new AwardDecisionMail($award)));
+                $ref = Rfq::withoutGlobalScopes()->whereKey($award->rfq_id)->value('ref_no');
+                Notifier::toUsers([$awarder], $award->organization_id, 'orders',
+                    $to === AwardStatus::Approved ? "Award approved: {$ref}" : "Award rejected: {$ref}",
+                    $by->name.($to === AwardStatus::Approved ? ' approved it. The purchase order goes to the supplier now.' : ' rejected it'.($award->decision_note ? ": {$award->decision_note}" : '.')),
+                    route('buyer.rfqs.show', $award->rfq_id).'#award');
             }
 
             return $award;
         });
+    }
+
+    private function alertApprovers(Award $award, int $orders): void
+    {
+        $rfq = Rfq::withoutGlobalScopes()->find($award->rfq_id);
+        $total = $award->group_key
+            ? (float) Award::withoutGlobalScopes()->where('group_key', $award->group_key)->sum('grand_total')
+            : (float) $award->grand_total;
+        Notifier::toUsers($this->approvers($award), $award->organization_id, 'orders', 'Award waiting for your approval',
+            "{$rfq?->ref_no} · {$rfq?->title}: ".\App\Support\Money::inr($total).' incl. GST'.($orders > 1 ? " across {$orders} suppliers" : '').'. Awarded by '.(User::find($award->awarded_by)?->name ?? 'a colleague').'.',
+            route('buyer.rfqs.show', $award->rfq_id).'#award');
     }
 
     /** Awarding closes any counter-offer still waiting for an answer. */

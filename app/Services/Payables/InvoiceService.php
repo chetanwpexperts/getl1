@@ -145,9 +145,13 @@ class InvoiceService
         }
 
         $rfq = Rfq::withoutGlobalScopes()->with('organization')->findOrFail($award->rfq_id);
-        foreach (app(Automations::class)->buyerTeam($rfq) as $user) {
+        $team = app(Automations::class)->buyerTeam($rfq);
+        foreach ($team as $user) {
             Mail::to($user->email)->queue(new InvoiceSubmittedMail($invoice));
         }
+        \App\Services\Notifier::toUsers($team, $award->organization_id, 'payments', 'New invoice to review',
+            Organization::whereKey($invoice->supplier_org_id)->value('name')." sent invoice {$invoice->invoice_number} for ".Money::inr($invoice->total_amount)." against {$award->po_number}.",
+            route('buyer.orders.show', $award->id).'#invoices');
 
         return $invoice;
     }
@@ -264,6 +268,16 @@ class InvoiceService
         $invite = RfqInvite::with(['listEntry', 'supplier', 'rfq.organization'])->where('rfq_id', $award->rfq_id)->where('supplier_org_id', $inv->supplier_org_id)->first();
         if ($invite && ($email = RfqService::recipientEmail($invite))) {
             Mail::to($email)->queue(new InvoiceDecisionMail($inv));
+        }
+        $buyer = Organization::whereKey($inv->organization_id)->value('name');
+        [$title, $body] = match ($inv->status) {
+            SupplierInvoice::PAID => ["Payment recorded: {$inv->invoice_number}", "{$buyer} marked ".Money::inr($inv->paid_amount ?? $inv->total_amount).' as paid'.($inv->paid_on ? ' on '.$inv->paid_on->format('d M Y') : '').'.'],
+            SupplierInvoice::APPROVED => ["Invoice approved: {$inv->invoice_number}", "{$buyer} approved your invoice".($inv->due_date ? ', due for payment by '.$inv->due_date->format('d M Y') : '').'.'],
+            SupplierInvoice::DISPUTED => ["Invoice disputed: {$inv->invoice_number}", "{$buyer} raised a query".($inv->review_note ? ": {$inv->review_note}" : '.').' You can upload a corrected invoice.'],
+            default => [null, null],
+        };
+        if ($title) {
+            \App\Services\Notifier::toOrg($inv->supplier_org_id, 'payments', $title, $body, route('supplier.orders.show', $award->id).'#invoices');
         }
     }
 }

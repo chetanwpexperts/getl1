@@ -80,6 +80,11 @@ class CounterOfferService
         if ($invite && ($email = RfqService::recipientEmail($invite))) {
             Mail::to($email)->queue(new CounterOfferMail($offer, $invite));
         }
+        if ($invite) {
+            Notifier::toOrg($supplierOrgId, 'orders', 'Counter-offer from '.$invite->rfq?->organization?->name,
+                "{$rfq->ref_no}: they ask whether you can do ".\App\Support\Money::inr($offer->offered_amount).' (your price '.\App\Support\Money::inr($offer->current_amount).'). Reply by '.$offer->expires_at->ist()->format('d M, h:i A').' IST.',
+                route('supplier.rfqs.show', $invite->id));
+        }
 
         return $offer;
     }
@@ -122,9 +127,14 @@ class CounterOfferService
             return $o;
         });
 
-        foreach (app(Automations::class)->buyerTeam($offer->rfq) as $user) {
+        $team = app(Automations::class)->buyerTeam($offer->rfq);
+        foreach ($team as $user) {
             Mail::to($user->email)->queue(new CounterOfferResponseMail($offer));
         }
+        $supplierName = \App\Models\Organization::whereKey($offer->supplier_org_id)->value('name');
+        Notifier::toUsers($team, $offer->organization_id, 'orders', $accept ? "Counter-offer accepted by {$supplierName}" : "Counter-offer declined by {$supplierName}",
+            $offer->rfq->ref_no.': '.($accept ? 'they agreed to '.\App\Support\Money::inr($offer->offered_amount).'. You can award at this price.' : 'they kept their price.'.($offer->response_note ? " Note: {$offer->response_note}" : '')),
+            route('buyer.rfqs.show', $offer->rfq_id).'#award');
 
         return $offer;
     }

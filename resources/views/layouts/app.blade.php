@@ -123,6 +123,7 @@
                 @endif
 
                 <x-install-app />
+                <x-notification-bell />
                 {{-- Account menu --}}
                 <details class="relative" data-dropdown>
                     <summary class="flex cursor-pointer list-none items-center gap-2 rounded-full p-0.5 pr-1 hover:bg-slate-100 [&::-webkit-details-marker]:hidden" aria-label="Account menu">

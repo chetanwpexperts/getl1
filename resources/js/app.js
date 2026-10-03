@@ -7,6 +7,7 @@ import { initCountdowns } from './countdowns';
 import { initBilling } from './billing';
 import { initPwa } from './pwa';
 import { initShell } from './shell';
+import { initNotifications, initPushSettings } from './notifications';
 
 document.addEventListener('DOMContentLoaded', () => {
     initRfqItems();
@@ -17,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initBilling();
     initPwa();
     initShell();
+    initNotifications();
+    initPushSettings();
 
     // Copy-to-clipboard buttons: <button data-copy="text">
     document.addEventListener('click', async (e) => {

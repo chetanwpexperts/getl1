@@ -79,6 +79,17 @@ Route::middleware('auth')->group(function () {
     Route::put('/account', [\App\Http\Controllers\AccountController::class, 'update'])->middleware('throttle:20,1')->name('account.update');
     Route::put('/account/password', [\App\Http\Controllers\AccountController::class, 'password'])->middleware('throttle:6,1')->name('account.password');
 
+    // Notifications: the bell, live alerts and device push. Always the signed-in person's own.
+    Route::controller(\App\Http\Controllers\NotificationController::class)->prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/feed', 'feed')->middleware('throttle:120,1')->name('feed');
+        Route::get('/{id}/open', 'open')->whereUuid('id')->middleware('throttle:60,1')->name('open');
+        Route::post('/read-all', 'readAll')->middleware('throttle:30,1')->name('read-all');
+        Route::post('/devices', 'subscribe')->middleware('throttle:10,1')->name('devices.store');
+        Route::delete('/devices', 'unsubscribe')->middleware('throttle:10,1')->name('devices.destroy');
+        Route::put('/preferences', 'preferences')->middleware('throttle:20,1')->name('preferences');
+    });
+
     Route::get('/onboarding', [OrganizationController::class, 'onboarding'])->name('onboarding');
     Route::post('/onboarding', [OrganizationController::class, 'store'])->name('onboarding.store');
     Route::post('/organizations/{organization}/switch', [OrganizationController::class, 'switch'])

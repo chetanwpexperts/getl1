@@ -359,6 +359,8 @@ class RfqService
             if ($email) {
                 Mail::to($email)->queue(new RfqInvitationMail($invite));
             }
+            Notifier::toOrg($invite->supplier_org_id, 'sourcing', 'New RFQ from '.$rfq->organization?->name,
+                "{$rfq->ref_no} · {$rfq->title}. Quotes close ".$rfq->quote_deadline?->ist()->format('d M, h:i A').' IST.', route('supplier.rfqs.show', $invite->id));
             $invite->forceFill(['last_sent_at' => now()])->save();
         }
     }
@@ -366,10 +368,14 @@ class RfqService
     private function notifySuppliers(Rfq $rfq, string $kind, ?string $reason = null): void
     {
         $rfq->invites()->where('status', '!=', InviteStatus::Declined->value)->get()
-            ->each(function (RfqInvite $invite) use ($kind, $reason) {
+            ->each(function (RfqInvite $invite) use ($rfq, $kind, $reason) {
                 if ($email = $this->recipientEmail($invite)) {
                     Mail::to($email)->queue(new RfqUpdateMail($invite, $kind, $reason));
                 }
+                Notifier::toOrg($invite->supplier_org_id, 'sourcing',
+                    ($kind === 'cancelled' ? 'RFQ cancelled: ' : 'Deadline extended: ').$rfq->ref_no,
+                    $kind === 'cancelled' ? $rfq->title.($reason ? ". Reason: {$reason}" : '.') : "{$rfq->title}. Quotes now close ".$rfq->quote_deadline?->ist()->format('d M, h:i A').' IST.',
+                    route('supplier.rfqs.show', $invite->id));
             });
     }
 

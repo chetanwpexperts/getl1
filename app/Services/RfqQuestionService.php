@@ -61,9 +61,12 @@ class RfqQuestionService
             return $q;
         });
 
-        foreach (app(Automations::class)->buyerTeam($rfq) as $user) {
+        $team = app(Automations::class)->buyerTeam($rfq);
+        foreach ($team as $user) {
             Mail::to($user->email)->queue(new RfqQuestionMail($question));
         }
+        Notifier::toUsers($team, $rfq->organization_id, 'sourcing', "New question on {$rfq->ref_no}",
+            Str::limit($question->question, 160).' Answer it so every supplier quotes on the same basis.', route('buyer.rfqs.show', $rfq->id).'#questions');
 
         return $question;
     }
@@ -128,6 +131,9 @@ class RfqQuestionService
             if ($email = RfqService::recipientEmail($invite)) {
                 Mail::to($email)->queue(new RfqClarificationMail($invite, $q, $invite->supplier_org_id !== null && $invite->supplier_org_id === $q->supplier_org_id));
             }
+            $mine = $invite->supplier_org_id !== null && $invite->supplier_org_id === $q->supplier_org_id;
+            Notifier::toOrg($invite->supplier_org_id, 'sourcing', ($mine ? 'Your question was answered: ' : 'New clarification: ').$invite->rfq->ref_no,
+                Str::limit((string) $q->answer, 180), route('supplier.rfqs.show', $invite->id).'#questions');
         }
     }
 

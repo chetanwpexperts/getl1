@@ -67,9 +67,12 @@ class OrderController extends Controller
         });
 
         if ($accepted) {
-            foreach ($automations->buyerTeam(Rfq::withoutGlobalScopes()->with('organization')->findOrFail($accepted->rfq_id)) as $user) {
+            $team = $automations->buyerTeam(Rfq::withoutGlobalScopes()->with('organization')->findOrFail($accepted->rfq_id));
+            foreach ($team as $user) {
                 Mail::to($user->email)->queue(new PoAcceptedMail($accepted));
             }
+            \App\Services\Notifier::toUsers($team, $accepted->organization_id, 'orders', "PO accepted: {$accepted->po_number}",
+                \App\Models\Organization::whereKey($accepted->supplier_org_id)->value('name').' accepted the purchase order.', route('buyer.orders.show', $accepted->id));
         }
 
         return back()->with('status', 'Order accepted. The buyer has been told.');
