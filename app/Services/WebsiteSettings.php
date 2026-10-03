@@ -80,7 +80,11 @@ class WebsiteSettings
     /** All saved values (only keys that were saved). */
     public function saved(): array
     {
-        $cached = Cache::get(self::CACHE_KEY);
+        try {
+            $cached = Cache::get(self::CACHE_KEY);
+        } catch (\Throwable) {
+            return []; // cache store unreachable (e.g. no database yet during install): run on defaults
+        }
         if (is_array($cached)) {
             return $cached;
         }
@@ -90,7 +94,7 @@ class WebsiteSettings
         } catch (\Throwable) {
             return []; // database not ready (fresh install, migrations): defaults, and nothing cached
         }
-        Cache::put(self::CACHE_KEY, $values, 300);
+        rescue(fn () => Cache::put(self::CACHE_KEY, $values, 300), null, false);
 
         return $values;
     }
