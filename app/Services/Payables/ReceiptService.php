@@ -84,7 +84,7 @@ class ReceiptService
         if ($invite && ($email = RfqService::recipientEmail($invite))) {
             Mail::to($email)->queue(new GoodsReceivedMail($grn));
         }
-        \App\Services\PurchaseRequestService::tellRequesters($award->rfq_id, 'received', (string) $award->po_number);
+        \App\Services\PurchaseRequestService::tellRequesters($award, 'received');
         $buyer = \App\Models\Organization::whereKey($award->organization_id)->value('name');
         $rejected = $grn->rejectedQty();
         \App\Services\Notifier::toOrg($award->supplier_org_id, 'orders', "Goods received: {$award->po_number}",

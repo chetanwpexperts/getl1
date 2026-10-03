@@ -9,6 +9,7 @@
         $signed = fn ($v) => $v === null ? '—' : ($v >= 0 ? $inr($v) : '−'.$inr(abs($v)));
     @endphp
 
+    @include('buyer.prices._tabs')
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight">Savings report</h1>
@@ -31,7 +32,7 @@
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
             <p class="text-sm text-emerald-900">Saved vs last purchase price</p>
             <p class="mt-1 text-3xl font-semibold tabular-nums text-emerald-800">{{ $t['vs_last_count'] ? $signed($t['vs_last']) : '—' }}</p>
-            <p class="mt-1 text-xs text-emerald-900">{{ $t['vs_last_pct'] !== null ? $t['vs_last_pct'].'% lower' : 'Add last prices on RFQ items to see this' }}</p>
+            <p class="mt-1 text-xs text-emerald-900">{{ $t['vs_last_pct'] !== null ? $t['vs_last_pct'].'% lower' : 'Shown once an item is bought again: last prices fill in from your past POs' }}</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <p class="text-sm text-slate-600">Saved vs best sealed quote</p>

@@ -44,6 +44,9 @@ class Automations
             'auction_reminders' => $this->remindAuctionParticipants(),
             'auction_results' => $this->announceAuctionResults(),
             'payment_reminders' => $this->remindMsmePayments(),
+            // Rate contracts ending in 30 / 7 days: reminders from 9 AM IST.
+            'contract_reminders' => now()->setTimezone(config('app.display_timezone'))->hour >= 9
+                ? app(\App\Services\Pricing\RateContractService::class)->remindExpiring() : 0,
         ];
     }
 

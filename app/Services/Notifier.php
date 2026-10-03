@@ -90,7 +90,7 @@ class Notifier
                     'notifiable_type' => 'user',
                     'notifiable_id' => $user->id,
                     'organization_id' => $orgId,
-                    'data' => json_encode(['category' => $category, 'title' => $title, 'body' => $body, 'url' => $url, 'org_id' => $orgId], JSON_UNESCAPED_UNICODE),
+                    'data' => json_encode(['category' => $category, 'title' => $title, 'body' => $body, 'url' => $url, 'org_id' => $orgId], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     'read_at' => null,
                     'created_at' => $now,
                     'updated_at' => $now,

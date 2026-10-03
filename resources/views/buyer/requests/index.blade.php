@@ -12,9 +12,6 @@
         </a>
     </x-page-header>
 
-    @if (session('status'))
-        <p class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{{ session('status') }}</p>
-    @endif
 
     @if (count($tabs) > 1)
         <nav class="mb-4 flex flex-wrap gap-1 border-b border-slate-200 text-sm" aria-label="Request filter">

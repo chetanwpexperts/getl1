@@ -179,6 +179,7 @@ Route::middleware('auth')->group(function () {
                     Route::post('/{id}/approve', 'approve')->whereNumber('id')->name('approve');
                     Route::post('/{id}/reject', 'reject')->whereNumber('id')->name('reject');
                     Route::post('/{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+                    Route::post('/{id}/take-back', 'takeBack')->whereNumber('id')->name('take-back');
                 });
             });
             Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
@@ -217,6 +218,18 @@ Route::middleware('auth')->group(function () {
                 ->middleware(['org.role:buyer_admin,buyer_user', 'throttle:20,1'])->name('orders.tally.settings');
 
             Route::get('/reports/savings', [\App\Http\Controllers\Buyer\ReportController::class, 'savings'])->name('reports.savings');
+
+            // Price history and rate contracts: the buyer team views; buyers and admins make and end contracts.
+            Route::controller(\App\Http\Controllers\Buyer\PriceController::class)->group(function () {
+                Route::get('/prices', 'index')->name('prices.index');
+                Route::get('/prices/item', 'item')->name('prices.item');
+                Route::get('/prices/lookup', 'lookup')->middleware('throttle:120,1')->name('prices.lookup');
+                Route::get('/contracts', 'contracts')->name('contracts.index');
+                Route::get('/contracts/new', 'create')->name('contracts.create');
+                Route::post('/contracts', 'store')->middleware('throttle:20,1')->name('contracts.store');
+                Route::get('/contracts/{id}', 'show')->whereNumber('id')->name('contracts.show');
+                Route::post('/contracts/{id}/cancel', 'cancel')->whereNumber('id')->middleware('throttle:20,1')->name('contracts.cancel');
+            });
             Route::get('/reports/savings.csv', [\App\Http\Controllers\Buyer\ReportController::class, 'savingsCsv'])->middleware('throttle:20,1')->name('reports.savings.csv');
 
             // Billing: everyone can see the plan and invoices; only admins pay or cancel.
@@ -316,6 +329,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/auctions/{auction}/bid', [SupplierAuctionController::class, 'bid'])
                 ->whereNumber('auction')->middleware('throttle:60,1')->name('auctions.bid');
 
+            Route::get('/contracts', [\App\Http\Controllers\Supplier\ContractController::class, 'index'])->name('contracts.index');
+            Route::get('/contracts/{id}', [\App\Http\Controllers\Supplier\ContractController::class, 'show'])->whereNumber('id')->name('contracts.show');
+            Route::post('/contracts/{id}/accept', [\App\Http\Controllers\Supplier\ContractController::class, 'accept'])->whereNumber('id')->middleware('throttle:20,1')->name('contracts.accept');
             Route::get('/orders', [SupplierOrderController::class, 'index'])->name('orders.index');
             Route::get('/orders/{award}', [SupplierOrderController::class, 'show'])->whereNumber('award')->name('orders.show');
             Route::get('/orders/{award}/po', [SupplierOrderController::class, 'po'])->whereNumber('award')->name('orders.po');

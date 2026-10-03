@@ -44,6 +44,7 @@ class PurchaseOrderService
                     $award->po_sent_at = now();
                     Storage::disk('local')->put($path, $this->render($award));
                     $award->save();
+                    \App\Services\Pricing\PriceHistory::record($award);
 
                     Rfq::withoutGlobalScopes()->whereKey($award->rfq_id)->update(['status' => RfqStatus::Awarded->value]);
                     $this->audit->log('po_issued', $award, after: ['po_number' => $award->po_number, 'grand_total' => (float) $award->grand_total],
@@ -165,7 +166,7 @@ class PurchaseOrderService
         if ($to) {
             Mail::to($to)->queue(new PurchaseOrderMail($award));
         }
-        PurchaseRequestService::tellRequesters($rfq->id, 'ordered', (string) $award->po_number);
+        PurchaseRequestService::tellRequesters($award, 'ordered');
         $buyerName = Organization::whereKey($award->organization_id)->value('name');
         Notifier::toOrg($award->supplier_org_id, 'orders', "New purchase order: {$award->po_number}",
             "{$buyerName} issued a PO for {$rfq->ref_no} · {$rfq->title}, ".\App\Support\Money::inr($award->grand_total).' incl. GST. Please review and accept it.',

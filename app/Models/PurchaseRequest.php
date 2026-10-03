@@ -24,13 +24,13 @@ class PurchaseRequest extends Model
 
     protected $fillable = [
         'organization_id', 'pr_number', 'title', 'department', 'needed_by', 'notes', 'items', 'estimated_total', 'status',
-        'requested_by', 'decided_by', 'decided_at', 'decision_note', 'rfq_id', 'converted_by', 'converted_at',
+        'requested_by', 'decided_by', 'decided_at', 'decision_note', 'rfq_id', 'rfq_item_ids', 'converted_by', 'converted_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'items' => 'array', 'needed_by' => 'date', 'decided_at' => 'datetime', 'converted_at' => 'datetime',
+            'items' => 'array', 'rfq_item_ids' => 'array', 'needed_by' => 'date', 'decided_at' => 'datetime', 'converted_at' => 'datetime',
             'estimated_total' => 'decimal:2',
         ];
     }
@@ -48,6 +48,39 @@ class PurchaseRequest extends Model
     public function rfq(): BelongsTo
     {
         return $this->belongsTo(Rfq::class)->withoutGlobalScopes();
+    }
+
+    /**
+     * Issued POs per RFQ, looked up once per request for all the RFQs on a page.
+     *
+     * @param  list<int>  $rfqIds
+     * @return \Illuminate\Support\Collection<int, \Illuminate\Support\Collection<int, Award>>
+     */
+    public static function issuedPos(array $rfqIds): \Illuminate\Support\Collection
+    {
+        // Web requests only: a queue worker or command keeps one request object for its whole life.
+        $attrs = app()->runningInConsole() && ! app()->runningUnitTests() ? new \Symfony\Component\HttpFoundation\ParameterBag : request()->attributes;
+        $memo = $attrs->get('getl1.pr_pos', collect());
+        $missing = array_values(array_diff(array_unique($rfqIds), $memo->keys()->all()));
+        if ($missing) {
+            $found = Award::withoutGlobalScopes()->whereIn('rfq_id', $missing)->where('status', AwardStatus::PoSent->value)->get()->groupBy('rfq_id');
+            foreach ($missing as $id) {
+                $memo->put($id, $found->get($id, collect()));
+            }
+            $attrs->set('getl1.pr_pos', $memo);
+        }
+
+        return $memo;
+    }
+
+    /** Does this PO include any of this request's lines? */
+    public function covers(Award $award): bool
+    {
+        if ($this->rfq_item_ids === null) {
+            return (int) $award->rfq_id === (int) $this->rfq_id;
+        }
+
+        return collect($award->lines['items'] ?? [])->contains(fn ($l) => in_array((int) ($l['rfq_item_id'] ?? 0), $this->rfq_item_ids, true));
     }
 
     public function isOpen(): bool
@@ -75,18 +108,29 @@ class PurchaseRequest extends Model
         }
 
         $rfq = $this->loadMissing('rfq')->rfq;
-        $awards = $rfq ? Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->where('status', AwardStatus::PoSent->value)->get() : collect();
+        $mine = $this->rfq_item_ids; // null for requests converted before lines were tracked: the whole RFQ
+        $awards = $rfq ? self::issuedPos([$rfq->id])->get($rfq->id, collect())->filter(fn ($a) => $this->covers($a)) : collect();
         if ($awards->isNotEmpty()) {
             $pos = $awards->pluck('po_number')->filter()->values()->all();
-            $summaries = $awards->map(fn ($a) => ReceiptService::summary($a));
-            if ($summaries->every(fn ($s) => $s['complete'])) {
+            // Only this request's lines count, never the other requests sharing the RFQ.
+            $byItem = [];
+            foreach ($awards as $a) {
+                foreach (ReceiptService::summary($a)['lines'] as $itemId => $l) {
+                    if ($mine === null || in_array((int) $itemId, $mine, true)) {
+                        $byItem[(int) $itemId] = $l;
+                    }
+                }
+            }
+            $lines = collect($byItem);
+            $orderedAll = $mine === null || collect($mine)->every(fn ($id) => $lines->has($id));
+            if ($orderedAll && $lines->isNotEmpty() && $lines->every(fn ($l) => $l['pending'] <= 0)) {
                 return ['key' => 'received', 'label' => 'Received', 'tone' => 'emerald', 'pos' => $pos];
             }
-            if ($summaries->contains(fn ($s) => $s['latest'] !== null)) {
+            if ($lines->contains(fn ($l) => $l['received'] > 0)) {
                 return ['key' => 'part_received', 'label' => 'Partly received', 'tone' => 'emerald', 'pos' => $pos];
             }
 
-            return ['key' => 'ordered', 'label' => 'Ordered', 'tone' => 'emerald', 'pos' => $pos];
+            return ['key' => 'ordered', 'label' => $orderedAll ? 'Ordered' : 'Partly ordered', 'tone' => 'emerald', 'pos' => $pos];
         }
 
         $label = match ($rfq?->status) {

@@ -34,6 +34,9 @@ class AppLayoutComposer
         if ($org) {
             $view->with('currentOrg', $org);
             $view->with('currentRole', $user->roleIn($org));
+            if ($user->roleIn($org)?->value === 'requester') {
+                return; // no buying badges, counts or auction button for requesters
+            }
 
             // Menu badges: awards waiting for approval (buyer) / orders not yet accepted (supplier).
             $badgeKey = 'getl1.badges.'.$org->id;
@@ -46,7 +49,11 @@ class AppLayoutComposer
                                 ->orWhere(fn ($w) => $w->where('status', \App\Models\SupplierInvoice::APPROVED)->where('is_msme', true)
                                     ->where('due_date', '<=', now()->setTimezone(config('app.display_timezone'))->addDays(7)->toDateString())))
                             ->count()]
-                    : ['openOrders' => \App\Models\Award::withoutGlobalScopes()->where('supplier_org_id', $org->id)->where('status', \App\Enums\AwardStatus::PoSent->value)->whereNull('supplier_accepted_at')->count()]);
+                    : ['openOrders' => \App\Models\Award::withoutGlobalScopes()->where('supplier_org_id', $org->id)->where('status', \App\Enums\AwardStatus::PoSent->value)->whereNull('supplier_accepted_at')->count(),
+                        // Rate contracts in force or upcoming that the supplier hasn't confirmed yet.
+                        'contractsToConfirm' => \App\Models\RateContract::withoutGlobalScopes()->where('supplier_org_id', $org->id)
+                            ->where('status', \App\Models\RateContract::ACTIVE)->whereNull('supplier_accepted_at')
+                            ->where('valid_to', '>=', \App\Models\RateContract::today())->count()]);
             }
             $view->with(request()->attributes->get($badgeKey));
 
@@ -59,9 +66,6 @@ class AppLayoutComposer
                     ->whereIn('status', $statuses)
                     ->where(fn ($q) => $q->where('status', '!=', \App\Models\PurchaseRequest::PENDING)->orWhere('requested_by', '!=', $user->id))
                     ->count());
-            }
-            if ($role === 'requester') {
-                return; // no auction button or other buying details for requesters
             }
 
             // Running or starting-soon auction: shown as a button in the header on every page.

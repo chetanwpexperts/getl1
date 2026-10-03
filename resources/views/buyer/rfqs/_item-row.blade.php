@@ -12,6 +12,7 @@
             <input name="items[{{ $i }}][name]" value="{{ $row['name'] ?? '' }}" required maxlength="150" class="{{ $cls }}{{ $mark('name') }}" placeholder="Corrugated box">
             {!! $note('name') !!}
             @error("items.$i.name") <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            <p class="mt-1 hidden text-xs text-slate-600" data-price-hint></p>
         </div>
         <div class="sm:col-span-2">
             <label class="block text-xs font-medium text-slate-600">Quantity</label>

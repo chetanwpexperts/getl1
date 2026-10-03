@@ -245,12 +245,15 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             @foreach ($rfq->items as $item)
+                                @php $rcHit = \App\Services\Pricing\PriceHistory::contractsFor($rfq->organization_id, $item->name, $item->unit, $item->spec)->first(); @endphp
                                 <tr>
                                     <td class="px-4 py-2 text-slate-500">{{ $item->line_no }}</td>
                                     <td class="px-4 py-2">{{ $item->name }}@if ($item->spec)<span class="block text-xs text-slate-500">{{ $item->spec }}</span>@endif</td>
                                     <td class="px-4 py-2 text-right tabular-nums">{{ $qtyFmt($item->qty) }} {{ $item->unit }}</td>
                                     <td class="px-4 py-2">{{ $item->delivery_date?->format('d M Y') ?? '—' }}</td>
-                                    <td class="px-4 py-2 text-right tabular-nums text-slate-600">{{ $item->last_purchase_price !== null ? \App\Support\Money::inr($item->last_purchase_price) : '—' }}</td>
+                                    <td class="px-4 py-2 text-right tabular-nums text-slate-600">{{ $item->last_purchase_price !== null ? \App\Support\Money::inr($item->last_purchase_price) : '—' }}
+                                        @if ($rcHit)<a href="{{ route('buyer.contracts.show', $rcHit['contract']->id) }}" class="block text-xs font-medium text-emerald-700 hover:underline" title="{{ $rcHit['contract']->supplier?->name }}, until {{ $rcHit['contract']->valid_to->format('d M Y') }}">Contract {{ \App\Support\Money::inr($rcHit['rate']) }}</a>@endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

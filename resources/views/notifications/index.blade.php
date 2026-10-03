@@ -13,9 +13,6 @@
         <a href="{{ route('account.edit') }}#notifications" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-slate-50">Settings</a>
     </x-page-header>
 
-    @if (session('status'))
-        <p class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{{ session('status') }}</p>
-    @endif
 
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <ul class="divide-y divide-slate-100">

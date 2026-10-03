@@ -122,10 +122,17 @@ class TeamController extends Controller
         if ($old?->value === $data['role']) {
             return back();
         }
-        if ($old === OrgRole::Requester) { // moving into a paid seat
+        if ($old === OrgRole::Requester || $data['role'] === OrgRole::Requester->value) { // into a paid seat, or into the requester cap
             $this->assertRoom($org, app(PlanService::class), $data['role'], 'role');
         }
         $org->users()->updateExistingPivot($member->id, ['role' => $data['role']]);
+        if ($data['role'] === OrgRole::Requester->value) {
+            // Requesters see no prices, suppliers or orders: earlier alerts about those go.
+            $ids = \Illuminate\Support\Facades\DB::table('notifications')->where('notifiable_type', 'user')->where('notifiable_id', $member->id)
+                ->where('organization_id', $org->id)->get(['id', 'data'])
+                ->reject(fn ($n) => str_contains((string) (json_decode($n->data, true)['url'] ?? ''), '/buyer/requests/'))->pluck('id');
+            \Illuminate\Support\Facades\DB::table('notifications')->whereIn('id', $ids)->delete();
+        }
         $this->audit->log('team_role_changed', $member, before: ['role' => $old?->value], after: ['role' => $data['role']], user: $request->user(), organizationId: $org->id);
 
         return back()->with('status', "{$member->name} is now ".OrgRole::from($data['role'])->label().'.');

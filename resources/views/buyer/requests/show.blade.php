@@ -23,9 +23,6 @@
         <a href="{{ route('buyer.requests.index') }}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-slate-50">All requests</a>
     </x-page-header>
 
-    @if (session('status'))
-        <p class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{{ session('status') }}</p>
-    @endif
     @if ($errors->any())
         <p class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $errors->first() }}</p>
     @endif
@@ -115,6 +112,15 @@
                     <a href="{{ route('buyer.rfqs.show', $pr->rfq_id) }}" class="mt-4 inline-block text-sm font-medium text-emerald-700 hover:underline">Open {{ $pr->rfq?->ref_no ?? 'the RFQ' }} →</a>
                 @endif
             </section>
+
+            @if ($canTakeBack)
+                <form method="POST" action="{{ route('buyer.requests.take-back', $pr->id) }}" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" data-confirm="Take {{ $pr->pr_number }} out of {{ $pr->rfq?->ref_no }}? It goes back to Ready to buy.">
+                    @csrf
+                    <h2 class="text-sm font-semibold">RFQ not going ahead?</h2>
+                    <p class="mt-1 text-xs text-slate-500">Take this request out of {{ $pr->rfq?->ref_no }} and put it back on Ready to buy. Possible until its items are awarded.</p>
+                    <button class="mt-3 w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">Take back from RFQ</button>
+                </form>
+            @endif
 
             @if ($canCancel)
                 <form method="POST" action="{{ route('buyer.requests.cancel', $pr->id) }}" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" data-confirm="Cancel {{ $pr->pr_number }}?">

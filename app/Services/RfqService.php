@@ -118,6 +118,8 @@ class RfqService
                 $rfq->items()->delete();
             }
 
+            $lastPaid = \App\Services\Pricing\PriceHistory::lastMany($buyer->id, array_map(
+                fn ($item) => \App\Services\Pricing\PriceHistory::key((string) $item['name'], (string) $item['unit'], $item['spec'] ?? null), array_values($data['items'])));
             foreach (array_values($data['items']) as $i => $item) {
                 $rfq->items()->create([
                     'line_no' => $i + 1,
@@ -126,7 +128,10 @@ class RfqService
                     'qty' => $item['qty'],
                     'unit' => $item['unit'],
                     'delivery_date' => $item['delivery_date'] ?? null,
-                    'last_purchase_price' => $item['last_purchase_price'] ?? null,
+                    // Left blank: filled from what this company last paid for the same item.
+                    'last_purchase_price' => isset($item['last_purchase_price']) && $item['last_purchase_price'] !== ''
+                        ? $item['last_purchase_price']
+                        : ($lastPaid[\App\Services\Pricing\PriceHistory::key((string) $item['name'], (string) $item['unit'], $item['spec'] ?? null)]->rate ?? null),
                 ]);
             }
 

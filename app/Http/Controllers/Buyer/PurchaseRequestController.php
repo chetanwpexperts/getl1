@@ -65,8 +65,11 @@ class PurchaseRequestController extends Controller
             'ready' => $canBuy ? PurchaseRequest::where('status', PurchaseRequest::APPROVED)->count() : 0,
         ];
 
+        $requests = $query->with('rfq:id,ref_no,status')->paginate(25)->withQueryString();
+        PurchaseRequest::issuedPos($requests->pluck('rfq_id')->filter()->all()); // one query for the whole page
+
         return view('buyer.requests.index', [
-            'requests' => $query->paginate(25)->withQueryString(),
+            'requests' => $requests,
             'tabs' => $tabs, 'tab' => $tab, 'counts' => $counts,
             'canBuy' => $canBuy, 'isRequester' => $isRequester,
         ]);
@@ -99,6 +102,8 @@ class PurchaseRequestController extends Controller
             'canDecide' => $pr->status === PurchaseRequest::PENDING && in_array($role, PurchaseRequestService::DECIDERS, true) && $pr->requested_by !== $request->user()->id,
             'canBuy' => $pr->status === PurchaseRequest::APPROVED && in_array($role, [OrgRole::BuyerAdmin, OrgRole::BuyerUser], true),
             'canCancel' => $pr->isOpen() && ($pr->requested_by === $request->user()->id || $role === OrgRole::BuyerAdmin),
+            'canTakeBack' => $pr->status === PurchaseRequest::CONVERTED && in_array($role, [OrgRole::BuyerAdmin, OrgRole::BuyerUser], true)
+                && ! in_array($pr->progress()['key'], ['ordered', 'part_received', 'received'], true),
         ]);
     }
 
@@ -131,6 +136,15 @@ class PurchaseRequestController extends Controller
         $this->service->cancel($pr, $request->user(), $reason);
 
         return back()->with('status', "{$pr->pr_number} cancelled.");
+    }
+
+    public function takeBack(Request $request, int $id): RedirectResponse
+    {
+        abort_unless(in_array($this->role($request), [OrgRole::BuyerAdmin, OrgRole::BuyerUser], true), 403);
+        $pr = $this->find($request, $id);
+        $this->service->takeBack($pr, $request->user());
+
+        return back()->with('status', "{$pr->pr_number} is back on Ready to buy.");
     }
 
     public function convert(Request $request): RedirectResponse

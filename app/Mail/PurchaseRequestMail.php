@@ -9,7 +9,11 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-/** 'submitted' → to approvers: a request needs a decision. 'decided' → to the requester: approved or rejected. */
+/**
+ * 'submitted' → to approvers: a request needs a decision. 'approved' / 'rejected' → to the requester.
+ * The decision is passed in, never read back later: by the time the queued mail is sent the request
+ * may already be in an RFQ.
+ */
 class PurchaseRequestMail extends Mailable
 {
     use Queueable, SerializesModels;
@@ -20,7 +24,7 @@ class PurchaseRequestMail extends Mailable
     {
         $subject = match (true) {
             $this->kind === 'submitted' => "Purchase request to approve: {$this->pr->pr_number}",
-            $this->pr->status === PurchaseRequest::APPROVED => "Your request was approved: {$this->pr->pr_number}",
+            $this->kind === 'approved' => "Your request was approved: {$this->pr->pr_number}",
             default => "Your request was rejected: {$this->pr->pr_number}",
         };
 

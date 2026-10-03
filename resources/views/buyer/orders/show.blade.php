@@ -16,6 +16,9 @@
 
     <x-page-header :title="'Purchase order '.$award->po_number" :subtitle="$award->supplier->name.' · '.$award->rfq?->title.' ('.$award->rfq?->ref_no.') · '.$award->po_sent_at?->ist()->format('d M Y')">
         <a href="{{ route('buyer.awards.po', $award->id) }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-slate-50"><x-icon name="download" class="size-4 text-slate-500" /> PO (PDF)</a>
+        @if ($canEdit)
+            <a href="{{ route('buyer.contracts.create', ['award' => $award->id]) }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-slate-50" title="Lock in these rates with this supplier for the months ahead">Make rate contract</a>
+        @endif
     </x-page-header>
 
     <div class="mb-6 flex flex-wrap gap-2 text-xs">

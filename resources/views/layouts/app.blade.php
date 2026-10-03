@@ -31,7 +31,8 @@
                 ['buyer.payments.index', 'Payments', 'billing', 'buyer.payments.*', $paymentsAttention ?? 0],
                 ['buyer.suppliers.index', 'Suppliers', 'suppliers', 'buyer.suppliers.*', null],
             ]));
-            $groups['Insights'] = [['buyer.reports.savings', 'Savings', 'savings', 'buyer.reports.*', null]];
+            // Price history, rate contracts and the savings report share one menu item (tabs inside).
+            $groups['Insights'] = [['buyer.prices.index', 'Prices & savings', 'savings', 'buyer.prices.*|buyer.contracts.*|buyer.reports.*', null]];
             $groups['Company'] = [
                 ['company.edit', 'Company profile', 'company', 'company.*', null],
                 ['team.index', 'Team', 'team', 'team.*', null],
@@ -41,6 +42,7 @@
             $groups['Selling'] = [
                 ['supplier.rfqs.index', 'RFQs & auctions', 'rfqs', 'supplier.rfqs.*|supplier.auctions.*', null],
                 ['supplier.orders.index', 'Purchase orders', 'orders', 'supplier.orders.*', $openOrders ?? 0],
+                ['supplier.contracts.index', 'Rate contracts', 'documents', 'supplier.contracts.*', $contractsToConfirm ?? 0],
             ];
             $groups['Company'] = [
                 ['company.edit', 'Company profile', 'company', 'company.*', null],

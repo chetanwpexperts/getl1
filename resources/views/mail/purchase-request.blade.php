@@ -4,7 +4,7 @@
 # Purchase request to approve
 
 **{{ $e($pr->requester?->name) }}**{{ $pr->department ? ' ('.$e($pr->department).')' : '' }} has asked for the following. Please approve or reject it.
-@elseif ($pr->status === \App\Models\PurchaseRequest::APPROVED)
+@elseif ($kind === 'approved')
 # Your request was approved
 
 **{{ $e($pr->decider?->name) }}** approved your request. The purchase team will now get quotes from suppliers, and you'll be told when it's ordered.

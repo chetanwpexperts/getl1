@@ -89,14 +89,17 @@ class PurchaseRequestTest extends TestCase
         $pr->refresh();
         $this->assertSame(PurchaseRequest::APPROVED, $pr->status);
         $this->assertSame($this->approver->id, $pr->decided_by);
-        Mail::assertQueued(PurchaseRequestMail::class, fn ($m) => $m->hasTo($this->requester->email) && $m->kind === 'decided');
+        Mail::assertQueued(PurchaseRequestMail::class, fn ($m) => $m->hasTo($this->requester->email) && $m->kind === 'approved');
         $this->assertContains('Request approved: PR-2026-0001', $this->titles($this->requester));
         $this->assertContains('Approved request to buy: PR-2026-0001', $this->titles($this->buyerUser));
         $this->assertDatabaseHas('audit_logs', ['action' => 'purchase_request_approved']);
 
         // Decided once only.
         $this->actingAs($this->admin)->post(route('buyer.requests.reject', $pr->id), ['decision_note' => 'Too late now'])->assertSessionHasErrors('decision_note');
-        $this->assertStringContainsString('approved', (new PurchaseRequestMail($pr, 'decided'))->render());
+        $this->assertStringContainsString('approved', (new PurchaseRequestMail($pr, 'approved'))->render());
+        // Converted before the queued mail goes out: still says approved, never "rejected".
+        $pr->forceFill(['status' => PurchaseRequest::CONVERTED])->save();
+        $this->assertStringNotContainsString('rejected', (new PurchaseRequestMail($pr->fresh(), 'approved'))->render());
     }
 
     public function test_approver_cannot_approve_own_request_and_admin_requests_skip_approval(): void
@@ -237,6 +240,95 @@ class PurchaseRequestTest extends TestCase
         app(CurrentOrganization::class)->set(null);
         $this->assertSame('received', $pr->fresh()->progress()['key']);
         $this->assertContains("Delivery received: {$pr->pr_number}", $this->titles($this->requester));
+    }
+
+    public function test_combined_rfq_split_between_suppliers_reports_each_request_on_its_own(): void
+    {
+        $sup = [];
+        foreach (['A' => 'Alpha Packaging', 'B' => 'Beta Gloves'] as $k => $name) {
+            [$org, $u] = $this->supplier($name);
+            $sup[$k] = [$org, $u, BuyerSupplier::create(['buyer_org_id' => $this->buyer->id, 'company_name' => $name, 'status' => 'active',
+                'contact_email' => $u->email, 'supplier_org_id' => $org->id])];
+        }
+        $this->raise($this->requester, ['title' => 'Boxes', 'items' => [['name' => 'Box 5-ply', 'qty' => '500', 'unit' => 'pcs']]]);
+        $other = $this->memberOf($this->buyer, OrgRole::Requester);
+        $this->raise($other, ['title' => 'Gloves', 'items' => [['name' => 'Nitrile gloves', 'qty' => '40', 'unit' => 'box']]]);
+        [$boxes, $gloves] = PurchaseRequest::orderBy('id')->get()->all();
+        $this->actingAs($this->approver)->post(route('buyer.requests.approve', $boxes->id));
+        $this->actingAs($this->approver)->post(route('buyer.requests.approve', $gloves->id));
+        $this->actingAs($this->buyerUser)->post(route('buyer.requests.convert'), ['ids' => [$boxes->id, $gloves->id]]);
+        app(CurrentOrganization::class)->set(null);
+
+        $rfq = Rfq::withoutGlobalScopes()->findOrFail($boxes->fresh()->rfq_id);
+        [$boxItem, $gloveItem] = $rfq->items()->orderBy('line_no')->get()->all();
+        $this->assertSame([$boxItem->id], $boxes->fresh()->rfq_item_ids);
+        $this->assertSame([$gloveItem->id], $gloves->fresh()->rfq_item_ids);
+
+        $rfq->update(['quote_deadline' => now()->addHours(3), 'bid_basis' => Rfq::BASIS_PER_ITEM]);
+        $svc = app(RfqService::class);
+        $svc->invite($rfq, $this->buyerUser, [$sup['A'][2]->id, $sup['B'][2]->id]);
+        $svc->publish($rfq->fresh(), $this->buyerUser);
+        app(CurrentOrganization::class)->set(null);
+        foreach (['A' => [40, 900], 'B' => [45, 800]] as $k => [$box, $glove]) {
+            $invite = RfqInvite::where('rfq_id', $rfq->id)->where('supplier_org_id', $sup[$k][0]->id)->firstOrFail();
+            $this->actingAs($sup[$k][1])->post(route('supplier.rfqs.accept', $invite->id), ['agree' => 1]);
+            $this->actingAs($sup[$k][1])->post(route('supplier.rfqs.quote', $invite->id), ['items' => [
+                $boxItem->id => ['unit_price' => $box, 'gst_rate' => '18', 'freight' => 0], $gloveItem->id => ['unit_price' => $glove, 'gst_rate' => '18', 'freight' => 0],
+            ], 'valid_till' => now()->addDays(10)->toDateString()])->assertSessionHasNoErrors();
+            app(CurrentOrganization::class)->set(null);
+        }
+        $this->travel(4)->hours();
+        // Boxes to A, gloves to B: two POs.
+        $this->actingAs($this->buyerUser)->post(route('buyer.awards.store', $rfq->id), ['items' => [$boxItem->id => $sup['A'][0]->id, $gloveItem->id => $sup['B'][0]->id]])->assertSessionHasNoErrors();
+        app(CurrentOrganization::class)->set(null);
+        $awards = Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->get();
+        if ($awards->first()->isPending()) {
+            $this->actingAs($this->approver)->post(route('buyer.awards.approve', $awards->first()->id));
+            app(CurrentOrganization::class)->set(null);
+        }
+        $boxPo = Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->where('supplier_org_id', $sup['A'][0]->id)->firstOrFail();
+        $glovePo = Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->where('supplier_org_id', $sup['B'][0]->id)->firstOrFail();
+        $this->assertSame([$boxPo->po_number], $boxes->fresh()->progress()['pos']);
+        $this->assertSame([$glovePo->po_number], $gloves->fresh()->progress()['pos']);
+
+        // Boxes arrive: only the boxes requester hears about it, and only their request shows received.
+        $this->actingAs($this->buyerUser)->post(route('buyer.orders.receive', $boxPo->id), [
+            'received_on' => now()->setTimezone('Asia/Kolkata')->toDateString(), 'lines' => [$boxItem->id => ['received' => 500]],
+        ])->assertSessionHasNoErrors();
+        app(CurrentOrganization::class)->set(null);
+        $this->assertSame('received', $boxes->fresh()->progress()['key']);
+        $this->assertSame('ordered', $gloves->fresh()->progress()['key']);
+        $this->assertContains("Delivery received: {$boxes->pr_number}", $this->titles($this->requester));
+        $this->assertNotContains("Delivery received: {$gloves->pr_number}", $this->titles($other));
+    }
+
+    public function test_request_can_be_taken_back_from_an_rfq_until_it_is_awarded(): void
+    {
+        $this->raise($this->requester);
+        $pr = PurchaseRequest::firstOrFail();
+        $this->actingAs($this->approver)->post(route('buyer.requests.approve', $pr->id));
+        $this->actingAs($this->buyerUser)->post(route('buyer.requests.convert'), ['ids' => [$pr->id]]);
+        app(CurrentOrganization::class)->set(null);
+
+        $this->actingAs($this->approver)->post(route('buyer.requests.take-back', $pr->id))->assertForbidden();
+        $this->actingAs($this->requester)->post(route('buyer.requests.take-back', $pr->id))->assertForbidden();
+        $this->actingAs($this->buyerUser)->get(route('buyer.requests.show', $pr->id))->assertSee('Take back from RFQ');
+        $this->actingAs($this->buyerUser)->post(route('buyer.requests.take-back', $pr->id))->assertSessionHasNoErrors();
+        $pr->refresh();
+        $this->assertSame([PurchaseRequest::APPROVED, null, null], [$pr->status, $pr->rfq_id, $pr->rfq_item_ids]);
+        $this->assertContains("Request back with purchase: {$pr->pr_number}", $this->titles($this->requester));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'purchase_request_taken_back']);
+        $this->actingAs($this->buyerUser)->post(route('buyer.requests.take-back', $pr->id))->assertSessionHasErrors('request');
+    }
+
+    public function test_moving_someone_to_requester_removes_buying_alerts_and_respects_the_cap(): void
+    {
+        $member = $this->memberOf($this->buyer, OrgRole::BuyerUser);
+        \App\Services\Notifier::toUsers([$member], $this->buyer->id, 'orders', 'PO accepted: PO-2026-0001', 'Alpha accepted.', route('buyer.orders.index'));
+        \App\Services\Notifier::toUsers([$member], $this->buyer->id, 'sourcing', 'Request approved: PR-2026-0009', 'x', route('buyer.requests.show', 9));
+        $this->actingAs($this->admin)->put(route('team.role', $member->id), ['role' => 'requester'])->assertSessionHasNoErrors();
+        $this->assertSame(['Request approved: PR-2026-0009'], $this->titles($member));
+
     }
 
     public function test_cancel_and_validation(): void

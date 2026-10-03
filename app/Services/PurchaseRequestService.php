@@ -157,7 +157,7 @@ class PurchaseRequestService
         $pr->load(['requester', 'decider']);
         $requester = $pr->requester;
         if ($requester?->email) {
-            Mail::to($requester->email)->queue(new PurchaseRequestMail($pr, 'decided'));
+            Mail::to($requester->email)->queue(new PurchaseRequestMail($pr, $to === PurchaseRequest::APPROVED ? 'approved' : 'rejected'));
         }
         Notifier::toUsers([$requester], $pr->organization_id, 'sourcing',
             $to === PurchaseRequest::APPROVED ? "Request approved: {$pr->pr_number}" : "Request rejected: {$pr->pr_number}",
@@ -230,9 +230,18 @@ class PurchaseRequestService
                 'title' => $title,
                 'items' => array_values($lines),
             ]);
-            PurchaseRequest::whereKey($prs->pluck('id'))->update([
-                'status' => PurchaseRequest::CONVERTED, 'rfq_id' => $rfq->id, 'converted_by' => $by->id, 'converted_at' => now(),
-            ]);
+            // Which RFQ lines belong to which request (lines are created in the same order as $lines).
+            $itemIdByKey = array_combine(array_keys($lines), $rfq->items()->orderBy('line_no')->pluck('id')->all());
+            foreach ($prs as $p) {
+                $mine = [];
+                foreach ($p->items as $item) {
+                    $mine[] = $itemIdByKey[mb_strtolower($item['name'].'|'.($item['spec'] ?? '').'|'.$item['unit'])];
+                }
+                $p->update([
+                    'status' => PurchaseRequest::CONVERTED, 'rfq_id' => $rfq->id, 'rfq_item_ids' => array_values(array_unique($mine)),
+                    'converted_by' => $by->id, 'converted_at' => now(),
+                ]);
+            }
             $this->audit->log('purchase_requests_converted', $rfq, after: ['requests' => $prs->pluck('pr_number')->all(), 'lines' => count($lines)],
                 user: $by, organizationId: $org->id);
 
@@ -247,6 +256,33 @@ class PurchaseRequestService
         return $rfq;
     }
 
+    /**
+     * Take one request back out of its RFQ (the RFQ was dropped or went another way), as long as no
+     * award or PO includes its lines yet. It goes back to "Ready to buy".
+     */
+    public function takeBack(PurchaseRequest $pr, User $by): void
+    {
+        DB::transaction(function () use ($pr, $by) {
+            $p = PurchaseRequest::whereKey($pr->id)->lockForUpdate()->firstOrFail();
+            if ($p->status !== PurchaseRequest::CONVERTED || ! $p->rfq_id) {
+                throw ValidationException::withMessages(['request' => 'This request isn’t in an RFQ.']);
+            }
+            Rfq::withoutGlobalScopes()->whereKey($p->rfq_id)->lockForUpdate()->first(); // awarding takes the same lock
+            $awarded = \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $p->rfq_id)
+                ->whereIn('status', [\App\Enums\AwardStatus::PendingApproval->value, \App\Enums\AwardStatus::Approved->value, \App\Enums\AwardStatus::PoSent->value])
+                ->get()->contains(fn ($a) => $p->covers($a));
+            if ($awarded) {
+                throw ValidationException::withMessages(['request' => 'Its items have already been awarded, so it stays with this RFQ.']);
+            }
+            $ref = Rfq::withoutGlobalScopes()->whereKey($p->rfq_id)->value('ref_no');
+            $p->update(['status' => PurchaseRequest::APPROVED, 'rfq_id' => null, 'rfq_item_ids' => null, 'converted_by' => null, 'converted_at' => null]);
+            $this->audit->log('purchase_request_taken_back', $p, after: ['pr_number' => $p->pr_number, 'from_rfq' => $ref], user: $by, organizationId: $p->organization_id);
+        });
+        $pr->refresh()->load('requester');
+        Notifier::toUsers([$pr->requester], $pr->organization_id, 'sourcing', "Request back with purchase: {$pr->pr_number}",
+            "The purchase team will source \"{$pr->title}\" again.", route('buyer.requests.show', $pr->id));
+    }
+
     /** The RFQ was cancelled: its requests go back to the purchase team as approved. */
     public function release(Rfq $rfq, User $by): void
     {
@@ -254,22 +290,27 @@ class PurchaseRequestService
         if ($prs->isEmpty()) {
             return;
         }
-        PurchaseRequest::withoutGlobalScopes()->whereKey($prs->pluck('id'))->update(['status' => PurchaseRequest::APPROVED, 'rfq_id' => null, 'converted_by' => null, 'converted_at' => null]);
+        PurchaseRequest::withoutGlobalScopes()->whereKey($prs->pluck('id'))->update(['status' => PurchaseRequest::APPROVED, 'rfq_id' => null, 'rfq_item_ids' => null, 'converted_by' => null, 'converted_at' => null]);
         $this->audit->log('purchase_requests_released', $rfq, after: ['requests' => $prs->pluck('pr_number')->all()], user: $by, organizationId: $rfq->organization_id);
         foreach ($prs as $p) {
             Notifier::toUsers([$p->requester], $p->organization_id, 'sourcing', "Request back with purchase: {$p->pr_number}",
                 "The RFQ for \"{$p->title}\" was cancelled. The purchase team will source it again.", route('buyer.requests.show', $p->id));
+            $this->tellBuyers($p->refresh(), $by); // back on "Ready to buy"
         }
     }
 
-    /** Ordered / delivered: tell the people who asked for it (no prices, no supplier names). */
-    public static function tellRequesters(int $rfqId, string $event, string $poNumber): void
+    /** Ordered / delivered: tell the people whose request this PO covers (no prices, no supplier names). */
+    public static function tellRequesters(\App\Models\Award $award, string $event): void
     {
-        rescue(function () use ($rfqId, $event, $poNumber) {
-            foreach (PurchaseRequest::withoutGlobalScopes()->with('requester')->where('rfq_id', $rfqId)->get() as $p) {
+        rescue(function () use ($award, $event) {
+            $po = (string) $award->po_number;
+            foreach (PurchaseRequest::withoutGlobalScopes()->with('requester')->where('rfq_id', $award->rfq_id)->get() as $p) {
+                if (! $p->covers($award)) {
+                    continue;
+                }
                 [$title, $body] = $event === 'ordered'
-                    ? ["Ordered: {$p->pr_number}", "\"{$p->title}\" has been ordered ({$poNumber})."]
-                    : ["Delivery received: {$p->pr_number}", "Material for \"{$p->title}\" has arrived ({$poNumber}). The store has recorded it."];
+                    ? ["Ordered: {$p->pr_number}", "\"{$p->title}\" has been ordered ({$po})."]
+                    : ["Delivery received: {$p->pr_number}", "Material for \"{$p->title}\" has arrived ({$po}). The store has recorded it."];
                 Notifier::toUsers([$p->requester], $p->organization_id, 'orders', $title, $body, route('buyer.requests.show', $p->id));
             }
         }, null, false);

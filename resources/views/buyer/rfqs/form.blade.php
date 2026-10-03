@@ -95,7 +95,7 @@
             </div>
             @error('items') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
 
-            <div class="mt-4 space-y-3" data-items>
+            <div class="mt-4 space-y-3" data-items data-price-lookup="{{ route('buyer.prices.lookup') }}">
                 @foreach ($rows as $i => $row)
                     @include('buyer.rfqs._item-row', ['i' => $i, 'row' => $row, 'doubt' => $aiUncertain[$i] ?? []])
                 @endforeach
