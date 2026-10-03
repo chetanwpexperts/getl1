@@ -118,6 +118,8 @@ class RfqController extends Controller
             'award' => $currentAward,
             'currentAwards' => $currentAwards,
             'canDecide' => $currentAward && $awards->canDecide($currentAward, request()->user()),
+            'approvalSteps' => $currentAward ? \App\Services\ApprovalFlow::steps($currentAward) : collect(),
+            'hasRules' => \App\Models\ApprovalRule::exists(),
             'awardBlocker' => $awardBlocker,
             'candidates' => $unsealed && ! $currentAward && ! $awardBlocker && ! $rfq->isPerItem() ? $awards->candidates($rfq) : collect(),
             'itemCandidates' => $unsealed && ! $currentAward && ! $awardBlocker && $rfq->isPerItem() ? $awards->itemCandidates($rfq) : collect(),

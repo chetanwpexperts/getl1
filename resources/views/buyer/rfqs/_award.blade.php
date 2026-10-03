@@ -52,13 +52,17 @@
                 @endif
             </div>
 
+            @include('buyer.rfqs._approval-steps')
+
             @if ($pending)
                 @if ($canDecide)
+                    @php $lvl = $approvalSteps->firstWhere('status', 'pending'); $last = ! $lvl || $approvalSteps->where('status', 'pending')->count() === 1; @endphp
+                    @if ($lvl && $approvalSteps->count() > 1)<p class="mt-4 text-sm font-medium text-amber-900">Your decision: {{ $lvl->name }}</p>@endif
                     <div class="mt-4 grid gap-3 border-t border-amber-200 pt-4 sm:grid-cols-2">
-                        <form method="POST" action="{{ route('buyer.awards.approve', $award->id) }}" class="space-y-2" data-confirm="Approve and send the purchase order to {{ $award->supplier->name }}?">
+                        <form method="POST" action="{{ route('buyer.awards.approve', $award->id) }}" class="space-y-2" data-confirm="{{ $last ? 'Approve and send the purchase order to '.$award->supplier->name.'?' : 'Approve this level? It then goes to the next approver.' }}">
                             @csrf
                             <input name="decision_note" maxlength="1000" placeholder="Comment (optional)" class="{{ $input }}">
-                            <button class="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Approve and send PO</button>
+                            <button class="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">{{ $last ? 'Approve and send PO' : 'Approve, send to next level' }}</button>
                         </form>
                         <form method="POST" action="{{ route('buyer.awards.reject', $award->id) }}" class="space-y-2">
                             @csrf
@@ -69,8 +73,9 @@
                     </div>
                 @else
                     <p class="mt-3 text-sm text-amber-900">
-                        {{ $award->awarded_by === auth()->id() ? 'You made this award, so a colleague with approval rights must approve it.' : 'Only an approver or admin can approve this award.' }}
-                        Approvers were emailed. The PO goes out automatically once approved.
+                        @php $lvl = $approvalSteps->firstWhere('status', 'pending'); @endphp
+                        {{ $award->awarded_by === auth()->id() ? 'You made this award, so a colleague with approval rights must approve it.' : ($lvl ? 'Waiting for '.($lvl->approver?->name ?? 'an approver or admin').' ('.$lvl->name.').' : 'Only an approver or admin can approve this award.') }}
+                        They were emailed. The PO goes out automatically once every level has approved.
                     </p>
                 @endif
             @endif
@@ -127,7 +132,9 @@
                 <div class="flex flex-wrap items-center gap-3 border-t border-slate-100 px-5 py-4">
                     <button class="rounded-lg bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Award</button>
                     <span class="text-xs text-slate-500">
-                        @if ($hasApprover)
+                        @if ($hasRules)
+                            Approval as per your <a href="{{ route('buyer.approval-rules.index') }}" class="underline">approval rules</a>; then the PO is emailed automatically.
+                        @elseif ($hasApprover)
                             Needs approval{{ (float) $approvalLimit > 0 ? ' from '.$inr($approvalLimit) : '' }}; then the PO is emailed automatically.
                         @else
                             The PO (PDF) is generated and emailed to the supplier right away.

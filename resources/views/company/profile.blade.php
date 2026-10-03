@@ -83,7 +83,8 @@
                         <input id="award_approval_limit" name="award_approval_limit" inputmode="decimal" placeholder="0"
                                value="{{ old('award_approval_limit', $org->award_approval_limit !== null ? rtrim(rtrim((string) $org->award_approval_limit, '0'), '.') : '') }}"
                                class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">
-                        <p class="mt-1 text-xs text-slate-500">Applies when your team has an Approver. Leave empty or 0 to approve every award. Below this amount, the PO goes out straight away.</p>
+                        <p class="mt-1 text-xs text-slate-500">Applies when your team has an Approver. Leave empty or 0 to approve every award. Below this amount, the PO goes out straight away.
+                            For several levels (e.g. manager, plant head, director), set up <a href="{{ route('buyer.approval-rules.index') }}" class="font-medium text-emerald-700 hover:underline">approval rules</a>; they are used instead of this.</p>
                         @error('award_approval_limit') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div class="sm:col-span-2">

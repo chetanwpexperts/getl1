@@ -50,6 +50,8 @@
         </ul>
     </div>
 
+    @include('buyer.rfqs._approval-steps')
+
     @if ($pending)
         @if ($canDecide)
             <div class="mt-4 grid gap-3 border-t border-amber-200 pt-4 sm:grid-cols-2">
@@ -68,8 +70,9 @@
             <p class="mt-2 text-xs text-amber-900">The split is decided as a whole, so every supplier gets its PO at the same time.</p>
         @else
             <p class="mt-3 text-sm text-amber-900">
-                {{ $first->awarded_by === auth()->id() ? 'You made this award, so a colleague with approval rights must approve it.' : 'Only an approver or admin can approve this award.' }}
-                Approvers were emailed. The POs go out automatically once approved.
+                @php $lvl = $approvalSteps->firstWhere('status', 'pending'); @endphp
+                {{ $first->awarded_by === auth()->id() ? 'You made this award, so a colleague with approval rights must approve it.' : ($lvl ? 'Waiting for '.($lvl->approver?->name ?? 'an approver or admin').' ('.$lvl->name.').' : 'Only an approver or admin can approve this award.') }}
+                They were emailed. The POs go out automatically once every level has approved.
             </p>
         @endif
     @endif

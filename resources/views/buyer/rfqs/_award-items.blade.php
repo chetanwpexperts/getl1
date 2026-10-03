@@ -97,7 +97,9 @@
         <div class="flex flex-wrap items-center gap-3 border-t border-slate-100 px-5 py-4">
             <button class="rounded-lg bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Award</button>
             <span class="text-xs text-slate-500">
-                @if ($hasApprover)
+                @if ($hasRules)
+                    Approval as per your <a href="{{ route('buyer.approval-rules.index') }}" class="underline">approval rules</a>, on the combined amount; then the POs are emailed automatically.
+                @elseif ($hasApprover)
                     Needs approval{{ (float) $approvalLimit > 0 ? ' from '.$inr($approvalLimit) : '' }} on the combined amount; then the POs are emailed automatically.
                 @else
                     The POs (PDF) are generated and emailed to the suppliers right away.

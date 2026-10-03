@@ -74,6 +74,7 @@ class AppServiceProvider extends ServiceProvider
             'supplier_invoice' => \App\Models\SupplierInvoice::class,
             'purchase_request' => \App\Models\PurchaseRequest::class,
             'rate_contract' => \App\Models\RateContract::class,
+            'approval_rule' => \App\Models\ApprovalRule::class,
             'quote' => Quote::class,
             'auction' => Auction::class,
             'bid' => Bid::class,

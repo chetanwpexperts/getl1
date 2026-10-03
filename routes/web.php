@@ -220,6 +220,14 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/reports/savings', [\App\Http\Controllers\Buyer\ReportController::class, 'savings'])->name('reports.savings');
 
+            // Approval rules: everyone in the buyer team can read them; only admins change them.
+            Route::get('/approval-rules', [\App\Http\Controllers\Buyer\ApprovalRuleController::class, 'index'])->name('approval-rules.index');
+            Route::middleware(['org.role:buyer_admin', 'throttle:30,1'])->controller(\App\Http\Controllers\Buyer\ApprovalRuleController::class)->group(function () {
+                Route::post('/approval-rules', 'store')->name('approval-rules.store');
+                Route::put('/approval-rules/{id}', 'update')->whereNumber('id')->name('approval-rules.update');
+                Route::delete('/approval-rules/{id}', 'destroy')->whereNumber('id')->name('approval-rules.destroy');
+            });
+
             // Price history and rate contracts: the buyer team views; buyers and admins make and end contracts.
             Route::controller(\App\Http\Controllers\Buyer\PriceController::class)->group(function () {
                 Route::get('/prices', 'index')->name('prices.index');

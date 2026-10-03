@@ -36,6 +36,7 @@
             $groups['Company'] = [
                 ['company.edit', 'Company profile', 'company', 'company.*', null],
                 ['team.index', 'Team', 'team', 'team.*', null],
+                ['buyer.approval-rules.index', 'Approval rules', 'approvals', 'buyer.approval-rules.*', null],
                 ['buyer.billing.index', 'Plan & billing', 'billing', 'buyer.billing.*', null],
             ];
         } else {

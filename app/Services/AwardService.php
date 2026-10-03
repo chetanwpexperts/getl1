@@ -236,7 +236,9 @@ class AwardService
             $orders = collect($picked)->map(fn ($rows) => ['rows' => $rows, 'po' => $this->itemPoLines($rows)]);
             $buyer = Organization::findOrFail($rfq->organization_id);
             $combined = (float) $orders->sum(fn ($o) => $o['po']['basic']);
-            $needsApproval = $this->needsApproval($buyer, $combined);
+            $plan = ApprovalFlow::plan($buyer, ['amount' => $combined, 'off_l1' => $offL1, 'quotes' => $this->quoteCount($rfq),
+                'supplier_ids' => array_map('intval', array_keys($picked)), 'awarded_by' => $by->id]);
+            $needsApproval = $plan !== [];
             $groupKey = (string) \Illuminate\Support\Str::uuid();
 
             $created = collect();
@@ -266,11 +268,15 @@ class AwardService
                     'supplier' => $first['option']['supplier']->name, 'total' => $order['po']['basic'], 'source' => $first['source'],
                     'items' => array_map(fn ($r) => ['item' => $r['item']->name, 'rank' => $r['option']['rank'], 'rate' => $r['option']['rate']], $order['rows']),
                     'split_into' => $orders->count(), 'combined_total' => $combined, 'reason' => $award->reason, 'needs_approval' => $needsApproval,
+                    'approval_steps' => array_column($plan, 'name'),
                 ], user: $by, organizationId: $rfq->organization_id);
                 if (! $needsApproval) {
                     $this->audit->log('award_approved', $award, after: ['by' => 'automatic (no approval required)'], user: $by, organizationId: $rfq->organization_id);
                 }
                 $created->push($award);
+            }
+            if ($needsApproval) {
+                ApprovalFlow::start($created->first(), $plan);
             }
 
             $rfq->update(['status' => RfqStatus::Evaluating]);
@@ -364,7 +370,9 @@ class AwardService
 
             $po = $this->poLines($rfq, $chosen['quote'], $chosen['basic']);
             $buyer = Organization::findOrFail($rfq->organization_id);
-            $needsApproval = $this->needsApproval($buyer, $chosen['basic']);
+            $plan = ApprovalFlow::plan($buyer, ['amount' => (float) $chosen['basic'], 'off_l1' => $chosen['rank'] !== 1, 'quotes' => $this->quoteCount($rfq),
+                'supplier_ids' => [$supplierOrgId], 'awarded_by' => $by->id]);
+            $needsApproval = $plan !== [];
 
             $award = Award::create([
                 'rfq_id' => $rfq->id,
@@ -391,10 +399,13 @@ class AwardService
             $this->audit->log('awarded', $award, after: [
                 'supplier' => $chosen['supplier']->name, 'rank' => $chosen['rank'], 'total' => $chosen['basic'],
                 'source' => $chosen['source'], 'reason' => $award->reason, 'needs_approval' => $needsApproval,
+                'approval_steps' => array_column($plan, 'name'),
                 'negotiated' => $chosen['negotiated'] ? (float) $chosen['negotiated']->offered_amount : null,
             ], user: $by, organizationId: $rfq->organization_id);
             if (! $needsApproval) {
                 $this->audit->log('award_approved', $award, after: ['by' => 'automatic (no approval required)'], user: $by, organizationId: $rfq->organization_id);
+            } else {
+                ApprovalFlow::start($award, $plan);
             }
 
             return $award;
@@ -441,31 +452,21 @@ class AwardService
         return $this->decide($award, $by, AwardStatus::Rejected, $note);
     }
 
-    /** May this user approve or reject this award? */
+    /** May this user approve or reject this award (its current approval level)? */
     public function canDecide(Award $award, User $user): bool
     {
-        $org = Organization::find($award->organization_id);
-
-        return $org && $award->isPending()
-            && $award->awarded_by !== $user->id
-            && $user->hasRoleIn($org, OrgRole::BuyerAdmin->value, OrgRole::Approver->value);
+        return ApprovalFlow::canDecide($award, $user);
     }
 
-    /** People who can approve this award (never the person who made it). */
+    /** People who can approve this award's current level (never the person who made it). */
     public function approvers(Award $award): Collection
     {
-        return Organization::findOrFail($award->organization_id)->users()
-            ->wherePivotIn('role', [OrgRole::Approver->value, OrgRole::BuyerAdmin->value])
-            ->where('users.id', '!=', $award->awarded_by)
-            ->get();
+        return ApprovalFlow::approversNow($award);
     }
 
-    public function needsApproval(Organization $buyer, float $amount): bool
+    private function quoteCount(Rfq $rfq): int
     {
-        $hasApprover = $buyer->users()->wherePivot('role', OrgRole::Approver->value)->exists();
-        $limit = (float) ($buyer->award_approval_limit ?? 0);
-
-        return $hasApprover && $amount >= $limit;
+        return Quote::where('rfq_id', $rfq->id)->whereNotNull('submitted_at')->count();
     }
 
     /**
@@ -533,6 +534,32 @@ class AwardService
                 abort(403, 'You can’t approve an award you made, or you don’t have approval rights.');
             }
 
+            // Approval levels: record this one; if more remain, the award waits for the next.
+            $step = ApprovalFlow::current($award);
+            if ($step) {
+                $step->update(['status' => $to === AwardStatus::Approved ? \App\Models\AwardApprovalStep::APPROVED : \App\Models\AwardApprovalStep::REJECTED,
+                    'decided_by' => $by->id, 'decided_at' => now(), 'note' => $note ? trim(mb_substr($note, 0, 1000)) : null]);
+                if ($to === AwardStatus::Rejected) {
+                    ApprovalFlow::steps($award)->where('status', \App\Models\AwardApprovalStep::PENDING)
+                        ->each(fn ($s) => $s->update(['status' => \App\Models\AwardApprovalStep::CANCELLED]));
+                } elseif ($next = ApprovalFlow::current($award)) {
+                    $this->audit->log('award_level_approved', $award, after: ['level' => $step->name, 'note' => $step->note, 'next' => $next->name],
+                        user: $by, organizationId: $award->organization_id);
+                    DB::afterCommit(function () use ($award, $step, $by) {
+                        foreach ($this->approvers($award)->filter(fn ($u) => $u->email) as $u) {
+                            Mail::to($u->email)->queue(new AwardApprovalRequestMail($award));
+                        }
+                        $this->alertApprovers($award, $this->group($award)->count());
+                        $awarder = User::find($award->awarded_by);
+                        $ref = Rfq::withoutGlobalScopes()->whereKey($award->rfq_id)->value('ref_no');
+                        Notifier::toUsers([$awarder], $award->organization_id, 'orders', "{$step->name} approved: {$ref}",
+                            "{$by->name} approved. It now goes to the next level.", route('buyer.rfqs.show', $award->rfq_id).'#award');
+                    });
+
+                    return $award;
+                }
+            }
+
             // An item-wise decision is approved or rejected as a whole.
             $members = $award->group_key
                 ? Award::withoutGlobalScopes()->where('group_key', $award->group_key)->where('status', AwardStatus::PendingApproval->value)->orderBy('id')->get()
@@ -574,7 +601,9 @@ class AwardService
         $total = $award->group_key
             ? (float) Award::withoutGlobalScopes()->where('group_key', $award->group_key)->sum('grand_total')
             : (float) $award->grand_total;
-        Notifier::toUsers($this->approvers($award), $award->organization_id, 'orders', 'Award waiting for your approval',
+        $level = ApprovalFlow::current($award);
+        $multi = $level && ApprovalFlow::steps($award)->count() > 1;
+        Notifier::toUsers($this->approvers($award), $award->organization_id, 'orders', $multi ? "Award waiting for your approval ({$level->name})" : 'Award waiting for your approval',
             "{$rfq?->ref_no} · {$rfq?->title}: ".\App\Support\Money::inr($total).' incl. GST'.($orders > 1 ? " across {$orders} suppliers" : '').'. Awarded by '.(User::find($award->awarded_by)?->name ?? 'a colleague').'.',
             route('buyer.rfqs.show', $award->rfq_id).'#award');
     }
