@@ -279,5 +279,9 @@ class InvoiceService
         if ($title) {
             \App\Services\Notifier::toOrg($inv->supplier_org_id, 'payments', $title, $body, route('supplier.orders.show', $award->id).'#invoices');
         }
+        if ($inv->status === SupplierInvoice::PAID) {
+            \App\Services\Whatsapp::toPhone($invite ? RfqService::recipientPhone($invite) : Organization::find($inv->supplier_org_id)?->phone, 'payment_recorded',
+                [(string) $buyer, (string) $inv->invoice_number, Money::inr($inv->paid_amount ?? $inv->total_amount)], 'supplier/orders/'.$award->id, $inv->organization_id, $inv, $inv->supplier_org_id);
+        }
     }
 }

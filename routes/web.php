@@ -351,6 +351,12 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+// WhatsApp (Meta) webhook: verification, then signed delivery receipts and replies.
+Route::get('/webhooks/whatsapp', [\App\Http\Controllers\WhatsappWebhookController::class, 'verify'])->middleware('throttle:30,1')->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp', [\App\Http\Controllers\WhatsappWebhookController::class, 'receive'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])
+    ->middleware('throttle:300,1')->name('webhooks.whatsapp');
+
 // Razorpay webhooks: signed by Razorpay, so no login or CSRF token.
 Route::post('/webhooks/razorpay', RazorpayWebhookController::class)
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])

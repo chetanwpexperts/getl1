@@ -168,6 +168,8 @@ class PurchaseOrderService
         }
         PurchaseRequestService::tellRequesters($award, 'ordered');
         $buyerName = Organization::whereKey($award->organization_id)->value('name');
+        Whatsapp::toPhone($winner ? RfqService::recipientPhone($winner) : Organization::find($award->supplier_org_id)?->phone, 'po_issued',
+            [(string) $buyerName, (string) $award->po_number, \App\Support\Money::inr($award->grand_total)], 'supplier/orders/'.$award->id, $award->organization_id, $award, $award->supplier_org_id);
         Notifier::toOrg($award->supplier_org_id, 'orders', "New purchase order: {$award->po_number}",
             "{$buyerName} issued a PO for {$rfq->ref_no} · {$rfq->title}, ".\App\Support\Money::inr($award->grand_total).' incl. GST. Please review and accept it.',
             route('supplier.orders.show', $award->id));

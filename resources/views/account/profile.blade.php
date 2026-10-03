@@ -69,6 +69,12 @@
                             @endforeach
                         </div>
                         <p class="mt-3 text-xs text-slate-500">The bell always keeps everything, whatever you choose here. Emails are sent as before.</p>
+                        @if (\App\Services\Whatsapp::enabled())
+                            <label class="mt-4 flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm hover:bg-slate-50">
+                                <input type="checkbox" name="whatsapp" value="1" @checked(data_get($user->notification_prefs, 'whatsapp', true)) class="mt-0.5 size-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600">
+                                <span><span class="block font-medium">WhatsApp messages on {{ $user->phone ? '+91 '.$user->phone : 'your mobile' }}</span><span class="block text-xs text-slate-500">Only the important ones: new RFQ, auction starting, purchase order, approval needed, payment made.</span></span>
+                            </label>
+                        @endif
                     </fieldset>
                     <div class="flex justify-end border-t border-slate-100 px-6 py-4">
                         <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50">Save notification settings</button>

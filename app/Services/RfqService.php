@@ -365,6 +365,9 @@ class RfqService
             if ($email) {
                 Mail::to($email)->queue(new RfqInvitationMail($invite));
             }
+            // WhatsApp reaches suppliers who aren't on GetL1 yet too: the button opens their invitation.
+            Whatsapp::toPhone(self::recipientPhone($invite), 'rfq_invite', [(string) $rfq->organization?->name, $rfq->title,
+                (string) $rfq->quote_deadline?->ist()->format('d M, h:i A').' IST'], 'i/'.$invite->token, $rfq->organization_id, $invite, $invite->supplier_org_id);
             Notifier::toOrg($invite->supplier_org_id, 'sourcing', 'New RFQ from '.$rfq->organization?->name,
                 "{$rfq->ref_no} · {$rfq->title}. Quotes close ".$rfq->quote_deadline?->ist()->format('d M, h:i A').' IST.', route('supplier.rfqs.show', $invite->id));
             $invite->forceFill(['last_sent_at' => now()])->save();
@@ -383,6 +386,14 @@ class RfqService
                     $kind === 'cancelled' ? $rfq->title.($reason ? ". Reason: {$reason}" : '.') : "{$rfq->title}. Quotes now close ".$rfq->quote_deadline?->ist()->format('d M, h:i A').' IST.',
                     route('supplier.rfqs.show', $invite->id));
             });
+    }
+
+    /** Where a supplier's WhatsApp alerts go: the contact in the buyer's list, else the company phone. */
+    public static function recipientPhone(RfqInvite $invite): ?string
+    {
+        $invite->loadMissing(['listEntry', 'supplier']);
+
+        return $invite->listEntry?->contact_phone ?: $invite->supplier?->phone;
     }
 
     /** Where a supplier's RFQ emails go: the contact in the buyer's list, else the company email. */

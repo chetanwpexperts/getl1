@@ -115,6 +115,7 @@ class NotificationController extends Controller
         foreach (array_keys(Notifier::CATEGORIES) as $cat) {
             $prefs[$cat] = ['push' => $request->boolean("push.{$cat}")];
         }
+        $prefs['whatsapp'] = \App\Services\Whatsapp::enabled() ? $request->boolean('whatsapp') : data_get($user->notification_prefs, 'whatsapp', true);
         $before = $user->notification_prefs;
         $user->forceFill(['notification_prefs' => $prefs])->save();
         $audit->log('notification_prefs_updated', $user, before: ['prefs' => $before], after: ['prefs' => $prefs], user: $user, organizationId: $user->current_organization_id);

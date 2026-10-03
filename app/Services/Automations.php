@@ -190,6 +190,8 @@ class Automations
                     Mail::to($email)->queue(new AuctionReminderMail($auction, $invite->supplier_org_id));
                     $sent++;
                 }
+                Whatsapp::toPhone(RfqService::recipientPhone($invite), 'auction_soon', [Rfq::withoutGlobalScopes()->whereKey($auction->rfq_id)->value('title'),
+                    $auction->starts_at->ist()->format('h:i A').' IST'], 'supplier/auctions/'.$auction->id, $auction->organization_id, $auction, $invite->supplier_org_id);
                 Notifier::toOrg($invite->supplier_org_id, 'auctions', 'Auction starts soon',
                     'Your live auction starts at '.$auction->starts_at->ist()->format('h:i A').' IST. Keep this page ready.', route('supplier.auctions.show', $auction->id));
             }

@@ -603,6 +603,10 @@ class AwardService
             : (float) $award->grand_total;
         $level = ApprovalFlow::current($award);
         $multi = $level && ApprovalFlow::steps($award)->count() > 1;
+        $who = User::find($award->awarded_by)?->name ?? 'a colleague';
+        foreach ($this->approvers($award) as $u) {
+            Whatsapp::toUser($u, 'approval_needed', [(string) $rfq?->title, \App\Support\Money::inr($total).' incl. GST', $who], 'buyer/rfqs/'.$award->rfq_id, $award->organization_id, $award);
+        }
         Notifier::toUsers($this->approvers($award), $award->organization_id, 'orders', $multi ? "Award waiting for your approval ({$level->name})" : 'Award waiting for your approval',
             "{$rfq?->ref_no} · {$rfq?->title}: ".\App\Support\Money::inr($total).' incl. GST'.($orders > 1 ? " across {$orders} suppliers" : '').'. Awarded by '.(User::find($award->awarded_by)?->name ?? 'a colleague').'.',
             route('buyer.rfqs.show', $award->rfq_id).'#award');
