@@ -65,10 +65,9 @@ class InviteService
         }
 
         $entry = $invite->listEntry;
-        $matches = $entry && (
-            ($entry->contact_email && strcasecmp($entry->contact_email, $user->email) === 0)
-            || ($entry->contact_phone && $user->phone && $entry->contact_phone === $user->phone)
-        );
+        $byEmail = $entry && $entry->contact_email && strcasecmp($entry->contact_email, $user->email) === 0;
+        $byPhone = ! $byEmail && $entry && $entry->contact_phone && $user->phone && $entry->contact_phone === $user->phone;
+        $matches = $byEmail || $byPhone;
 
         if (! $matches) {
             SecurityLog::warning('invite_claim_denied', ['invite_id' => $invite->id, 'reason' => 'contact_mismatch', 'supplier_org_id' => $supplier->id]);
@@ -81,7 +80,7 @@ class InviteService
             return ['ok' => false, 'reason' => 'duplicate'];
         }
 
-        DB::transaction(function () use ($invite, $supplier, $entry, $user) {
+        DB::transaction(function () use ($invite, $supplier, $entry, $user, $byPhone) {
             $invite->update(['supplier_org_id' => $supplier->id]);
 
             $linkedElsewhere = BuyerSupplier::where('buyer_org_id', $entry->buyer_org_id)->where('supplier_org_id', $supplier->id)->exists();
@@ -89,9 +88,17 @@ class InviteService
                 $entry->update(['supplier_org_id' => $supplier->id]);
             }
 
-            $this->audit->log('rfq_invite_claimed', $invite, after: ['supplier_org_id' => $supplier->id], user: $user,
+            $this->audit->log('rfq_invite_claimed', $invite, after: ['supplier_org_id' => $supplier->id, 'matched_by' => $byPhone ? 'phone' : 'email'], user: $user,
                 organizationId: $invite->rfq->organization_id);
         });
+        // Mobile numbers aren't verified by OTP yet: when the match was by mobile, the buyer is told
+        // which company took the invite, so a wrong claim is spotted straight away.
+        if ($byPhone) {
+            $rfq = $invite->rfq;
+            Notifier::toUsers(app(Automations::class)->buyerTeam($rfq), $rfq->organization_id, 'sourcing', "Invitation taken: {$rfq->ref_no}",
+                "{$supplier->name} ({$user->name}, mobile ending ".substr((string) $user->phone, -4).") opened the invitation sent to {$entry->company_name}. If that's not right, block them in Suppliers.",
+                route('buyer.rfqs.show', $rfq->id));
+        }
 
         return ['ok' => true];
     }

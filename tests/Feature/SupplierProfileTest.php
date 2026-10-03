@@ -116,6 +116,7 @@ class SupplierProfileTest extends TestCase
         $this->travel(2)->hours();
         $this->actingAs($this->s['A'][1])->post(route('supplier.orders.accept', $p1->id));
         $this->receive($p1, 100, 10);
+        $this->receive($p1, 10);        // the 10 rejected are replaced the same day: delivered in full
         // PO 2: due on the 15th, still not delivered on the 20th: late.
         $this->po('2026-10-15');
         $this->travelTo(Carbon::parse('2026-10-20 06:00:00', 'UTC'));
@@ -123,18 +124,18 @@ class SupplierProfileTest extends TestCase
         $s = SupplierProfile::score($this->buyer->id, $this->s['A'][0]->id);
         $this->assertSame(2, $s['pos']);
         $this->assertSame(50, $s['parts']['delivery']['score']);      // 1 of 2 on time
-        $this->assertSame(50, $s['parts']['quality']['score']);       // 10% rejected → 100 − 50
+        $this->assertSame(55, $s['parts']['quality']['score']);       // 10 of 110 rejected (9.1%) → 100 − 45
         $this->assertSame(100, $s['parts']['response']['score']);     // quoted on both
         $this->assertSame(100, $s['parts']['acceptance']['score']);   // within a day
         $this->assertNull($s['parts']['invoices']['score']);
         // (50×35 + 50×30 + 100×15 + 100×10) / 90
-        $this->assertSame((int) round((50 * 35 + 50 * 30 + 100 * 15 + 100 * 10) / 90), $s['score']);
+        $this->assertSame((int) round((50 * 35 + 55 * 30 + 100 * 15 + 100 * 10) / 90), $s['score']);
         $this->assertSame('Fair', $s['grade']);
 
         // Pages: list badge, supplier page, comparison.
         $this->actingAs($this->buyerUser)->get(route('buyer.suppliers.index'))->assertOk()->assertSee((string) $s['score'])->assertSee('Fair');
         $this->get(route('buyer.suppliers.show', $this->s['A'][2]->id))->assertOk()
-            ->assertSee('Scorecard')->assertSee('1 of 2 POs delivered in full by the date needed')->assertSee('10% of goods received were rejected')
+            ->assertSee('Scorecard')->assertSee('1 of 2 POs delivered in full by the date needed')->assertSee('9.1% of goods received were rejected')
             ->assertSee($p1->po_number);
     }
 

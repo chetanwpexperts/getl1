@@ -257,4 +257,45 @@ class ApprovalRulesTest extends TestCase
         $this->actingAs($otherAdmin)->delete(route('buyer.approval-rules.destroy', $d->id))->assertNotFound();
         $this->assertSame(2, ApprovalRule::withoutGlobalScopes()->count());
     }
+
+    public function test_never_stuck_with_too_few_people_and_named_levels_stay_with_their_person(): void
+    {
+        // One approver only, two "any approver" levels: the second can't be staffed and is left out (and recorded).
+        $only = $this->memberOf($this->buyer, OrgRole::Approver);
+        $this->actingAs($this->buyerUser);
+        $this->post(route('buyer.approval-rules.store'), ['name' => 'Manager', 'min_amount' => '0'])->assertSessionHasNoErrors();
+        $this->post(route('buyer.approval-rules.store'), ['name' => 'Second check', 'min_amount' => '0'])->assertSessionHasNoErrors();
+        app(CurrentOrganization::class)->set(null);
+        $this->threeQuotesAndDeadline();
+        $this->awardTo('B')->assertSessionHasNoErrors();
+        $a = $this->award();
+        $this->assertSame(['Manager'], AwardApprovalStep::withoutGlobalScopes()->pluck('name')->all());
+        $this->assertTrue(AuditLog::where('action', 'awarded')->get()->contains(fn ($l) => str_contains(json_encode($l->after), 'Second check')));
+        $this->actingAs($only)->post(route('buyer.awards.approve', $a->id))->assertRedirect();
+        $this->assertSame(AwardStatus::PoSent, $a->fresh()->status);
+    }
+
+    public function test_named_level_is_not_taken_by_someone_else_and_admins_can_always_turn_an_award_down(): void
+    {
+        $this->rules(); // Manager (named), Director (named, from 93,000 or not L1)
+        $junior = $this->memberOf($this->buyer, OrgRole::Approver);
+        $this->threeQuotesAndDeadline();
+        $this->awardTo('A', ['reason' => 'Better delivery record last quarter']);
+        $a = $this->award();
+        $this->actingAs($this->manager)->post(route('buyer.awards.approve', $a->id))->assertRedirect();
+        // The Director level belongs to the Director: the junior approver can't approve it.
+        $this->actingAs($junior)->post(route('buyer.awards.approve', $a->id))->assertForbidden();
+
+        // A stale click (made while looking at level 1) is refused rather than applied to level 2.
+        $level1 = AwardApprovalStep::withoutGlobalScopes()->where('position', 1)->value('id');
+        $this->actingAs($this->director)->post(route('buyer.awards.approve', $a->id), ['step_id' => $level1])->assertSessionHasErrors('decision_note');
+        $this->assertSame(AwardStatus::PendingApproval, $a->fresh()->status);
+
+        // The company owner (an admin, not on this level) can still reject it, so nothing stays stuck.
+        $owner = $this->memberOf($this->buyer, OrgRole::BuyerAdmin);
+        $this->actingAs($owner)->get(route('buyer.rfqs.show', $this->rfq->id))->assertSee('Reject award');
+        $this->actingAs($owner)->post(route('buyer.awards.approve', $a->id))->assertForbidden();
+        $this->actingAs($owner)->post(route('buyer.awards.reject', $a->id), ['decision_note' => 'Project put on hold'])->assertRedirect();
+        $this->assertSame(AwardStatus::Rejected, $a->fresh()->status);
+    }
 }

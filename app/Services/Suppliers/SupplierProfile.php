@@ -97,12 +97,13 @@ class SupplierProfile
         $tz = config('app.display_timezone');
 
         // Response: RFQs it was invited to vs quoted on.
-        $invited = RfqInvite::query()->join('rfqs', 'rfqs.id', '=', 'rfq_invites.rfq_id')
-            ->where('rfqs.organization_id', $buyerId)->where('rfq_invites.supplier_org_id', $supplierId)
-            ->whereNotNull('rfqs.published_at')->where('rfqs.published_at', '>=', $since)->count();
-        $quoted = Quote::query()->join('rfqs', 'rfqs.id', '=', 'quotes.rfq_id')
-            ->where('rfqs.organization_id', $buyerId)->where('quotes.supplier_org_id', $supplierId)
-            ->whereNotNull('quotes.submitted_at')->where('quotes.submitted_at', '>=', $since)->count();
+        // Only RFQs whose quote deadline has passed: nobody is marked down while an RFQ is still open.
+        $closedRfqs = fn ($q) => $q->where('rfqs.organization_id', $buyerId)->whereNotNull('rfqs.published_at')
+            ->where('rfqs.published_at', '>=', $since)->where('rfqs.quote_deadline', '<=', now());
+        $invited = RfqInvite::query()->join('rfqs', 'rfqs.id', '=', 'rfq_invites.rfq_id')->where($closedRfqs)
+            ->where('rfq_invites.supplier_org_id', $supplierId)->count();
+        $quoted = Quote::query()->join('rfqs', 'rfqs.id', '=', 'quotes.rfq_id')->where($closedRfqs)
+            ->where('quotes.supplier_org_id', $supplierId)->whereNotNull('quotes.submitted_at')->count();
 
         $pos = Award::withoutGlobalScopes()->where('organization_id', $buyerId)->where('supplier_org_id', $supplierId)
             ->where('status', AwardStatus::PoSent->value)->where('po_sent_at', '>=', $since)->get();
@@ -119,8 +120,8 @@ class SupplierProfile
         $received = $rejected = 0.0;
         foreach ($pos as $a) {
             $due = collect($a->lines['items'] ?? [])->pluck('needed_by')->filter()->max();
-            $lines = $grns->get($a->id, collect());
-            foreach ($lines as $g) {
+            $receipts = $grns->get($a->id, collect())->sortBy(fn ($g) => $g->received_on->toDateString().'|'.str_pad((string) $g->id, 12, '0', STR_PAD_LEFT));
+            foreach ($receipts as $g) {
                 foreach ($g->lines ?? [] as $l) {
                     $received += (float) ($l['received'] ?? 0);
                     $rejected += (float) ($l['rejected'] ?? 0);
@@ -129,9 +130,22 @@ class SupplierProfile
             if (! $due) {
                 continue;
             }
-            // Delivered = everything ordered has arrived (rejections count against quality, not here).
-            $complete = collect(\App\Services\Payables\ReceiptService::summary($a)['lines'])->every(fn ($l) => $l['received'] >= $l['ordered']);
-            $doneOn = $complete ? $lines->max(fn ($g) => $g->received_on->toDateString()) : null;
+            // Delivered on the day the last ordered quantity arrived, counting accepted goods only:
+            // rejected goods have to be replaced before the order is really delivered.
+            $ordered = collect($a->lines['items'] ?? [])->mapWithKeys(fn ($l) => [(int) $l['rfq_item_id'] => (float) $l['qty']]);
+            $got = [];
+            $doneOn = null;
+            foreach ($receipts as $g) {
+                foreach ($g->lines ?? [] as $l) {
+                    $id = (int) ($l['rfq_item_id'] ?? 0);
+                    $got[$id] = ($got[$id] ?? 0) + (float) ($l['accepted'] ?? max(0, (float) ($l['received'] ?? 0) - (float) ($l['rejected'] ?? 0)));
+                }
+                if ($ordered->every(fn ($qty, $id) => ($got[$id] ?? 0) + 0.0005 >= $qty)) {
+                    $doneOn = $g->received_on->toDateString();
+                    break;
+                }
+            }
+            $complete = $doneOn !== null;
             if ($complete && $doneOn <= $due) {
                 $onTime++;
             } elseif ($complete || $today > $due) {

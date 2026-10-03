@@ -24,24 +24,30 @@ class ApprovalFlow
     public const DECIDER_ROLES = [OrgRole::BuyerAdmin, OrgRole::Approver];
 
     /**
+     * The levels this award needs, worked out so that every level can really be decided:
+     * a named approver gets their own level; "any approver" levels each need a different person
+     * (nobody approves two levels, nor their own award). Levels that can't be staffed are left out
+     * and returned in $skipped, so the award's audit entry says so.
+     *
      * @param  array{amount: float, off_l1: bool, quotes: int, supplier_ids: list<int>, awarded_by: int}  $ctx
      * @return list<array{name: string, why: string, approver_user_id: ?int}>
      */
-    public static function plan(Organization $buyer, array $ctx): array
+    public static function plan(Organization $buyer, array $ctx, ?array &$skipped = null): array
     {
+        $skipped = [];
         $rules = ApprovalRule::withoutGlobalScopes()->where('organization_id', $buyer->id)->orderBy('position')->orderBy('id')->get();
-        $steps = [];
+        $pool = self::eligible($buyer->id, null, $ctx['awarded_by'])->pluck('id')->all();
 
         if ($rules->isEmpty()) {
             $limit = (float) ($buyer->award_approval_limit ?? 0);
-            if (self::eligible($buyer->id, null, $ctx['awarded_by'])->isNotEmpty()
-                && $buyer->users()->wherePivot('role', OrgRole::Approver->value)->exists() && $ctx['amount'] >= $limit) {
-                $steps[] = ['name' => 'Approval', 'why' => $limit > 0 ? 'Award from '.Money::inr($limit, 0) : 'Every award', 'approver_user_id' => null];
+            if ($pool && $buyer->users()->wherePivot('role', OrgRole::Approver->value)->exists() && $ctx['amount'] >= $limit) {
+                return [['name' => 'Approval', 'why' => $limit > 0 ? 'Award from '.Money::inr($limit, 0) : 'Every award', 'approver_user_id' => null]];
             }
 
-            return $steps;
+            return [];
         }
 
+        $applies = [];
         $newSupplier = null;
         foreach ($rules as $r) {
             $why = [];
@@ -60,21 +66,41 @@ class ApprovalFlow
                     $why[] = 'First order with this supplier';
                 }
             }
-            if (! $why) {
-                continue;
-            }
-            // A named approver who has left or lost approval rights: anyone with approval rights instead.
-            $named = $r->approver_user_id && User::find($r->approver_user_id)?->hasRoleIn($buyer->id, ...self::DECIDER_ROLES) ? $r->approver_user_id : null;
-            if (self::eligible($buyer->id, $named, $ctx['awarded_by'])->isEmpty()) {
-                $named = null; // the named person made the award: anyone else with rights
-                if (self::eligible($buyer->id, null, $ctx['awarded_by'])->isEmpty()) {
-                    continue; // nobody else can approve: skipped (recorded in the award's audit entry)
+            if ($why) {
+                $named = $r->approver_user_id && in_array($r->approver_user_id, $pool, true) ? (int) $r->approver_user_id : null;
+                if ($r->approver_user_id && ! $named) {
+                    $why[] = 'named approver unavailable, so any approver';
                 }
+                $applies[] = ['name' => $r->name, 'why' => $why, 'approver_user_id' => $named];
             }
-            $steps[] = ['name' => $r->name, 'why' => mb_substr(implode(' · ', $why), 0, 255), 'approver_user_id' => $named];
         }
 
-        return $steps;
+        // A person named on two levels decides only the first of them.
+        $named = [];
+        foreach ($applies as $i => $a) {
+            if ($a['approver_user_id']) {
+                if (isset($named[$a['approver_user_id']])) {
+                    $skipped[] = $a['name'].' (same approver as an earlier level)';
+                    unset($applies[$i]);
+                    continue;
+                }
+                $named[$a['approver_user_id']] = true;
+            }
+        }
+        // "Any approver" levels need different people, none of them named on another level.
+        $free = count(array_diff($pool, array_keys($named)));
+        foreach ($applies as $i => $a) {
+            if (! $a['approver_user_id']) {
+                if ($free <= 0) {
+                    $skipped[] = $a['name'].' (not enough different approvers)';
+                    unset($applies[$i]);
+                    continue;
+                }
+                $free--;
+            }
+        }
+
+        return array_values(array_map(fn ($a) => ['name' => $a['name'], 'why' => mb_substr(implode(' · ', $a['why']), 0, 255), 'approver_user_id' => $a['approver_user_id']], $applies));
     }
 
     /** Create the steps for a new award (the first award of a split carries them). */
@@ -116,26 +142,48 @@ class ApprovalFlow
         return $q->get();
     }
 
-    /** Who may approve the award right now. */
+    /**
+     * Who may approve the award's current level right now: the named person; or, for "any
+     * approver" levels, approvers who haven't decided an earlier level and aren't named on a later
+     * one. If that leaves nobody (people left or lost the role), the company's admins take over, so
+     * an award never gets stuck.
+     */
     public static function approversNow(Award $award): Collection
     {
-        $step = self::current($award);
-        if (! $step) {
-            return $award->isPending() ? self::eligible($award->organization_id, null, $award->awarded_by) : collect(); // older awards without steps
+        if (! $award->isPending()) {
+            return collect();
         }
-        $done = self::steps($award)->where('status', AwardApprovalStep::APPROVED)->pluck('decided_by')->all();
+        $steps = self::steps($award);
+        $step = $steps->firstWhere('status', AwardApprovalStep::PENDING);
+        $all = self::eligible($award->organization_id, null, $award->awarded_by);
+        if (! $step) {
+            return $all; // awards made before approval levels existed
+        }
+        $done = $steps->where('status', AwardApprovalStep::APPROVED)->pluck('decided_by')->filter()->all();
+        $later = $steps->where('status', AwardApprovalStep::PENDING)->where('position', '>', $step->position)->pluck('approver_user_id')->filter()->all();
+        $notDone = $all->reject(fn ($u) => in_array($u->id, $done, true));
 
-        // Someone who approved an earlier level doesn't approve a later one too.
-        $people = self::eligible($award->organization_id, $step->approver_user_id, $award->awarded_by)->reject(fn ($u) => in_array($u->id, $done, true));
+        $people = $step->approver_user_id
+            ? $notDone->where('id', $step->approver_user_id)
+            : $notDone->reject(fn ($u) => in_array($u->id, $later, true));
+        if ($people->isNotEmpty()) {
+            return $people->values();
+        }
+        $admins = fn ($c) => $c->filter(fn ($u) => $u->hasRoleIn($award->organization_id, OrgRole::BuyerAdmin));
 
-        return $people->isEmpty() && $step->approver_user_id
-            ? self::eligible($award->organization_id, null, $award->awarded_by)->reject(fn ($u) => in_array($u->id, $done, true))
-            : $people->values();
+        return ($admins($notDone)->isNotEmpty() ? $admins($notDone) : $admins($all))->values();
     }
 
     public static function canDecide(Award $award, User $user): bool
     {
         return $award->isPending() && $award->awarded_by !== $user->id && self::approversNow($award)->contains('id', $user->id);
+    }
+
+    /** Any admin (other than the person who made it) can always turn an award down: nothing stays stuck. */
+    public static function canReject(Award $award, User $user): bool
+    {
+        return self::canDecide($award, $user)
+            || ($award->isPending() && $award->awarded_by !== $user->id && $user->hasRoleIn($award->organization_id, OrgRole::BuyerAdmin));
     }
 
     private static function isNewSupplier(int $buyerId, array $supplierIds): bool

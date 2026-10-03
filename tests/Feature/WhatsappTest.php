@@ -133,7 +133,7 @@ class WhatsappTest extends TestCase
 
     public function test_rejected_by_meta_is_recorded_as_failed(): void
     {
-        config(['whatsapp.phone_number_id' => '1', 'whatsapp.token' => 't']);
+        config(['whatsapp.phone_number_id' => '1', 'whatsapp.token' => 't', 'whatsapp.app_secret' => 's']);
         Http::fake(['graph.facebook.com/*' => Http::response(['error' => ['message' => 'Template name does not exist in the translation']], 400)]);
         \App\Services\Whatsapp::toPhone('9876500009', 'po_issued', ['a', 'b', 'c'], 'supplier/orders/1');
         $m = WhatsappMessage::firstOrFail();

@@ -72,9 +72,13 @@
                 <ul class="mt-2 list-disc space-y-1.5 pl-4">
                     <li>Each level that applies must approve, in order. The first "no" rejects the award.</li>
                     <li>Nobody approves their own award, and one person approves only one level of it.</li>
-                    <li>If the named approver leaves, any approver or admin can approve that level.</li>
+                    <li>If a named approver leaves or loses approval rights, your admins decide that level.</li>
+                    <li>Any admin can always reject a waiting award, so nothing gets stuck.</li>
                     <li>Changes apply to new awards. Awards already waiting keep their levels.</li>
-                    @if ($approvers->isEmpty())<li class="font-medium text-amber-800">Add an Approver in Team: without one, awards go out without approval.</li>@endif
+                    @if ($approvers->isEmpty())<li class="font-medium text-amber-800">Add an Approver in Team: without one, awards go out without approval.</li>
+                    @elseif ($rules->isNotEmpty() && $approvers->count() <= $rules->count())
+                        <li class="font-medium text-amber-800">Only {{ $approvers->count() }} {{ $approvers->count() === 1 ? 'person has' : 'people have' }} approval rights. Each level needs a different person (not the one who made the award), so some levels may be left out. Add approvers in Team to use every level.</li>
+                    @endif
                 </ul>
             </section>
         </aside>

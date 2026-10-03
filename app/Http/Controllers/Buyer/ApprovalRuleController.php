@@ -49,6 +49,12 @@ class ApprovalRuleController extends Controller
     {
         $rule = ApprovalRule::findOrFail($id);
         $before = $this->snapshot($rule);
+        if ($request->filled('move') && ! $request->filled('rule'.$id.'_edit')) {
+            $this->move($rule, $request->input('move') === 'up' ? -1 : 1);
+            $this->audit->log('approval_rule_changed', $rule, before: $before, after: $this->snapshot($rule->fresh()));
+
+            return redirect()->route('buyer.approval-rules.index')->with('status', "Level \"{$rule->name}\" moved.");
+        }
         $data = $this->validated($request, 'rule'.$id.'_');
         $rule->update($data);
         if ($request->filled('move')) {

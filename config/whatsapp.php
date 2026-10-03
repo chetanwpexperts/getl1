@@ -15,6 +15,7 @@ return [
     'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),      // the text you type when connecting the webhook in Meta
     'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
     'language' => env('WHATSAPP_TEMPLATE_LANGUAGE', 'en'),
+    'daily_limit_per_company' => (int) env('WHATSAPP_DAILY_LIMIT', 300),
 
     // key => [Meta template name, number of body variables]
     'templates' => [

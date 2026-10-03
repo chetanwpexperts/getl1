@@ -57,17 +57,27 @@
             <div class="mt-4 grid gap-3 border-t border-amber-200 pt-4 sm:grid-cols-2">
                 <form method="POST" action="{{ route('buyer.awards.approve', $first->id) }}" class="space-y-2" data-confirm="Approve and send all {{ $currentAwards->count() }} purchase orders?">
                     @csrf
+                            @if ($approvalSteps->firstWhere('status', 'pending'))<input type="hidden" name="step_id" value="{{ $approvalSteps->firstWhere('status', 'pending')->id }}">@endif
                     <input name="decision_note" maxlength="1000" placeholder="Comment (optional)" class="{{ $input }}">
                     <button class="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Approve and send {{ $currentAwards->count() }} POs</button>
                 </form>
                 <form method="POST" action="{{ route('buyer.awards.reject', $first->id) }}" class="space-y-2">
                     @csrf
+                            @if ($approvalSteps->firstWhere('status', 'pending'))<input type="hidden" name="step_id" value="{{ $approvalSteps->firstWhere('status', 'pending')->id }}">@endif
                     <input name="decision_note" required minlength="5" maxlength="1000" placeholder="Reason for rejecting (required)" class="{{ $input }}">
                     @error('decision_note') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
                     <button class="w-full rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">Reject all</button>
                 </form>
             </div>
             <p class="mt-2 text-xs text-amber-900">The split is decided as a whole, so every supplier gets its PO at the same time.</p>
+        @elseif ($canReject)
+            <form method="POST" action="{{ route('buyer.awards.reject', $first->id) }}" class="mt-4 space-y-2 border-t border-amber-200 pt-4">
+                @csrf
+                @if ($approvalSteps->firstWhere('status', 'pending'))<input type="hidden" name="step_id" value="{{ $approvalSteps->firstWhere('status', 'pending')->id }}">@endif
+                <p class="text-sm text-amber-900">As an admin you can turn this award down if it can't go ahead. Approving stays with the level shown above.</p>
+                <input name="decision_note" required minlength="5" maxlength="1000" placeholder="Reason for rejecting (required)" class="{{ $input }}">
+                <button class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">Reject award</button>
+            </form>
         @else
             <p class="mt-3 text-sm text-amber-900">
                 @php $lvl = $approvalSteps->firstWhere('status', 'pending'); @endphp

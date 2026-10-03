@@ -118,6 +118,7 @@ class RfqController extends Controller
             'award' => $currentAward,
             'currentAwards' => $currentAwards,
             'canDecide' => $currentAward && $awards->canDecide($currentAward, request()->user()),
+            'canReject' => $currentAward && \App\Services\ApprovalFlow::canReject($currentAward, request()->user()),
             'approvalSteps' => $currentAward ? \App\Services\ApprovalFlow::steps($currentAward) : collect(),
             'hasRules' => \App\Models\ApprovalRule::exists(),
             'awardBlocker' => $awardBlocker,

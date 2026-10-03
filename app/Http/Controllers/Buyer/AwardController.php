@@ -52,18 +52,20 @@ class AwardController extends Controller
 
     public function approve(Request $request, int $award): RedirectResponse
     {
-        $data = $request->validate(['decision_note' => ['nullable', 'string', 'max:1000']]);
-        $award = $this->awards->approve(Award::findOrFail($award), $request->user(), $data['decision_note'] ?? null);
+        $data = $request->validate(['decision_note' => ['nullable', 'string', 'max:1000'], 'step_id' => ['nullable', 'integer']]);
+        $award = $this->awards->approve(Award::findOrFail($award), $request->user(), $data['decision_note'] ?? null, isset($data['step_id']) ? (int) $data['step_id'] : null);
 
         return redirect()->to(route('buyer.rfqs.show', $award->rfq_id).'#award')
-            ->with('status', 'Approved. The purchase order is being generated and emailed to the supplier.');
+            ->with('status', $award->isPending()
+                ? 'Approved. It now goes to the next approval level.'
+                : 'Approved. The purchase order is being generated and emailed to the supplier.');
     }
 
     public function reject(Request $request, int $award): RedirectResponse
     {
-        $data = $request->validate(['decision_note' => ['required', 'string', 'min:5', 'max:1000']],
+        $data = $request->validate(['decision_note' => ['required', 'string', 'min:5', 'max:1000'], 'step_id' => ['nullable', 'integer']],
             ['decision_note.required' => 'Please say why you are rejecting it.']);
-        $award = $this->awards->reject(Award::findOrFail($award), $request->user(), $data['decision_note']);
+        $award = $this->awards->reject(Award::findOrFail($award), $request->user(), $data['decision_note'], isset($data['step_id']) ? (int) $data['step_id'] : null);
 
         return redirect()->to(route('buyer.rfqs.show', $award->rfq_id).'#award')->with('status', 'Award rejected. The buyer has been told.');
     }

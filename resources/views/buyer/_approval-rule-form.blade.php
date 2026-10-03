@@ -1,6 +1,6 @@
 @php $field = 'mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20'; @endphp
 <form method="POST" action="{{ $action }}" class="space-y-4 px-5 py-4">
-    @csrf @if ($method === 'PUT') @method('PUT') @endif
+    @csrf @if ($method === 'PUT') @method('PUT') <input type="hidden" name="{{ $prefix }}edit" value="1"> @endif
     <div>
         <label for="{{ $prefix }}name" class="block text-sm font-medium">Level name</label>
         <input id="{{ $prefix }}name" name="{{ $prefix }}name" value="{{ old($prefix.'name', $rule?->name) }}" required maxlength="80" class="{{ $field }}" placeholder="Plant head">
