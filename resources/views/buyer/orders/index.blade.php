@@ -70,7 +70,7 @@
                 @forelse ($orders as $o)
                     <tr class="hover:bg-slate-50">
                         <td class="px-5 py-3.5">
-                            <span class="font-medium">{{ $o->po_number }}</span>
+                            <a href="{{ route('buyer.orders.show', $o->id) }}" class="font-medium hover:underline">{{ $o->po_number }}</a>
                             <span class="block text-xs text-slate-500">{{ $o->po_sent_at?->ist()->format('d M Y') }}{{ $o->source === 'auction' ? ' · live auction' : '' }}</span>
                         </td>
                         <td class="px-5 py-3.5">{{ $o->supplier?->name }}@if ($o->supplier?->gstin)<span class="block text-xs text-slate-500">{{ $o->supplier->gstin }}</span>@endif</td>
@@ -84,7 +84,7 @@
                                 <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">Not yet accepted</span>
                             @endif
                         </td>
-                        <td class="px-5 py-3.5 text-right"><a href="{{ route('buyer.awards.po', $o->id) }}" class="text-sm font-medium text-emerald-700 hover:underline">PDF</a></td>
+                        <td class="px-5 py-3.5 text-right"><a href="{{ route('buyer.orders.show', $o->id) }}" class="text-sm font-medium text-emerald-700 hover:underline">Open</a></td>
                     </tr>
                 @empty
                     <tr><td colspan="7" class="px-4 py-12 text-center text-slate-600">{{ $q ? 'No purchase orders match these filters.' : 'No purchase orders yet. Award an RFQ and its PO appears here.' }}</td></tr>

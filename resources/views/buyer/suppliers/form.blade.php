@@ -18,6 +18,12 @@
             <x-field name="contact_email" label="Email" type="email" :value="$entry->contact_email" maxlength="190" />
             <x-field name="tag" label="Tag (optional)" :value="$entry->tag" maxlength="50" placeholder="boxes, steel, transport…" hint="Group suppliers to invite them together." />
         </div>
+        <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm has-[:checked]:border-violet-300 has-[:checked]:bg-violet-50/60">
+            <input type="hidden" name="is_msme" value="0">
+            <input type="checkbox" name="is_msme" value="1" class="mt-0.5" @checked(old('is_msme', $entry->is_msme || filled($entry->supplier?->udyam_no)))>
+            <span><span class="font-medium">MSME supplier (Udyam registered)</span>
+                <span class="block text-xs text-slate-600">GetL1 then shows the 45-day payment due date on their invoices (MSMED Act; needed for your tax deduction under 43B(h)). Suppliers who enter their Udyam number are marked automatically.</span></span>
+        </label>
         <div>
             <label for="notes" class="block text-sm font-medium text-slate-700">Notes (only you see this)</label>
             <textarea id="notes" name="notes" rows="3" maxlength="1000" class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2">{{ old('notes', $entry->notes) }}</textarea>

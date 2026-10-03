@@ -181,6 +181,14 @@ Route::middleware('auth')->group(function () {
                 Route::get('/orders/export/tally-vouchers.xml', [\App\Http\Controllers\Buyer\OrderController::class, 'tallyVouchers'])->name('orders.tally.vouchers');
                 Route::get('/orders/export/register.csv', [\App\Http\Controllers\Buyer\OrderController::class, 'csv'])->name('orders.csv');
             });
+            Route::get('/orders/{award}', [\App\Http\Controllers\Buyer\OrderController::class, 'show'])->whereNumber('award')->name('orders.show');
+            Route::get('/invoices/{invoice}/file', [\App\Http\Controllers\Buyer\OrderController::class, 'invoiceFile'])->whereNumber('invoice')->middleware('throttle:60,1')->name('invoices.file');
+            Route::get('/payments', [\App\Http\Controllers\Buyer\PaymentController::class, 'index'])->name('payments.index');
+            Route::middleware(['org.role:buyer_admin,buyer_user', 'throttle:30,1'])->group(function () {
+                Route::post('/orders/{award}/receipts', [\App\Http\Controllers\Buyer\OrderController::class, 'receive'])->whereNumber('award')->name('orders.receive');
+                Route::post('/invoices/{invoice}/review', [\App\Http\Controllers\Buyer\OrderController::class, 'reviewInvoice'])->whereNumber('invoice')->name('invoices.review');
+                Route::post('/invoices/{invoice}/paid', [\App\Http\Controllers\Buyer\OrderController::class, 'payInvoice'])->whereNumber('invoice')->name('invoices.paid');
+            });
             Route::post('/orders/tally-settings', [\App\Http\Controllers\Buyer\OrderController::class, 'saveTally'])
                 ->middleware(['org.role:buyer_admin,buyer_user', 'throttle:20,1'])->name('orders.tally.settings');
 
@@ -288,6 +296,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/orders/{award}', [SupplierOrderController::class, 'show'])->whereNumber('award')->name('orders.show');
             Route::get('/orders/{award}/po', [SupplierOrderController::class, 'po'])->whereNumber('award')->name('orders.po');
             Route::post('/orders/{award}/accept', [SupplierOrderController::class, 'accept'])->whereNumber('award')->name('orders.accept');
+            Route::post('/orders/{award}/invoices', [SupplierOrderController::class, 'submitInvoice'])->whereNumber('award')->middleware('throttle:10,1')->name('orders.invoices.store');
+            Route::get('/orders/{award}/invoices/{invoice}/file', [SupplierOrderController::class, 'invoiceFile'])->whereNumber(['award', 'invoice'])->middleware('throttle:60,1')->name('orders.invoices.file');
         });
     });
 });

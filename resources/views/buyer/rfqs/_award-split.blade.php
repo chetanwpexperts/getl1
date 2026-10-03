@@ -38,7 +38,8 @@
                     <div class="text-right">
                         <p class="tabular-nums">{{ $inr($a->total) }} <span class="text-xs text-slate-500">+ GST</span></p>
                         @if ($a->status->value === 'po_sent')
-                            <a href="{{ route('buyer.awards.po', $a->id) }}" class="mt-1 inline-block text-xs font-semibold text-emerald-700 hover:underline">{{ $a->po_number }} · PDF</a>
+                            <a href="{{ route('buyer.orders.show', $a->id) }}" class="mt-1 inline-block text-xs font-semibold text-emerald-700 hover:underline">{{ $a->po_number }}</a>
+                            <a href="{{ route('buyer.awards.po', $a->id) }}" class="ml-1 text-xs text-slate-500 hover:underline">PDF</a>
                             <p class="text-xs {{ $a->supplier_accepted_at ? 'text-emerald-700' : 'text-slate-500' }}">{{ $a->supplier_accepted_at ? '✓ Accepted' : 'Waiting for acceptance' }}</p>
                         @elseif (! $pending)
                             <p class="mt-1 text-xs text-slate-500">PO being generated…</p>

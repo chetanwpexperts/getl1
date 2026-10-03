@@ -15,8 +15,13 @@ class BuyerSupplier extends Model
 
     protected $fillable = [
         'buyer_org_id', 'supplier_org_id', 'contact_name', 'contact_email', 'contact_phone',
-        'company_name', 'tag', 'notes', 'status',
+        'company_name', 'tag', 'is_msme', 'notes', 'status',
     ];
+
+    protected function casts(): array
+    {
+        return ['is_msme' => 'boolean'];
+    }
 
     public function buyer(): BelongsTo
     {

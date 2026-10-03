@@ -39,6 +39,7 @@ class SupplierListService
             'contact_email' => ['nullable', 'required_without:contact_phone', 'email:rfc', 'max:190'],
             'contact_phone' => ['nullable', 'required_without:contact_email', 'regex:/^[6-9]\d{9}$/'],
             'tag' => ['nullable', 'string', 'max:50'],
+            'is_msme' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -75,6 +76,7 @@ class SupplierListService
         if ($data['tag']) {
             $data['tag'] = Str::lower($data['tag']);
         }
+        $data['is_msme'] = ! empty($data['is_msme']);
 
         return $data;
     }

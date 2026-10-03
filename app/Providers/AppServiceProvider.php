@@ -70,6 +70,8 @@ class AppServiceProvider extends ServiceProvider
             'rfq_invite' => RfqInvite::class,
             'rfq_question' => \App\Models\RfqQuestion::class,
             'counter_offer' => \App\Models\CounterOffer::class,
+            'goods_receipt' => \App\Models\GoodsReceipt::class,
+            'supplier_invoice' => \App\Models\SupplierInvoice::class,
             'quote' => Quote::class,
             'auction' => Auction::class,
             'bid' => Bid::class,

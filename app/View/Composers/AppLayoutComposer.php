@@ -39,7 +39,13 @@ class AppLayoutComposer
             $badgeKey = 'getl1.badges.'.$org->id;
             if (! request()->attributes->has($badgeKey)) {
                 request()->attributes->set($badgeKey, $org->isBuyer()
-                    ? ['pendingApprovals' => \App\Models\Award::withoutGlobalScopes()->where('organization_id', $org->id)->where('status', \App\Enums\AwardStatus::PendingApproval->value)->count()]
+                    ? ['pendingApprovals' => \App\Models\Award::withoutGlobalScopes()->where('organization_id', $org->id)->where('status', \App\Enums\AwardStatus::PendingApproval->value)->count(),
+                        // Invoices to review, plus MSME invoices due within 7 days or overdue.
+                        'paymentsAttention' => \App\Models\SupplierInvoice::withoutGlobalScopes()->where('organization_id', $org->id)
+                            ->where(fn ($q) => $q->where('status', \App\Models\SupplierInvoice::SUBMITTED)
+                                ->orWhere(fn ($w) => $w->where('status', \App\Models\SupplierInvoice::APPROVED)->where('is_msme', true)
+                                    ->where('due_date', '<=', now()->setTimezone(config('app.display_timezone'))->addDays(7)->toDateString())))
+                            ->count()]
                     : ['openOrders' => \App\Models\Award::withoutGlobalScopes()->where('supplier_org_id', $org->id)->where('status', \App\Enums\AwardStatus::PoSent->value)->whereNull('supplier_accepted_at')->count()]);
             }
             $view->with(request()->attributes->get($badgeKey));

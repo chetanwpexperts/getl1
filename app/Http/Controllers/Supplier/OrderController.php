@@ -37,7 +37,12 @@ class OrderController extends Controller
     {
         $award = $this->own($award);
 
-        return view('supplier.orders.show', ['award' => $award, 'rfq' => $award->rfq, 'buyer' => $award->rfq->organization]);
+        return view('supplier.orders.show', [
+            'award' => $award, 'rfq' => $award->rfq, 'buyer' => $award->rfq->organization,
+            'summary' => \App\Services\Payables\ReceiptService::summary($award),
+            'receipts' => \App\Models\GoodsReceipt::withoutGlobalScopes()->where('award_id', $award->id)->latest('received_on')->latest('id')->get(),
+            'invoices' => \App\Models\SupplierInvoice::withoutGlobalScopes()->where('award_id', $award->id)->where('supplier_org_id', $this->current->id())->orderByDesc('id')->get(),
+        ]);
     }
 
     public function po(int $award): StreamedResponse
@@ -68,6 +73,25 @@ class OrderController extends Controller
         }
 
         return back()->with('status', 'Order accepted. The buyer has been told.');
+    }
+
+    public function submitInvoice(Request $request, int $award, \App\Services\Payables\InvoiceService $invoices): RedirectResponse
+    {
+        $award = $this->own($award);
+        $data = $request->validate(\App\Services\Payables\InvoiceService::rules(), \App\Services\Payables\InvoiceService::messages());
+        $inv = $invoices->submit($award, $request->user(), $data, $request->file('file'));
+
+        return redirect()->to(route('supplier.orders.show', $award->id).'#invoices')
+            ->with('status', "Invoice {$inv->invoice_number} sent to {$award->rfq->organization->name}. Payment due by {$inv->due_date?->format('d M Y')}.");
+    }
+
+    public function invoiceFile(int $award, int $invoice): StreamedResponse
+    {
+        $award = $this->own($award);
+        $inv = \App\Models\SupplierInvoice::withoutGlobalScopes()->where('award_id', $award->id)->where('supplier_org_id', $this->current->id())->findOrFail($invoice);
+        abort_unless(Storage::disk('local')->exists($inv->file_path), 404);
+
+        return Storage::disk('local')->download($inv->file_path, $inv->original_name);
     }
 
     private function own(int $id): Award

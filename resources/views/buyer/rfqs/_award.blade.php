@@ -38,6 +38,7 @@
                     <div class="text-right">
                         <p class="text-sm">PO <span class="font-semibold">{{ $award->po_number }}</span> · {{ $award->po_sent_at?->ist()->format('d M Y') }}</p>
                         <a href="{{ route('buyer.awards.po', $award->id) }}" class="mt-2 inline-block rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Download PO (PDF)</a>
+                        <a href="{{ route('buyer.orders.show', $award->id) }}" class="mt-2 inline-block rounded-lg border border-emerald-600 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Deliveries &amp; invoices</a>
                         <p class="mt-2 text-xs {{ $award->supplier_accepted_at ? 'text-emerald-800' : 'text-slate-600' }}">
                             @if ($award->supplier_accepted_at)
                                 ✓ Accepted by supplier on {{ $award->supplier_accepted_at->ist()->format('d M Y, h:i A') }}

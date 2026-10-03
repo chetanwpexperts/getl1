@@ -101,6 +101,74 @@ class OrderController extends Controller
         return redirect()->to(route('buyer.orders.index', $request->query()).'#tally')->with('status', 'Tally ledger names saved.');
     }
 
+    /** One PO: lines with what's been received, goods receipts, invoices with their checks. */
+    public function show(int $award): View
+    {
+        $award = Award::with(['supplier', 'rfq:id,ref_no,title,terms'])->where('status', AwardStatus::PoSent)->findOrFail($award);
+        $invoices = \App\Models\SupplierInvoice::with('reviewer:id,name')->where('award_id', $award->id)->orderBy('id')->get();
+
+        return view('buyer.orders.show', [
+            'award' => $award,
+            'summary' => \App\Services\Payables\ReceiptService::summary($award),
+            'receipts' => \App\Models\GoodsReceipt::with('receiver:id,name')->where('award_id', $award->id)->latest('received_on')->latest('id')->get(),
+            'invoices' => $invoices,
+            'checks' => $invoices->mapWithKeys(fn ($i) => [$i->id => \App\Services\Payables\InvoiceService::checks($i)]),
+            'msme' => \App\Services\Payables\MsmeDueDate::isMsme($award->supplier, $award->organization_id),
+            'canEdit' => request()->user()->hasRoleIn($this->current->get(), 'buyer_admin', 'buyer_user'),
+        ]);
+    }
+
+    public function receive(Request $request, int $award, \App\Services\Payables\ReceiptService $receipts): RedirectResponse
+    {
+        $award = Award::where('status', AwardStatus::PoSent)->findOrFail($award);
+        $data = $request->validate([
+            'received_on' => ['required', 'date_format:Y-m-d'],
+            'challan_no' => ['nullable', 'string', 'max:60'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'lines' => ['required', 'array'],
+            'lines.*.received' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'lines.*.rejected' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'lines.*.reason' => ['nullable', 'string', 'max:255'],
+        ]);
+        $grn = $receipts->record($award, $request->user(), $data);
+
+        return redirect()->to(route('buyer.orders.show', $award->id).'#receipts')->with('status', "Goods receipt {$grn->grn_number} recorded. The supplier has been told.");
+    }
+
+    public function invoiceFile(int $invoice): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $inv = \App\Models\SupplierInvoice::findOrFail($invoice);
+        abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($inv->file_path), 404);
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->download($inv->file_path, $inv->original_name);
+    }
+
+    public function reviewInvoice(Request $request, int $invoice, \App\Services\Payables\InvoiceService $invoices): RedirectResponse
+    {
+        $inv = \App\Models\SupplierInvoice::findOrFail($invoice);
+        $data = $request->validate(['decision' => ['required', 'in:approve,dispute'], 'review_note' => ['nullable', 'string', 'max:1000']]);
+        $data['decision'] === 'approve'
+            ? $invoices->approve($inv, $request->user(), $data['review_note'] ?? null)
+            : $invoices->dispute($inv, $request->user(), (string) ($data['review_note'] ?? ''));
+
+        return redirect()->to(route('buyer.orders.show', $inv->award_id).'#invoices')->with('status', $data['decision'] === 'approve'
+            ? "Invoice {$inv->invoice_number} approved. Pay by {$inv->due_date?->format('d M Y')}."
+            : "Invoice {$inv->invoice_number} disputed. The supplier has been asked to correct it.");
+    }
+
+    public function payInvoice(Request $request, int $invoice, \App\Services\Payables\InvoiceService $invoices): RedirectResponse
+    {
+        $inv = \App\Models\SupplierInvoice::findOrFail($invoice);
+        $data = $request->validate([
+            'paid_on' => ['required', 'date_format:Y-m-d'],
+            'paid_amount' => ['required', 'numeric', 'gt:0', 'max:99999999999'],
+            'payment_ref' => ['nullable', 'string', 'max:60'],
+        ]);
+        $invoices->markPaid($inv, $request->user(), $data['paid_on'], (string) $data['paid_amount'], $data['payment_ref'] ?? null);
+
+        return back()->with('status', "Invoice {$inv->invoice_number} marked paid. The supplier has been told.");
+    }
+
     /** @return array{from: ?string, to: ?string, supplier: ?int, accepted: ?string} */
     private function filters(Request $request): array
     {

@@ -288,6 +288,8 @@ class RfqController extends Controller
             'award' => \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->pluck('id')->all(),
             'rfq_question' => \App\Models\RfqQuestion::where('rfq_id', $rfq->id)->pluck('id')->all(),
             'counter_offer' => \App\Models\CounterOffer::where('rfq_id', $rfq->id)->pluck('id')->all(),
+            'goods_receipt' => \App\Models\GoodsReceipt::withoutGlobalScopes()->whereIn('award_id', \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->select('id'))->pluck('id')->all(),
+            'supplier_invoice' => \App\Models\SupplierInvoice::withoutGlobalScopes()->whereIn('award_id', \App\Models\Award::withoutGlobalScopes()->where('rfq_id', $rfq->id)->select('id'))->pluck('id')->all(),
         ];
 
         return \App\Models\AuditLog::with('user:id,name')
