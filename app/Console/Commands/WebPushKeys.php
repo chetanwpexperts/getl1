@@ -56,7 +56,8 @@ class WebPushKeys extends Command
         if (app()->configurationIsCached()) {
             $this->call('config:cache');
         }
-        \App\Services\SecurityLog::info('webpush_keys_created', ['via' => 'artisan']);
+        // Logged when the log file is writable by this user; the keys are saved either way.
+        rescue(fn () => \App\Services\SecurityLog::info('webpush_keys_created', ['via' => 'artisan']), null, false);
         $this->info('Push keys created and saved to .env.');
 
         return self::SUCCESS;
