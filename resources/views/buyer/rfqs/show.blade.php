@@ -32,6 +32,7 @@
             <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
                 <span>{{ $rfq->ref_no }}</span>
                 @if ($rfq->category)<span>{{ $rfq->category->name }}</span>@endif
+                <span>{{ $rfq->isPerItem() ? 'Item-by-item bidding' : 'One total for all items' }}</span>
                 @if ($deadline)<span>Quotes close <span class="font-medium text-slate-800">{{ $deadline }} IST</span></span>@endif
             </p>
         </div>
@@ -179,12 +180,25 @@
                         </tbody>
                     </table>
                 </div>
-                <details class="border-t border-slate-100 px-5 py-3 text-sm">
-                    <summary class="cursor-pointer font-medium text-slate-700">Item-wise unit prices</summary>
+                @php
+                    // Item-wise: lowest quoted rate per line, and the total if each line goes to its lowest.
+                    $lineBest = $rfq->items->mapWithKeys(fn ($item) => [$item->id => $comparison->map(fn ($r) => $r['lines'][$item->id]['unit_price'] ?? null)->filter(fn ($v) => $v !== null)->min()]);
+                    $splitBest = $rfq->items->sum(fn ($item) => (float) ($lineBest[$item->id] ?? 0) * (float) $item->qty);
+                @endphp
+                @if ($rfq->isPerItem())
+                    <p class="border-t border-slate-100 px-5 py-3 text-sm">
+                        Best rate on every item combined (before GST): <span class="font-semibold text-emerald-700">{{ \App\Support\Money::inr($splitBest) }}</span>
+                        @if ($splitBest < $l1['basic'] - 0.005)
+                            <span class="text-slate-500">· {{ \App\Support\Money::inr($l1['basic'] - $splitBest) }} less than giving everything to L1</span>
+                        @endif
+                    </p>
+                @endif
+                <details class="border-t border-slate-100 px-5 py-3 text-sm" @if ($rfq->isPerItem()) open @endif>
+                    <summary class="cursor-pointer font-medium text-slate-700">Item-wise unit prices{{ $rfq->isPerItem() ? ' (lowest highlighted)' : '' }}</summary>
                     <div class="mt-3 overflow-x-auto">
                         <table class="w-full min-w-[640px] text-sm">
                             <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
-                                <tr><th class="py-2 pr-4">Item</th>@foreach ($comparison as $row)<th class="py-2 pr-4 text-right">L{{ $row['rank'] }}</th>@endforeach</tr>
+                                <tr><th class="py-2 pr-4">Item</th>@foreach ($comparison as $row)<th class="py-2 pr-4 text-right">{{ $rfq->isPerItem() ? $row['quote']->supplier->name : 'L'.$row['rank'] }}</th>@endforeach</tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach ($rfq->items as $item)
@@ -192,7 +206,8 @@
                                         <td class="py-2 pr-4">{{ $item->name }} <span class="text-xs text-slate-500">({{ $qtyFmt($item->qty) }} {{ $item->unit }})</span></td>
                                         @foreach ($comparison as $row)
                                             @php $line = $row['lines'][$item->id] ?? null; @endphp
-                                            <td class="py-2 pr-4 text-right tabular-nums">{{ $line ? \App\Support\Money::inr($line['unit_price']) : '—' }}
+                                            @php $isBest = $line && $rfq->isPerItem() && abs($line['unit_price'] - (float) $lineBest[$item->id]) < 0.005; @endphp
+                                            <td class="py-2 pr-4 text-right tabular-nums {{ $isBest ? 'font-semibold text-emerald-700' : '' }}">{{ $line ? \App\Support\Money::inr($line['unit_price']) : '—' }}
                                                 @if ($line)<span class="block text-xs text-slate-500">GST {{ rtrim(rtrim(number_format($line['gst_rate'], 2), '0'), '.') }}%</span>@endif
                                             </td>
                                         @endforeach

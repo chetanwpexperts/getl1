@@ -108,16 +108,19 @@ class RfqController extends Controller
         $auction = Auction::where('rfq_id', $rfq->id)->where('status', '!=', AuctionStatus::Cancelled)->latest('id')->first();
 
         $awards = app(\App\Services\AwardService::class);
-        $currentAward = $unsealed ? $awards->current($rfq) : null;
+        $currentAwards = $unsealed ? $awards->currentAll($rfq)->load(['supplier', 'awarder', 'approver']) : collect();
+        $currentAward = $currentAwards->first();
         $awardBlocker = $unsealed && ! $currentAward ? $awards->blocker($rfq) : null;
 
         return view('buyer.rfqs.show', [
             'rfq' => $rfq,
             'live' => LiveVersion::buyerRfq($rfq),
-            'award' => $currentAward?->load(['supplier', 'awarder', 'approver']),
+            'award' => $currentAward,
+            'currentAwards' => $currentAwards,
             'canDecide' => $currentAward && $awards->canDecide($currentAward, request()->user()),
             'awardBlocker' => $awardBlocker,
-            'candidates' => $unsealed && ! $currentAward && ! $awardBlocker ? $awards->candidates($rfq) : collect(),
+            'candidates' => $unsealed && ! $currentAward && ! $awardBlocker && ! $rfq->isPerItem() ? $awards->candidates($rfq) : collect(),
+            'itemCandidates' => $unsealed && ! $currentAward && ! $awardBlocker && $rfq->isPerItem() ? $awards->itemCandidates($rfq) : collect(),
             'rejectedAwards' => \App\Models\Award::with(['supplier', 'approver'])->where('rfq_id', $rfq->id)
                 ->where('status', \App\Enums\AwardStatus::Rejected)->latest()->get(),
             'approvalLimit' => $this->current->get()->award_approval_limit,

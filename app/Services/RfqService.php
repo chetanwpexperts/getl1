@@ -60,6 +60,7 @@ class RfqService
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'delivery_location' => ['nullable', 'string', 'max:190'],
             'quote_deadline' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'bid_basis' => ['nullable', 'in:lot_total,per_item'],
             'terms.payment' => ['nullable', 'in:'.implode(',', array_keys(self::PAYMENT_TERMS))],
             'terms.freight' => ['nullable', 'in:'.implode(',', array_keys(self::FREIGHT_TERMS))],
             'terms.delivery' => ['nullable', 'string', 'max:255'],
@@ -104,6 +105,7 @@ class RfqService
                 'delivery_location' => $data['delivery_location'] ?? null,
                 'quote_deadline' => self::parseDeadline($data['quote_deadline'] ?? null),
                 'terms' => array_filter($data['terms'] ?? [], fn ($v) => $v !== null && $v !== ''),
+                'bid_basis' => ($data['bid_basis'] ?? null) === Rfq::BASIS_PER_ITEM ? Rfq::BASIS_PER_ITEM : Rfq::BASIS_LOT,
             ];
 
             $creating = $rfq === null;
@@ -129,7 +131,7 @@ class RfqService
             }
 
             $this->audit->log($creating ? 'rfq_created' : 'rfq_updated', $rfq, before: $before,
-                after: ['title' => $rfq->title, 'items' => count($data['items']), 'deadline' => $rfq->quote_deadline?->toIso8601String()],
+                after: ['title' => $rfq->title, 'items' => count($data['items']), 'bid_basis' => $rfq->bid_basis, 'deadline' => $rfq->quote_deadline?->toIso8601String()],
                 user: $by, organizationId: $buyer->id);
 
             return $rfq;

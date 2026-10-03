@@ -6,7 +6,10 @@
 <div id="award" class="scroll-mt-6">
     @error('award') <p class="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $message }}</p> @enderror
 
-    @if ($award)
+    @if ($award && $currentAwards->count() > 1)
+        @include('buyer.rfqs._award-split')
+
+    @elseif ($award)
         {{-- Current award: pending / approved / PO sent --}}
         @php
             $pending = $award->isPending();
@@ -129,6 +132,9 @@
                 </div>
             </form>
         </section>
+
+    @elseif ($itemCandidates->isNotEmpty() && in_array($currentRole?->value, ['buyer_admin', 'buyer_user'], true))
+        @include('buyer.rfqs._award-items')
 
     @elseif ($awardBlocker && ! $rfq->isCancelled() && $rfq->quotesAreUnsealed())
         <p class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm px-5 py-4 text-sm text-slate-600">{{ $awardBlocker }}</p>

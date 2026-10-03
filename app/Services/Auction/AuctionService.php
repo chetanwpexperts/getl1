@@ -78,7 +78,22 @@ class AuctionService
             throw ValidationException::withMessages(['starts_at' => 'Start between 5 minutes and 14 days from now, so suppliers can get ready.']);
         }
 
-        $startPrice = (float) $quotes->min('total');
+        $perItem = $rfq->isPerItem();
+        if ($perItem) {
+            // Item-wise: the start is the best rate on every line combined; drops are a percentage of each rate.
+            if ($data['min_decrement_type'] !== 'percent') {
+                throw ValidationException::withMessages(['min_decrement_value' => 'For an item-wise auction, set the minimum drop in percent (it applies to every item’s rate).']);
+            }
+            $quotes->load('items');
+            $lines = $quotes->flatMap->items;
+            $startPrice = 0.0;
+            foreach ($rfq->items()->pluck('qty', 'id') as $itemId => $q) {
+                $startPrice += (float) $lines->where('rfq_item_id', $itemId)->min('unit_price') * (float) $q;
+            }
+            $startPrice = round($startPrice, 2);
+        } else {
+            $startPrice = (float) $quotes->min('total');
+        }
         if ($data['min_decrement_type'] === 'percent' && (float) $data['min_decrement_value'] > 10) {
             throw ValidationException::withMessages(['min_decrement_value' => 'A minimum decrement above 10% is not practical.']);
         }
@@ -86,7 +101,7 @@ class AuctionService
             throw ValidationException::withMessages(['min_decrement_value' => 'The minimum decrement can be at most 10% of the start price.']);
         }
 
-        $auction = DB::transaction(function () use ($rfq, $by, $data, $quotes, $startsAt, $startPrice) {
+        $auction = DB::transaction(function () use ($rfq, $by, $data, $quotes, $startsAt, $startPrice, $perItem) {
             // Re-check inside the lock that nobody scheduled one in parallel.
             $locked = Rfq::withoutGlobalScopes()->whereKey($rfq->id)->lockForUpdate()->first();
             if ($locked->status !== RfqStatus::Published) {
@@ -105,6 +120,7 @@ class AuctionService
                 'created_by' => $by->id,
                 'paid_with_credit' => $useCredit,
                 'format' => 'english_reverse',
+                'bid_basis' => $perItem ? Rfq::BASIS_PER_ITEM : Rfq::BASIS_LOT,
                 'start_price' => $startPrice,
                 'min_decrement_type' => $data['min_decrement_type'],
                 'min_decrement_value' => $data['min_decrement_value'],
@@ -118,28 +134,32 @@ class AuctionService
                 'visibility' => $data['visibility'],
                 'status' => AuctionStatus::Scheduled,
                 'current_l1' => $startPrice,
-                'current_l1_supplier_org_id' => $best->supplier_org_id,
+                'current_l1_supplier_org_id' => $perItem ? null : $best->supplier_org_id,
                 'bid_count' => 0,
             ]);
 
-            // Each participant's sealed quote is their opening position.
+            // Each participant's sealed quote is their opening position (item-wise: one per line, at the quoted rate).
             foreach ($quotes as $q) {
-                $bid = new Bid([
-                    'auction_id' => $auction->id,
-                    'supplier_org_id' => $q->supplier_org_id,
-                    'user_id' => $q->submitted_by ?? $by->id,
-                    'kind' => Bid::KIND_SEALED,
-                    'amount' => $q->total,
-                ]);
-                $bid->created_at = $q->submitted_at;
-                $bid->save();
+                $openings = $perItem
+                    ? $q->items->map(fn ($qi) => ['rfq_item_id' => $qi->rfq_item_id, 'amount' => $qi->unit_price])
+                    : [['rfq_item_id' => null, 'amount' => $q->total]];
+                foreach ($openings as $opening) {
+                    $bid = new Bid([
+                        'auction_id' => $auction->id,
+                        'supplier_org_id' => $q->supplier_org_id,
+                        'user_id' => $q->submitted_by ?? $by->id,
+                        'kind' => Bid::KIND_SEALED,
+                    ] + $opening);
+                    $bid->created_at = $q->submitted_at;
+                    $bid->save();
+                }
             }
 
             $locked->update(['status' => RfqStatus::Auction]);
 
             $this->audit->log('auction_scheduled', $auction, after: [
                 'starts_at' => $startsAt->toIso8601String(), 'ends_at' => $endsAt->toIso8601String(),
-                'start_price' => $startPrice, 'participants' => $quotes->count(),
+                'start_price' => $startPrice, 'participants' => $quotes->count(), 'bid_basis' => $perItem ? 'per_item' : 'lot_total',
                 'rules' => collect($data)->except('starts_at')->all(),
             ], user: $by, organizationId: $rfq->organization_id);
 

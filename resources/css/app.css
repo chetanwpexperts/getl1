@@ -38,6 +38,8 @@
 
     .auction-rank { @apply border-slate-200 bg-white text-slate-700; }
     .auction-rank[data-rank='first'] { @apply border-emerald-600 bg-emerald-600 text-white; }
+    .auction-item-rank { @apply inline-flex min-w-10 justify-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700 tabular-nums; }
+    .auction-item-rank[data-rank='first'] { @apply bg-emerald-600 text-white; }
 
     .auction-message:empty { display: none; }
     .auction-message[data-tone='ok'] { @apply rounded-lg bg-emerald-50 p-3 text-emerald-800; }

@@ -3,8 +3,13 @@
 
 The live auction for **{{ \App\Support\Md::escape($rfq->title) }}** ({{ $rfq->ref_no }}) has ended.
 
+@if ($a->isPerItem())
+**Best total, each item from its L1:** {{ \App\Support\Money::inr($a->current_l1) }} before GST
+<br>**Best sealed rates combined:** {{ \App\Support\Money::inr($a->start_price) }}
+@else
 **Final lowest price (L1):** {{ \App\Support\Money::inr($a->current_l1) }} before GST @if ($winner)from **{{ \App\Support\Md::escape($winner) }}** @endif
 <br>**Best sealed quote:** {{ \App\Support\Money::inr($a->start_price) }}
+@endif
 <br>**Saved in the auction:** {{ \App\Support\Money::inr(max(0, $savings)) }}@if ($savingsPct !== null && $savingsPct > 0) ({{ number_format($savingsPct, 2) }}%)@endif
 <br>**Live bids:** {{ $a->bid_count }}@if ($a->extensions_used), extended {{ $a->extensions_used }} {{ \Illuminate\Support\Str::plural('time', $a->extensions_used) }}@endif
 

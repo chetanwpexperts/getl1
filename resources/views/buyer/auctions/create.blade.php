@@ -86,12 +86,17 @@
                             <label class="block text-sm font-medium text-slate-700">Minimum drop per bid</label>
                             <div class="mt-1 flex gap-2">
                                 <input name="min_decrement_value" inputmode="decimal" required value="{{ old('min_decrement_value', $defaults['auction.default_min_decrement_pct']) }}" class="{{ $input }} mt-0">
-                                <select name="min_decrement_type" class="{{ $input }} mt-0 w-32">
-                                    <option value="percent" @selected(old('min_decrement_type', 'percent') === 'percent')>%</option>
-                                    <option value="amount" @selected(old('min_decrement_type') === 'amount')>₹</option>
-                                </select>
+                                @if ($rfq->isPerItem())
+                                    <input type="hidden" name="min_decrement_type" value="percent">
+                                    <span class="flex w-16 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-600">%</span>
+                                @else
+                                    <select name="min_decrement_type" class="{{ $input }} mt-0 w-32">
+                                        <option value="percent" @selected(old('min_decrement_type', 'percent') === 'percent')>%</option>
+                                        <option value="amount" @selected(old('min_decrement_type') === 'amount')>₹</option>
+                                    </select>
+                                @endif
                             </div>
-                            <p class="mt-1 text-xs text-slate-500">Each new bid must beat the supplier's own price by at least this much.</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $rfq->isPerItem() ? 'Item by item: each new rate must beat the supplier\'s own rate for that item by at least this much.' : 'Each new bid must beat the supplier\'s own price by at least this much.' }}</p>
                             @error('min_decrement_value') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
@@ -128,7 +133,11 @@
                             </li>
                         @endforeach
                     </ul>
-                    <p class="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">Start price is the best sealed quote (before GST): <span class="font-semibold text-slate-700">{{ \App\Support\Money::inr($best->total) }}</span>.</p>
+                    <p class="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">@if ($rfq->isPerItem())
+                        Item by item: every supplier starts at its quoted rates; each item is ranked on its own.
+                    @else
+                        Start price is the best sealed quote (before GST): <span class="font-semibold text-slate-700">{{ \App\Support\Money::inr($best->total) }}</span>.
+                    @endif</p>
                 </section>
                 <p class="text-xs text-slate-500">Participants get an email with the start time. Suppliers never see each other's names.</p>
             </aside>

@@ -14,7 +14,7 @@ class Award extends Model
     protected $fillable = [
         'rfq_id', 'organization_id', 'supplier_org_id', 'rfq_item_id', 'qty', 'unit_price', 'total', 'status',
         'awarded_by', 'approved_by', 'approved_at', 'po_number', 'po_pdf_path', 'po_sent_at', 'remarks',
-        'source', 'auction_id', 'rank', 'reason', 'lines', 'gst_total', 'freight_total', 'grand_total',
+        'source', 'auction_id', 'group_key', 'rank', 'reason', 'lines', 'gst_total', 'freight_total', 'grand_total',
         'decision_note', 'supplier_accepted_at', 'supplier_accepted_by',
     ];
 

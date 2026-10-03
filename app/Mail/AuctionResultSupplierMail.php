@@ -18,12 +18,29 @@ class AuctionResultSupplierMail extends Mailable
 
     public function envelope(): Envelope
     {
+        if ($this->auction->isPerItem()) {
+            return new Envelope(subject: "Auction result: {$this->auction->rfq->title}");
+        }
+
         return new Envelope(subject: "Auction result: you finished L{$this->rank}: {$this->auction->rfq->title}");
     }
 
     public function content(): Content
     {
         $a = $this->auction;
+        $items = null;
+        if ($a->isPerItem()) {
+            // Item-wise: own rank and rate per item; the L1 rate only if the buyer allowed it.
+            $byItem = \App\Services\Auction\Standings::byItem($a);
+            $items = \App\Models\RfqItem::where('rfq_id', $a->rfq_id)->orderBy('line_no')->get()
+                ->map(function ($item) use ($byItem, $a) {
+                    $rows = $byItem[$item->id] ?? collect();
+                    $me = $rows->firstWhere('supplier_org_id', $this->supplierOrgId);
+
+                    return $me ? ['name' => $item->name, 'unit' => $item->unit, 'rank' => $me['rank'], 'rate' => $me['amount'],
+                        'l1' => $a->visibility === 'rank_and_l1' ? $rows->first()['amount'] : null] : null;
+                })->filter()->values();
+        }
 
         return new Content(markdown: 'mail.auction-result-supplier', with: [
             'rfq' => $a->rfq,
@@ -33,6 +50,7 @@ class AuctionResultSupplierMail extends Mailable
             'participants' => $this->participants,
             'l1' => $a->visibility === 'rank_and_l1' ? (float) $a->current_l1 : null,
             'url' => route('supplier.auctions.show', $a->id),
+            'items' => $items,
         ]);
     }
 }

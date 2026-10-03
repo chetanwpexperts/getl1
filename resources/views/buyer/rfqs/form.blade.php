@@ -104,6 +104,28 @@
                 @include('buyer.rfqs._item-row', ['i' => '__i__', 'row' => ['name' => '', 'spec' => '', 'qty' => '', 'unit' => 'pcs', 'delivery_date' => '', 'last_purchase_price' => '']])
             </template>
             <button type="button" data-add-item class="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50">+ Add item</button>
+
+            @php $basis = old('bid_basis', $rfq->bid_basis ?? 'lot_total'); @endphp
+            <fieldset class="mt-6 border-t border-slate-100 pt-5">
+                <legend class="text-sm font-semibold">How should suppliers compete?</legend>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label class="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-4 hover:bg-slate-50 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50/60">
+                        <input type="radio" name="bid_basis" value="lot_total" class="mt-1" @checked($basis === 'lot_total')>
+                        <span>
+                            <span class="block text-sm font-medium">One total for all items</span>
+                            <span class="mt-0.5 block text-xs text-slate-600">Suppliers compete on the full order. The whole order goes to one supplier.</span>
+                        </span>
+                    </label>
+                    <label class="flex cursor-pointer gap-3 rounded-xl border border-slate-200 p-4 hover:bg-slate-50 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50/60">
+                        <input type="radio" name="bid_basis" value="per_item" class="mt-1" @checked($basis === 'per_item')>
+                        <span>
+                            <span class="block text-sm font-medium">Item by item</span>
+                            <span class="mt-0.5 block text-xs text-slate-600">Each item has its own L1. Award every item to its best supplier; each gets its own PO.</span>
+                        </span>
+                    </label>
+                </div>
+                @error('bid_basis') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
+            </fieldset>
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">

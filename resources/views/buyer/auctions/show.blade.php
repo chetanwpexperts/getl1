@@ -43,7 +43,7 @@
 
         <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-                <p class="text-sm text-emerald-900">Current L1 (before GST)</p>
+                <p class="text-sm text-emerald-900">{{ ($state['basis'] ?? 'lot_total') === 'per_item' ? 'Best total, each item at its L1' : 'Current L1' }} (before GST)</p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums text-emerald-800" data-l1>—</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
@@ -61,9 +61,26 @@
             </div>
         </div>
 
+        @if (($state['basis'] ?? 'lot_total') === 'per_item')
+            <section class="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-6 py-4">
+                    <h2 class="font-semibold">Item by item</h2>
+                    <span class="text-xs text-slate-500">L1 above is the total if every item goes to its own L1.</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[760px] text-sm">
+                        <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                            <tr><th class="px-5 py-3.5">Item</th><th class="px-5 py-3.5">L1 supplier</th><th class="px-5 py-3.5 text-right">L1 rate</th><th class="px-5 py-3.5 text-right">Line total</th><th class="px-5 py-3.5">Others</th><th class="px-5 py-3.5 text-right">Bids</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100" data-items-board></tbody>
+                    </table>
+                </div>
+            </section>
+        @endif
+
         <div class="mt-6 grid gap-6 lg:grid-cols-3">
             <section class="rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
-                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">Standings</h2>
+                <h2 class="border-b border-slate-100 px-6 py-4 font-semibold">{{ ($state['basis'] ?? 'lot_total') === 'per_item' ? 'If one supplier took every item' : 'Standings' }}</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[560px] text-sm">
                         <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">

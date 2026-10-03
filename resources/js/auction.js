@@ -221,6 +221,21 @@ export function initAuction() {
             }, (s) => `${s.amount}|${s.bids}`); // flash on a new price; rank moves just slide
         }
 
+        const board = $('[data-items-board]');
+        if (board && state.items) {
+            renderList(board, state.items, (it) => `i${it.id}`, (it) => {
+                const others = it.ranking.slice(1, 4).map((r) => `L${r.rank} ${r.supplier} ${fmt(r.rate)}`).join(' · ');
+                return row([
+                    [`${it.line}. ${it.name} (${it.qty} ${it.unit})`, 'px-5 py-3 font-medium'],
+                    [it.l1_supplier ?? '—', 'px-5 py-3'],
+                    [fmt(it.l1_rate), 'px-5 py-3 text-right tabular-nums font-semibold text-emerald-700'],
+                    [fmt(it.l1_total), 'px-5 py-3 text-right tabular-nums'],
+                    [others || '—', 'px-5 py-3 text-xs text-slate-500'],
+                    [String(it.bids), 'px-5 py-3 text-right tabular-nums'],
+                ]);
+            }, (it) => `${it.l1_rate}|${it.l1_supplier}|${it.bids}`);
+        }
+
         const feed = $('[data-recent]');
         if (feed) {
             renderList(feed, state.recent.length ? state.recent : [null], (b) => (b ? `b${b.at}-${b.amount}-${b.supplier}` : 'empty'), (b) => {
@@ -232,7 +247,7 @@ export function initAuction() {
                     return li;
                 }
                 const left = document.createElement('span');
-                left.textContent = `${b.supplier} → ${fmt(b.amount)}${b.rank ? ` (L${b.rank})` : ''}`;
+                left.textContent = `${b.supplier} → ${b.item ? `${b.item}: ${fmt(b.amount)}/unit` : fmt(b.amount)}${b.rank ? ` (L${b.rank})` : ''}`;
                 const right = document.createElement('span');
                 right.className = 'text-slate-500';
                 right.textContent = time(b.at);
@@ -242,7 +257,66 @@ export function initAuction() {
         }
     }
 
+    function bidWaitingText() {
+        return state.paused ? 'Bidding is paused. You can bid again as soon as the auction resumes.'
+            : state.status === 'scheduled' ? 'Bidding opens when the countdown reaches zero.'
+            : state.status === 'cancelled' ? 'This auction was cancelled.'
+            : 'Bidding is closed. The buyer will review the result and award.';
+    }
+
+    function renderMyBids() {
+        const list = $('[data-my-bids]');
+        if (!list) return;
+        renderList(list, state.my_bids, (b) => `m${b.at}-${b.amount}-${b.item ?? ''}`, (b) => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between gap-3 px-4 py-2';
+            const left = document.createElement('span');
+            left.textContent = `${b.item ? `${b.item}: ` : ''}${fmt(b.amount)}${b.item ? '/unit' : ''}${b.kind === 'sealed' ? ' (sealed quote)' : ''}`;
+            const right = document.createElement('span');
+            right.className = 'text-slate-500';
+            right.textContent = `${b.rank ? `L${b.rank} · ` : ''}${time(b.at)}`;
+            li.append(left, right);
+            return li;
+        });
+    }
+
+    /** Item-wise: rows are rendered by the server once; only their cells change (inputs keep what's typed). */
+    function renderSupplierItems() {
+        setLive('[data-leading]', String(state.leading));
+        setLive('[data-my-total]', fmt(state.my_total));
+        setText('[data-extensions]', `${state.extensions_used} of ${state.max_extensions}`);
+        const badge = $('[data-rank-badge]');
+        if (badge) badge.dataset.rank = state.leading > 0 ? 'first' : 'other';
+
+        const canBid = state.status === 'live' && !state.paused;
+        for (const it of state.items) {
+            const tr = root.querySelector(`[data-item-row="${it.id}"]`);
+            if (!tr) continue;
+            const cell = (name) => tr.querySelector(`[data-cell="${name}"]`);
+            const rank = cell('rank');
+            const rankText = `L${it.my_rank}`;
+            if (rank.textContent !== rankText) {
+                rank.textContent = rankText;
+                replay(rank, 'anim-pop');
+            }
+            rank.dataset.rank = it.my_rank === 1 ? 'first' : 'other';
+            const rate = cell('rate');
+            if (rate.textContent !== fmt(it.my_rate)) { rate.textContent = fmt(it.my_rate); replay(rate, 'anim-pop'); }
+            cell('l1').textContent = it.l1_rate === null ? 'Hidden' : fmt(it.l1_rate);
+            cell('max').textContent = fmt(it.max_next_bid);
+            tr.querySelectorAll('input, button').forEach((el) => { el.disabled = !canBid; });
+        }
+
+        const waiting = $('[data-bid-waiting]');
+        if (waiting) {
+            waiting.hidden = canBid;
+            waiting.textContent = bidWaitingText();
+        }
+        renderMyBids();
+    }
+
     function renderSupplier() {
+        if (state.basis === 'per_item') return renderSupplierItems();
         const rankBefore = $('[data-my-rank]')?.textContent;
         setLive('[data-my-rank]', state.my_rank ? `L${state.my_rank}` : '—');
         if (rankBefore !== $('[data-my-rank]')?.textContent) replay($('[data-rank-badge]'), 'anim-flash');
@@ -262,26 +336,10 @@ export function initAuction() {
         const waiting = $('[data-bid-waiting]');
         if (waiting) {
             waiting.hidden = canBid;
-            waiting.textContent = state.paused ? 'Bidding is paused. You can bid again as soon as the auction resumes.'
-                : state.status === 'scheduled' ? 'Bidding opens when the countdown reaches zero.'
-                : state.status === 'cancelled' ? 'This auction was cancelled.'
-                : 'Bidding is closed. The buyer will review the result and award.';
+            waiting.textContent = bidWaitingText();
         }
 
-        const list = $('[data-my-bids]');
-        if (list) {
-            renderList(list, state.my_bids, (b) => `m${b.at}-${b.amount}`, (b) => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between gap-3 px-4 py-2';
-                const left = document.createElement('span');
-                left.textContent = `${fmt(b.amount)}${b.kind === 'sealed' ? ' (sealed quote)' : ''}`;
-                const right = document.createElement('span');
-                right.className = 'text-slate-500';
-                right.textContent = `${b.rank ? `L${b.rank} · ` : ''}${time(b.at)}`;
-                li.append(left, right);
-                return li;
-            });
-        }
+        renderMyBids();
     }
 
     function render(ts) {
@@ -303,18 +361,31 @@ export function initAuction() {
 
     // ------------------------------------------------------------------ bidding (supplier)
 
+    const confirmBox = $('[data-bid-confirm]');
+    const msg = $('[data-bid-message]');
+    const submitBtn = confirmBox?.querySelector('[data-bid-submit]');
+    let pending = null; // { amount, key, item?, input }
+
+    const say = (text, ok = false) => {
+        if (!msg) return;
+        msg.textContent = text;
+        msg.dataset.tone = ok ? 'ok' : 'error';
+    };
+    const parse = (v) => Number(String(v).replace(/[,₹\s]/g, ''));
+
+    function ask(next, drop, itemName = null) {
+        pending = { ...next, key: uuid() }; // one key per confirmed attempt
+        setText('[data-confirm-amount]', fmt(Number(next.amount)));
+        setText('[data-confirm-drop]', `${drop}% below your current ${itemName ? 'rate' : 'price'}`);
+        if (itemName) setText('[data-confirm-item]', itemName);
+        confirmBox.hidden = false;
+        submitBtn.focus();
+    }
+
+    // Lot auction: one form for the whole RFQ total.
     const form = $('[data-bid-form]');
     if (form) {
         const input = form.querySelector('input[name="amount"]');
-        const confirmBox = $('[data-bid-confirm]');
-        const msg = $('[data-bid-message]');
-        const submitBtn = confirmBox?.querySelector('[data-bid-submit]');
-        let pending = null; // { amount, key }
-
-        const say = (text, ok = false) => {
-            msg.textContent = text;
-            msg.dataset.tone = ok ? 'ok' : 'error';
-        };
 
         $$('[data-quick-drop]').forEach((btn) => btn.addEventListener('click', () => {
             if (state.my_amount === null) return;
@@ -327,64 +398,81 @@ export function initAuction() {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             say('');
-            const amount = Number(String(input.value).replace(/[,₹\s]/g, ''));
+            const amount = parse(input.value);
             if (!Number.isFinite(amount) || amount <= 0) return say('Enter a valid amount.');
             if (amount > state.max_next_bid) return say(`Your bid must be at most ${fmt(state.max_next_bid)}.`);
             if (state.floor !== null && amount < state.floor) return say(`That's too far below the current lowest price. Check for a typo.`);
-
-            pending = { amount: amount.toFixed(2), key: uuid() }; // one key per confirmed attempt
             const drop = state.my_amount ? ((1 - amount / state.my_amount) * 100).toFixed(2) : '0';
-            setText('[data-confirm-amount]', fmt(amount));
-            setText('[data-confirm-drop]', `${drop}% below your current price`);
-            confirmBox.hidden = false;
-            submitBtn.focus();
-        });
-
-        confirmBox?.querySelector('[data-bid-cancel]')?.addEventListener('click', () => {
-            pending = null;
-            confirmBox.hidden = true;
-        });
-
-        async function send(attempt = 1) {
-            try {
-                const res = await fetch(cfg.bidUrl, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf() },
-                    body: JSON.stringify({ amount: pending.amount, idempotency_key: pending.key }),
-                });
-                const data = await res.json().catch(() => ({}));
-                if (res.ok) {
-                    apply(data.state);
-                    say(`Bid placed. You are L${data.state.my_rank}.${data.extended ? ' The auction was extended.' : ''}`, true);
-                    input.value = '';
-                    pending = null;
-                    confirmBox.hidden = true;
-                } else if (res.status === 419) {
-                    say('Your session expired. Refresh the page and bid again.');
-                } else if (res.status === 429) {
-                    say('Too many bids too quickly. Wait a moment.');
-                } else {
-                    say(data.errors?.amount?.[0] ?? data.message ?? 'Bid not accepted.');
-                    refresh();
-                }
-            } catch {
-                // Network hiccup: retry once with the SAME key; the server records it only once.
-                if (attempt === 1) return new Promise((r) => setTimeout(() => r(send(2)), 1500));
-                say('Network problem. Check your connection; your bid may not have been placed.');
-                refresh();
-            }
-        }
-
-        submitBtn?.addEventListener('click', async () => {
-            if (!pending || submitBtn.disabled) return;
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Placing…';
-            await send();
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Confirm bid';
+            ask({ amount: amount.toFixed(2), input }, drop);
         });
     }
+
+    // Item-wise auction: a small form per item row.
+    $$('[data-item-bid]').forEach((itemForm) => {
+        const input = itemForm.querySelector('input[name="amount"]');
+        itemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            say('');
+            const id = Number(itemForm.dataset.itemBid);
+            const it = (state.items || []).find((x) => x.id === id);
+            if (!it) return say('Refresh the page and try again.');
+            const amount = parse(input.value);
+            if (!Number.isFinite(amount) || amount <= 0) return say(`Enter a valid rate for ${it.name}.`);
+            if (amount > it.max_next_bid) return say(`Your rate for ${it.name} must be at most ${fmt(it.max_next_bid)}.`);
+            if (amount < it.floor) return say(`That's too far below the current lowest rate for ${it.name}. Check for a typo.`);
+            const drop = ((1 - amount / it.my_rate) * 100).toFixed(2);
+            ask({ amount: amount.toFixed(2), item: id, input }, drop, `${it.name} (line total ${fmt(amount * it.qty)})`);
+        });
+    });
+
+    confirmBox?.querySelector('[data-bid-cancel]')?.addEventListener('click', () => {
+        pending = null;
+        confirmBox.hidden = true;
+    });
+
+    async function send(attempt = 1) {
+        try {
+            const body = { amount: pending.amount, idempotency_key: pending.key };
+            if (pending.item) body.item = pending.item;
+            const res = await fetch(cfg.bidUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf() },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                apply(data.state);
+                const it = pending.item ? (data.state.items || []).find((x) => x.id === pending.item) : null;
+                const rank = it ? it.my_rank : data.state.my_rank;
+                say(`Bid placed. You are L${rank}${it ? ` on ${it.name}` : ''}.${data.extended ? ' The auction was extended.' : ''}`, true);
+                if (pending.input) pending.input.value = '';
+                pending = null;
+                confirmBox.hidden = true;
+            } else if (res.status === 419) {
+                say('Your session expired. Refresh the page and bid again.');
+            } else if (res.status === 429) {
+                say('Too many bids too quickly. Wait a moment.');
+            } else {
+                say(data.errors?.amount?.[0] ?? data.message ?? 'Bid not accepted.');
+                refresh();
+            }
+        } catch {
+            // Network hiccup: retry once with the SAME key; the server records it only once.
+            if (attempt === 1) return new Promise((r) => setTimeout(() => r(send(2)), 1500));
+            say('Network problem. Check your connection; your bid may not have been placed.');
+            refresh();
+        }
+    }
+
+    submitBtn?.addEventListener('click', async () => {
+        if (!pending || submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Placing…';
+        await send();
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm bid';
+    });
 
     // ------------------------------------------------------------------ start
 

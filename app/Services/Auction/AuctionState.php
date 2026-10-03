@@ -22,9 +22,10 @@ class AuctionState
 
         $recent = Bid::where('auction_id', $auction->id)->where('kind', Bid::KIND_LIVE)
             ->orderByDesc('created_at')->orderByDesc('id')->limit(25)
-            ->get(['supplier_org_id', 'amount', 'rank_at_submit', 'created_at']);
+            ->get(['supplier_org_id', 'rfq_item_id', 'amount', 'rank_at_submit', 'created_at']);
+        $itemNames = $auction->isPerItem() ? self::items($auction)->pluck('name', 'id') : collect();
 
-        return self::common($auction) + [
+        return self::common($auction) + ($auction->isPerItem() ? self::buyerItems($auction, $names) : []) + [
             'role' => 'buyer',
             'start_price' => (float) $auction->start_price,
             'current_l1' => $auction->current_l1 !== null ? (float) $auction->current_l1 : null,
@@ -41,6 +42,7 @@ class AuctionState
             ])->all(),
             'recent' => $recent->map(fn ($b) => [
                 'supplier' => $names[$b->supplier_org_id]->name ?? 'Supplier',
+                'item' => $b->rfq_item_id ? ($itemNames[$b->rfq_item_id] ?? null) : null,
                 'amount' => (float) $b->amount,
                 'rank' => $b->rank_at_submit,
                 'at' => $b->created_at->getTimestampMs(),
@@ -50,6 +52,10 @@ class AuctionState
 
     public static function forSupplier(Auction $auction, int $supplierOrgId): array
     {
+        if ($auction->isPerItem()) {
+            return self::supplierItems($auction, $supplierOrgId);
+        }
+
         $standings = Standings::for($auction);
         $me = $standings->firstWhere('supplier_org_id', $supplierOrgId);
         $own = $me['amount'] ?? null;
@@ -76,10 +82,111 @@ class AuctionState
         ];
     }
 
+    /** Item-wise, buyer: every line with its L1 rate and supplier, and the full ranking. */
+    private static function buyerItems(Auction $auction, \Illuminate\Support\Collection $names): array
+    {
+        $byItem = Standings::byItem($auction);
+
+        return [
+            'items' => self::items($auction)->map(function ($item) use ($byItem, $names) {
+                $rows = $byItem[$item->id] ?? collect();
+                $l1 = $rows->first();
+
+                return [
+                    'id' => $item->id,
+                    'line' => $item->line_no,
+                    'name' => $item->name,
+                    'qty' => (float) $item->qty,
+                    'unit' => $item->unit,
+                    'l1_rate' => $l1['amount'] ?? null,
+                    'l1_total' => $l1 ? round($l1['amount'] * (float) $item->qty, 2) : null,
+                    'l1_supplier' => $l1 ? ($names[$l1['supplier_org_id']]->name ?? 'Supplier') : null,
+                    'bids' => $rows->sum('bids'),
+                    'ranking' => $rows->map(fn ($r) => [
+                        'rank' => $r['rank'],
+                        'supplier' => $names[$r['supplier_org_id']]->name ?? 'Supplier',
+                        'rate' => $r['amount'],
+                    ])->all(),
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    /**
+     * Item-wise, supplier: own rate and rank per line; the line's L1 rate only with "rank + L1".
+     * Never other suppliers' names or rates.
+     */
+    private static function supplierItems(Auction $auction, int $supplierOrgId): array
+    {
+        $byItem = Standings::byItem($auction);
+        $items = self::items($auction);
+        $showL1 = $auction->visibility === 'rank_and_l1';
+        $lines = [];
+        $total = 0.0;
+        $leading = 0;
+        foreach ($items as $item) {
+            $rows = $byItem[$item->id] ?? collect();
+            $me = $rows->firstWhere('supplier_org_id', $supplierOrgId);
+            if (! $me) {
+                continue;
+            }
+            $l1 = (float) $rows->first()['amount'];
+            $total += $me['amount'] * (float) $item->qty;
+            $leading += $me['rank'] === 1 ? 1 : 0;
+            $lines[] = [
+                'id' => $item->id,
+                'line' => $item->line_no,
+                'name' => $item->name,
+                'qty' => (float) $item->qty,
+                'unit' => $item->unit,
+                'my_rank' => $me['rank'],
+                'my_rate' => $me['amount'],
+                'l1_rate' => $showL1 ? $l1 : null,
+                'max_next_bid' => Standings::maxNextBid($auction, $me['amount']),
+                'min_decrement' => Standings::minDecrement($auction, $me['amount']),
+                'floor' => Standings::itemFloor($auction, $l1),
+            ];
+        }
+
+        $names = $items->pluck('name', 'id');
+        $mine = Bid::where('auction_id', $auction->id)->where('supplier_org_id', $supplierOrgId)
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(15)
+            ->get(['rfq_item_id', 'amount', 'kind', 'rank_at_submit', 'created_at']);
+
+        return self::common($auction) + [
+            'role' => 'supplier',
+            'participants' => $byItem->first()?->count() ?? 0,
+            'items' => $lines,
+            'leading' => $leading,
+            'my_total' => round($total, 2),
+            // Kept for shared code paths; per-line values are in items.
+            'my_rank' => null,
+            'my_amount' => round($total, 2),
+            'l1_amount' => null,
+            'max_next_bid' => null,
+            'min_decrement' => null,
+            'floor' => null,
+            'my_bids' => $mine->map(fn ($b) => [
+                'item' => $b->rfq_item_id ? ($names[$b->rfq_item_id] ?? null) : null,
+                'amount' => (float) $b->amount,
+                'kind' => $b->kind,
+                'rank' => $b->rank_at_submit,
+                'at' => $b->created_at->getTimestampMs(),
+            ])->all(),
+        ];
+    }
+
+    private static function items(Auction $auction): \Illuminate\Support\Collection
+    {
+        return \App\Models\RfqItem::where('rfq_id', $auction->rfq_id)->orderBy('line_no')->orderBy('id')
+            ->get(['id', 'line_no', 'name', 'qty', 'unit']);
+    }
+
     private static function common(Auction $auction): array
     {
         return [
             'id' => $auction->id,
+            'basis' => $auction->isPerItem() ? 'per_item' : 'lot_total',
             'status' => Standings::effectiveStatus($auction)->value,
             'server_time' => now()->getTimestampMs(),
             'starts_at' => $auction->starts_at->getTimestampMs(),

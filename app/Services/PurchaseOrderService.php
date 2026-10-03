@@ -166,9 +166,20 @@ class PurchaseOrderService
             Mail::to($to)->queue(new PurchaseOrderMail($award));
         }
 
-        // Everyone else who quoted: a courteous "not selected this time".
+        // Item-wise split: the "not selected" notes go out once, after the last PO of the decision.
+        if ($award->group_key) {
+            $unissued = Award::withoutGlobalScopes()->where('group_key', $award->group_key)->whereNull('po_number')->exists();
+            if ($unissued || ! \Illuminate\Support\Facades\Cache::add('po_not_selected:'.$award->group_key, 1, now()->addDay())) {
+                return;
+            }
+        }
+
+        // Everyone else who quoted (and won nothing in this decision): a courteous "not selected this time".
+        $winners = $award->group_key
+            ? Award::withoutGlobalScopes()->where('group_key', $award->group_key)->pluck('supplier_org_id')
+            : collect([$award->supplier_org_id]);
         $others = Quote::where('rfq_id', $rfq->id)->whereNotNull('submitted_at')
-            ->where('supplier_org_id', '!=', $award->supplier_org_id)->pluck('supplier_org_id');
+            ->whereNotIn('supplier_org_id', $winners)->pluck('supplier_org_id');
         RfqInvite::with(['listEntry', 'supplier'])->where('rfq_id', $rfq->id)->whereIn('supplier_org_id', $others)->get()
             ->each(function (RfqInvite $invite) use ($rfq) {
                 if ($email = RfqService::recipientEmail($invite)) {

@@ -13,7 +13,7 @@ class Auction extends Model
     use BelongsToOrganization;
 
     protected $fillable = [
-        'rfq_id', 'organization_id', 'created_by', 'cancel_reason', 'paid_with_credit', 'format', 'start_price', 'min_decrement_type', 'min_decrement_value',
+        'rfq_id', 'organization_id', 'created_by', 'cancel_reason', 'paid_with_credit', 'format', 'bid_basis', 'start_price', 'min_decrement_type', 'min_decrement_value',
         'max_decrement_pct', 'starts_at', 'ends_at', 'original_ends_at', 'extend_window_sec', 'extend_by_sec',
         'max_extensions', 'extensions_used', 'visibility', 'status', 'current_l1', 'current_l1_supplier_org_id',
         'bid_count', 'opened_at', 'closed_at', 'paused_at', 'pause_reason', 'paused_seconds',
@@ -52,6 +52,12 @@ class Auction extends Model
     public function l1Supplier(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'current_l1_supplier_org_id');
+    }
+
+    /** Item-wise auction: every RFQ line is ranked on its own, bids are unit prices. */
+    public function isPerItem(): bool
+    {
+        return $this->bid_basis === Rfq::BASIS_PER_ITEM;
     }
 
     public function isLive(): bool

@@ -22,6 +22,8 @@ use Illuminate\Validation\ValidationException;
  * 4. Idempotency key per attempt: a retry or double-tap returns the original bid.
  * 5. Rules: must beat own price by the minimum decrement; can't drop below the fat-finger
  *    floor (current L1 − max %); one bid per supplier per second.
+ * 6. Item-wise auctions: a bid is a unit price for one RFQ line. The same rules apply per line
+ *    (own price on that line, that line's L1); auction.current_l1 becomes the combined best total.
  */
 class BidService
 {
@@ -35,11 +37,11 @@ class BidService
     /**
      * @return array{bid: Bid, duplicate: bool, extended: bool}
      */
-    public function place(Auction $auction, Organization $supplier, User $user, string $amountInput, string $idempotencyKey, ?string $ip, ?string $userAgent): array
+    public function place(Auction $auction, Organization $supplier, User $user, string $amountInput, string $idempotencyKey, ?string $ip, ?string $userAgent, ?int $itemId = null): array
     {
         $this->reason = null;
         try {
-            return $this->attempt($auction, $supplier, $user, $amountInput, $idempotencyKey, $ip, $userAgent);
+            return $this->attempt($auction, $supplier, $user, $amountInput, $idempotencyKey, $ip, $userAgent, $itemId);
         } catch (ValidationException $e) {
             // Record the refusal for GetL1's live monitor; never let that break the response.
             rescue(fn () => \App\Models\BidRejection::create([
@@ -57,15 +59,18 @@ class BidService
         throw ValidationException::withMessages(['amount' => $message]);
     }
 
-    private function attempt(Auction $auction, Organization $supplier, User $user, string $amountInput, string $idempotencyKey, ?string $ip, ?string $userAgent): array
+    private function attempt(Auction $auction, Organization $supplier, User $user, string $amountInput, string $idempotencyKey, ?string $ip, ?string $userAgent, ?int $itemId): array
     {
         $amount = $this->parseAmount($amountInput);
+        if ($auction->isPerItem() && ! $itemId) {
+            $this->fail('invalid', 'Choose the item you are bidding on.');
+        }
 
         if (! preg_match('/^[A-Za-z0-9-]{8,64}$/', $idempotencyKey)) {
             $this->fail('invalid', 'Please refresh the page and try again.');
         }
 
-        $result = DB::transaction(function () use ($auction, $supplier, $user, $amount, $idempotencyKey, $ip, $userAgent) {
+        $result = DB::transaction(function () use ($auction, $supplier, $user, $amount, $idempotencyKey, $ip, $userAgent, $itemId) {
             /** @var Auction $a */
             $a = Auction::withoutGlobalScopes()->whereKey($auction->id)->lockForUpdate()->firstOrFail();
 
@@ -86,6 +91,10 @@ class BidService
             }
             if ($a->paused_at !== null) {
                 $this->fail('paused', 'Bidding is paused for a technical check. Your bid was not placed; please try again when the auction resumes.');
+            }
+
+            if ($a->isPerItem()) {
+                return $this->placeOnItem($a, $supplier, $user, $amount, $idempotencyKey, $ip, $userAgent, $itemId);
             }
 
             $mine = Bid::where('auction_id', $a->id)->where('supplier_org_id', $supplier->id)
@@ -135,14 +144,7 @@ class BidService
             $bid->created_at = $now;
             $bid->save();
 
-            // Auto-extend: a bid in the last window pushes the end out (up to the limit).
-            $extended = false;
-            if ($a->extend_window_sec > 0 && $a->extensions_used < $a->max_extensions
-                && $a->ends_at->diffInSeconds(now(), true) <= $a->extend_window_sec) {
-                $a->ends_at = $a->ends_at->copy()->addSeconds($a->extend_by_sec);
-                $a->extensions_used++;
-                $extended = true;
-            }
+            $extended = $this->maybeExtend($a);
 
             $a->current_l1 = $l1['amount'];
             $a->current_l1_supplier_org_id = $l1['supplier_org_id'];
@@ -157,6 +159,85 @@ class BidService
         }
 
         return ['bid' => $result['bid'], 'duplicate' => $result['duplicate'], 'extended' => $result['extended']];
+    }
+
+    /** Item-wise bid, inside the locked transaction: the same rules, applied to one RFQ line. */
+    private function placeOnItem(Auction $a, Organization $supplier, User $user, float $amount, string $idempotencyKey, ?string $ip, ?string $userAgent, int $itemId): array
+    {
+        $participates = Bid::where('auction_id', $a->id)->where('supplier_org_id', $supplier->id)->exists();
+        if (! $participates) {
+            SecurityLog::warning('auction_bid_not_participant', ['auction_id' => $a->id, 'supplier_org_id' => $supplier->id]);
+            abort(404);
+        }
+
+        $mine = Bid::where('auction_id', $a->id)->where('supplier_org_id', $supplier->id)->where('rfq_item_id', $itemId)
+            ->orderByDesc('created_at')->orderByDesc('id')->first();
+        if (! $mine) {
+            $this->fail('invalid', 'That item is not part of this auction. Refresh the page.');
+        }
+
+        $lastLive = Bid::where('auction_id', $a->id)->where('supplier_org_id', $supplier->id)->where('kind', Bid::KIND_LIVE)
+            ->orderByDesc('created_at')->orderByDesc('id')->first();
+        if ($lastLive && $lastLive->created_at->diffInSeconds(now(), true) < self::MIN_SECONDS_BETWEEN_BIDS) {
+            $this->fail('too_fast', 'Please wait a moment between bids.');
+        }
+
+        $own = (float) $mine->amount;
+        $maxAllowed = Standings::maxNextBid($a, $own);
+        if ($amount > $maxAllowed) {
+            $this->fail('too_high', 'Your rate for this item must be at most '.\App\Support\Money::inr($maxAllowed).' per unit (at least '
+                .\App\Support\Money::inr(Standings::minDecrement($a, $own)).' below your current rate).');
+        }
+
+        $byItem = Standings::byItem($a);
+        $rows = $byItem[$itemId];
+        $floor = Standings::itemFloor($a, (float) $rows->first()['amount']);
+        if ($amount < $floor) {
+            $this->fail('below_floor', 'That’s more than '.rtrim(rtrim((string) $a->max_decrement_pct, '0'), '.').
+                '% below the current lowest rate for this item. Check for a typo: the lowest accepted rate right now is '.\App\Support\Money::inr($floor).'.');
+        }
+
+        $now = now();
+        $rows = Standings::rank($rows->map(fn ($row) => $row['supplier_org_id'] === $supplier->id ? ['amount' => $amount, 'at' => $now] + $row : $row));
+        $byItem[$itemId] = $rows;
+        $rank = $rows->firstWhere('supplier_org_id', $supplier->id)['rank'];
+
+        $bid = new Bid([
+            'auction_id' => $a->id,
+            'supplier_org_id' => $supplier->id,
+            'user_id' => $user->id,
+            'rfq_item_id' => $itemId,
+            'kind' => Bid::KIND_LIVE,
+            'idempotency_key' => $idempotencyKey,
+            'amount' => $amount,
+            'rank_at_submit' => $rank,
+            'ip' => $ip,
+            'user_agent' => $userAgent ? substr($userAgent, 0, 255) : null,
+        ]);
+        $bid->created_at = $now;
+        $bid->save();
+
+        $extended = $this->maybeExtend($a);
+        $a->current_l1 = Standings::combinedL1($byItem, Standings::quantities($a));
+        $a->current_l1_supplier_org_id = null; // several winners possible
+        $a->bid_count++;
+        $a->save();
+
+        return ['bid' => $bid, 'duplicate' => false, 'extended' => $extended, 'auction' => $a];
+    }
+
+    /** Auto-extend: a bid in the last window pushes the end out (up to the limit). */
+    private function maybeExtend(Auction $a): bool
+    {
+        if ($a->extend_window_sec > 0 && $a->extensions_used < $a->max_extensions
+            && $a->ends_at->diffInSeconds(now(), true) <= $a->extend_window_sec) {
+            $a->ends_at = $a->ends_at->copy()->addSeconds($a->extend_by_sec);
+            $a->extensions_used++;
+
+            return true;
+        }
+
+        return false;
     }
 
     /** Bring a locked auction's stored status in line with the server clock. */

@@ -20,13 +20,30 @@ class AwardController extends Controller
 
     public function store(Request $request, int $rfq): RedirectResponse
     {
+        $rfqModel = Rfq::findOrFail($rfq);
+        if ($rfqModel->isPerItem()) {
+            $data = $request->validate([
+                'items' => ['required', 'array'],
+                'items.*' => ['required', 'integer'],
+                'reason' => ['nullable', 'string', 'max:1000'],
+                'remarks' => ['nullable', 'string', 'max:1000'],
+            ], ['items.required' => 'Choose a supplier for each item.']);
+            $awards = $this->awards->awardItems($rfqModel, $request->user(), $data['items'], $data['reason'] ?? null, $data['remarks'] ?? null);
+            $n = $awards->count();
+            $pos = $n === 1 ? 'The purchase order' : "The {$n} purchase orders (one per supplier)";
+
+            return redirect()->to(route('buyer.rfqs.show', $rfq).'#award')->with('status', $awards->first()->isPending()
+                ? "Award sent for approval. {$pos} ".($n === 1 ? 'goes' : 'go').' out automatically once it is approved.'
+                : "Awarded. {$pos} ".($n === 1 ? 'is' : 'are').' being generated and emailed.');
+        }
+
         $data = $request->validate([
             'supplier_org_id' => ['required', 'integer'],
             'reason' => ['nullable', 'string', 'max:1000'],
             'remarks' => ['nullable', 'string', 'max:1000'],
         ], ['supplier_org_id.required' => 'Choose the supplier to award.']);
 
-        $award = $this->awards->award(Rfq::findOrFail($rfq), $request->user(), (int) $data['supplier_org_id'], $data['reason'] ?? null, $data['remarks'] ?? null);
+        $award = $this->awards->award($rfqModel, $request->user(), (int) $data['supplier_org_id'], $data['reason'] ?? null, $data['remarks'] ?? null);
 
         return redirect()->to(route('buyer.rfqs.show', $rfq).'#award')->with('status', $award->isPending()
             ? 'Award sent for approval. The purchase order goes out automatically once it is approved.'

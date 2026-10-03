@@ -14,6 +14,9 @@ class Rfq extends Model
 {
     use BelongsToOrganization, SoftDeletes;
 
+    public const BASIS_LOT = 'lot_total';
+    public const BASIS_PER_ITEM = 'per_item';
+
     protected $fillable = [
         'organization_id', 'created_by', 'ref_no', 'title', 'description', 'category_id', 'bid_basis',
         'currency', 'terms', 'delivery_location', 'status', 'quote_deadline', 'published_at',
@@ -36,6 +39,12 @@ class Rfq extends Model
             'quotes_opened_notified_at' => 'datetime',
             'approved_at' => 'datetime',
         ];
+    }
+
+    /** Item-wise: each line gets its own L1 and can be awarded to a different supplier. */
+    public function isPerItem(): bool
+    {
+        return $this->bid_basis === self::BASIS_PER_ITEM;
     }
 
     public function isDraft(): bool

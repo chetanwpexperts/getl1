@@ -111,6 +111,11 @@
                     <h2 class="font-semibold">{{ $accepted && $open ? 'Your quote' : 'Items' }}</h2>
                     @if ($quote)<span class="text-xs text-slate-500">Last submitted {{ $quote->submitted_at?->ist()->format('d M Y, h:i A') }} IST</span>@endif
                 </div>
+                @if ($rfq->isPerItem())
+                    <p class="border-b border-slate-100 bg-sky-50/70 px-5 py-2.5 text-sm text-sky-900">
+                        <span class="font-medium">Item-by-item RFQ:</span> each item is compared on its own, so you can win some items even if your total isn't the lowest. Quote every item at your best rate.
+                    </p>
+                @endif
 
                 @if ($accepted && $open)
                     @php

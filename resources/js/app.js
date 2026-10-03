@@ -99,6 +99,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (box) box.hidden = e.target.dataset.rank === '1';
     });
 
+    // Item-wise award form: live combined total, number of POs, and the reason box when any item
+    // isn't going to its L1.
+    const itemAward = document.querySelector('[data-item-award]');
+    if (itemAward) {
+        const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+        const update = () => {
+            let total = 0;
+            let offL1 = false;
+            const suppliers = new Set();
+            itemAward.querySelectorAll('select[data-item]').forEach((sel) => {
+                const opt = sel.selectedOptions[0];
+                if (!opt) return;
+                total += Number(opt.dataset.total || 0);
+                offL1 = offL1 || opt.dataset.rank !== '1';
+                suppliers.add(sel.value);
+                sel.closest('tr')?.toggleAttribute('data-off-l1', opt.dataset.rank !== '1');
+            });
+            const t = itemAward.querySelector('[data-award-total]');
+            if (t) t.textContent = inr.format(total);
+            const n = itemAward.querySelector('[data-award-pos]');
+            if (n) n.textContent = suppliers.size === 1 ? '1 purchase order' : `${suppliers.size} purchase orders (one per supplier)`;
+            const box = itemAward.querySelector('[data-award-reason]');
+            if (box) box.hidden = !offL1;
+        };
+        itemAward.addEventListener('change', update);
+        itemAward.querySelectorAll('[data-all-to]').forEach((btn) => btn.addEventListener('click', () => {
+            const id = btn.dataset.allTo;
+            itemAward.querySelectorAll('select[data-item]').forEach((sel) => {
+                if ([...sel.options].some((o) => o.value === id)) sel.value = id;
+            });
+            update();
+        }));
+        itemAward.querySelector('[data-all-l1]')?.addEventListener('click', () => {
+            itemAward.querySelectorAll('select[data-item]').forEach((sel) => { sel.selectedIndex = 0; });
+            update();
+        });
+        update();
+    }
+
     // Confirm before destructive actions: <form data-confirm="Are you sure?">
     document.addEventListener('submit', (e) => {
         const msg = e.target.dataset?.confirm;

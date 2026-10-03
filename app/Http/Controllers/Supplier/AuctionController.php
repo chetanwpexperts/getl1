@@ -45,11 +45,12 @@ class AuctionController extends Controller
         $data = $request->validate([
             'amount' => ['required', 'string', 'max:20'],
             'idempotency_key' => ['required', 'string', 'max:64'],
+            'item' => ['nullable', 'integer', 'min:1'], // item-wise auctions: the RFQ line being bid on
         ]);
 
         $auction = $this->findParticipating($auction);
         $result = $bids->place($auction, $this->current->get(), $request->user(), $data['amount'], $data['idempotency_key'],
-            $request->ip(), $request->userAgent());
+            $request->ip(), $request->userAgent(), isset($data['item']) ? (int) $data['item'] : null);
 
         return response()->json([
             'ok' => true,
