@@ -130,8 +130,8 @@
                         @csrf
                         @error('items') <p class="mx-5 mt-3 text-sm text-red-600">{{ $message }}</p> @enderror
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-sm">
-                                <thead class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                            <table class="w-full text-sm sm:min-w-[640px]">
+                                <thead class="hidden border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400 sm:table-header-group">
                                     <tr>
                                         <th class="px-4 py-2">Item</th><th class="px-4 py-2 text-right">Qty</th><th class="px-4 py-2">Unit price (₹, ex-GST)</th><th class="px-4 py-2">GST</th>
                                         @unless ($freightIncluded)<th class="px-4 py-2">Freight, total for line (₹)</th>@endunless
@@ -141,27 +141,30 @@
                                 <tbody class="divide-y divide-slate-100">
                                     @foreach ($rfq->items as $item)
                                         @php $line = $quoteLines[$item->id] ?? null; @endphp
-                                        <tr data-quote-row data-qty="{{ (float) $item->qty }}">
-                                            <td class="px-4 py-2">{{ $item->name }}@if ($item->spec)<span class="block text-xs text-slate-500">{{ $item->spec }}</span>@endif</td>
-                                            <td class="px-4 py-2 text-right tabular-nums">{{ $qtyFmt($item->qty) }} {{ $item->unit }}</td>
-                                            <td class="px-4 py-2">
+                                        <tr data-quote-row data-qty="{{ (float) $item->qty }}" class="grid grid-cols-2 gap-x-3 gap-y-2 px-5 py-4 sm:table-row sm:p-0">
+                                            <td class="col-span-2 font-medium sm:px-4 sm:py-2 sm:font-normal">{{ $item->name }}@if ($item->spec)<span class="block text-xs text-slate-500">{{ $item->spec }}</span>@endif</td>
+                                            <td class="col-span-2 -mt-1 tabular-nums text-slate-600 sm:mt-0 sm:px-4 sm:py-2 sm:text-right sm:text-slate-900"><span class="sm:hidden">Qty: </span>{{ $qtyFmt($item->qty) }} {{ $item->unit }}</td>
+                                            <td class="sm:px-4 sm:py-2">
+                                                <span class="mb-1 block text-xs text-slate-500 sm:hidden">Unit price (₹, ex-GST)</span>
                                                 <input name="items[{{ $item->id }}][unit_price]" inputmode="decimal" required data-price
-                                                       value="{{ old("items.{$item->id}.unit_price", $line?->unit_price) }}" class="{{ $cls }} w-32">
+                                                       value="{{ old("items.{$item->id}.unit_price", $line?->unit_price) }}" class="{{ $cls }} w-full sm:w-32">
                                                 @error("items.{$item->id}.unit_price") <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                             </td>
-                                            <td class="px-4 py-2">
+                                            <td class="sm:px-4 sm:py-2">
+                                                <span class="mb-1 block text-xs text-slate-500 sm:hidden">GST</span>
                                                 @php $gst = (string) old("items.{$item->id}.gst_rate", $line ? rtrim(rtrim((string) $line->gst_rate, '0'), '.') : '18'); @endphp
-                                                <select name="items[{{ $item->id }}][gst_rate]" class="{{ $cls }} w-24" data-gst>
+                                                <select name="items[{{ $item->id }}][gst_rate]" class="{{ $cls }} w-full sm:w-24" data-gst>
                                                     @foreach ($gstRates as $r)<option value="{{ $r }}" @selected($gst === $r)>{{ $r }}%</option>@endforeach
                                                 </select>
                                             </td>
                                             @unless ($freightIncluded)
-                                                <td class="px-4 py-2">
+                                                <td class="col-span-2 sm:col-span-1 sm:px-4 sm:py-2">
+                                                    <span class="mb-1 block text-xs text-slate-500 sm:hidden">Freight, total for line (₹)</span>
                                                     <input name="items[{{ $item->id }}][freight]" inputmode="decimal" data-freight
-                                                           value="{{ old("items.{$item->id}.freight", $line && (float) $line->freight > 0 ? $line->freight : '') }}" class="{{ $cls }} w-28" placeholder="0">
+                                                           value="{{ old("items.{$item->id}.freight", $line && (float) $line->freight > 0 ? $line->freight : '') }}" class="{{ $cls }} w-full sm:w-28" placeholder="0">
                                                 </td>
                                             @endunless
-                                            <td class="px-4 py-2 text-right font-medium tabular-nums" data-line-amount>—</td>
+                                            <td class="col-span-2 flex justify-between font-medium tabular-nums sm:table-cell sm:px-4 sm:py-2 sm:text-right"><span class="text-slate-500 sm:hidden">Amount (ex-GST)</span><span data-line-amount>—</span></td>
                                         </tr>
                                     @endforeach
                                 </tbody>

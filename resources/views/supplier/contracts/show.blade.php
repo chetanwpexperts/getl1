@@ -25,7 +25,7 @@
                 @include('buyer.prices._contract-state', ['rc' => $rc])
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[520px] text-sm">
+                <table class="w-full text-sm">
                     <thead class="text-left text-xs uppercase tracking-wide text-slate-400">
                         <tr><th class="px-5 py-3">Item</th><th class="px-5 py-3 text-right">Rate</th><th class="px-5 py-3 text-right">GST</th></tr>
                     </thead>
