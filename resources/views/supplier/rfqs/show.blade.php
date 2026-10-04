@@ -77,8 +77,8 @@
         @endif
     @endif
 
-    <div class="mt-8 grid gap-8 lg:grid-cols-3">
-        <div class="space-y-6 lg:col-span-2">
+    <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div class="min-w-0 space-y-6 lg:col-span-2">
             {{-- Accept / decline --}}
             @if ($open && ! $accepted && ! $declined)
                 <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
@@ -216,7 +216,7 @@
             @include('supplier.rfqs._questions')
         </div>
 
-        <div class="space-y-6">
+        <div class="min-w-0 space-y-6">
             <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 text-sm">
                 <h2 class="font-semibold">Buyer's terms</h2>
                 <dl class="mt-3 space-y-2">
