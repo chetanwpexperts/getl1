@@ -32,7 +32,7 @@ DEPLOY_USER="${SUDO_USER:-$(stat -c %U "$APP_ROOT")}"
 PHP_BIN="$(ls /usr/bin/php[0-9]* 2>/dev/null | grep -E "php[0-9]+\.[0-9]+$" | sort -V | tail -1)"
 [[ -n "$PHP_BIN" ]] || die "PHP not found."
 web() { sudo -u www-data "$PHP_BIN" "$APP_ROOT/artisan" "$@"; }
-env_get() { grep -E "^$1=" "$2" 2>/dev/null | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
+env_get() { { grep -E "^$1=" "$2" 2>/dev/null || true; } | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
 
 # -----------------------------------------------------------------------------
 step "Checks"

@@ -67,7 +67,7 @@ fi
 # -----------------------------------------------------------------------------
 step "App settings (.env)"
 cp -a "$ENV_FILE" "$ENV_FILE.bak-live-auctions"
-env_get() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
+env_get() { { grep -E "^$1=" "$ENV_FILE" || true; } | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
 env_set() { # key value [force]
   local k="$1" v="$2" force="${3:-}"
   if grep -qE "^$k=" "$ENV_FILE"; then
