@@ -64,10 +64,15 @@ set_env() { # key value [only_if_empty]
 rand() { tr -dc "$1" </dev/urandom | head -c "$2" || true; }
 
 # Live auction server port: localhost only, never 8090 (partner) or staging's port.
+# Stop our own server first, so anything still listening on a port belongs to someone else.
+supervisorctl stop getl1-www-reverb >/dev/null 2>&1 || true
+STAGING_PORT="$(env_get REVERB_SERVER_PORT "$STAGING_ROOT/.env")"
+port_bad() { [[ -z "$1" || "$1" == 8090 || "$1" == 6379 || "$1" == "$STAGING_PORT" ]] || ss -ltnH "( sport = :$1 )" | grep -q .; }
 PORT="$(env_get REVERB_SERVER_PORT "$ENV_FILE")"
-if [[ -z "$PORT" ]]; then
+if port_bad "$PORT"; then
+  [[ -n "$PORT" ]] && warn "Port $PORT is reserved or already in use by another program: choosing a free one."
   PORT=8191
-  while ss -ltnH "( sport = :$PORT )" | grep -q .; do PORT=$((PORT + 1)); done
+  while port_bad "$PORT"; do PORT=$((PORT + 1)); done
 fi
 
 set_env SITE_MODE app
